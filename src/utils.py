@@ -81,13 +81,13 @@ def arrange_data(fields_in, kpts_in, r0pts_in, freqs_in, lattice_vecs):
     TODO: Document function
     """
 
-    # Get the list of k-points in cartesian coordiantes
+    # Get the list of k-points in cartesian coordinates
     # ..
-    lattice_vecs_recipr = find_reciprocal_lattice_vectors(lattice_vecs, twopi=True)
+    lattice_vecs_recipr = find_reciprocal_lattice_vectors(lattice_vecs, two_pi=True)
     # ..
     kpts_cartesian = lattice_to_cartesian(kpts_in, lattice_vecs_recipr)
 
-    # Get the list of r0-points in cartesian coordiantes
+    # Get the list of r0-points in cartesian coordinates
     r0pts_cartesian = lattice_to_cartesian(r0pts_in, lattice_vecs)
 
     #
@@ -183,7 +183,7 @@ def convert_epsilon(filename, md):
     Parameters
     ----------
     filename : str
-        Name of the h5 file contaning the dielectric funcyion
+        Name of the h5 file containing the dielectric function
     md : mpb.MPBData() instance
         mpb.MPBData instance to transform the input data
 
@@ -211,7 +211,7 @@ def convert_epsilon(filename, md):
     --------
     >>> # The name of the h5 file
     >>> filename = 'epsilon.h5'
-    >>> # Create a MPBData instace to transform the dielectric function
+    >>> # Create a MPBData instance to transform the dielectric function
     >>> md = mpb.MPBData(rectify=False, periods=3)
     >>> epsilon_values, positions_car, positions_lat = convert_epsilon(filename, md)
 
@@ -246,7 +246,7 @@ def convert_epsilon(filename, md):
     )  # equivalent to [xg_1, xg_2, ...] with xg_i = np.arange(grid_size[i])
     positions_pixels = meshgrid_points(
         *rg
-    )  # indexing = 'xy'?          # equivalent to mf.meshgrid_points(xg_1, xg_2, ...)
+    )  # indexing = 'xy'?          # equivalents to mf.meshgrid_points(xg_1, xg_2, ...)
     # Get the positions in lattice coordinates
     positions_lat = (positions_pixels + spatial_shift) / normalization_factor
     # Get the positions in cartesian coordinates
@@ -265,7 +265,7 @@ def convert_epsilon(filename, md):
 
 
 ### Other auxiliary functions
-def find_reciprocal_lattice_vectors(lattice_vectors, twopi=True):
+def find_reciprocal_lattice_vectors(lattice_vectors, two_pi=True):
     """
         Return the reciprocal lattice vectors b1, b2, b3 corresponding to the lattice
         vectors a1, a2, a3.
@@ -291,7 +291,7 @@ def find_reciprocal_lattice_vectors(lattice_vectors, twopi=True):
     """
     output = np.transpose(np.linalg.inv(lattice_vectors))
 
-    if twopi:
+    if two_pi:
         output = 2 * np.pi * output
 
     return output.tolist()
@@ -457,4 +457,4 @@ def find_positions(orbitals, lattice_vectors):
     return positions
 
 
-marker_size = lambda n: 2e5 / (np.log(np.sqrt(n)) * n)
+marker_size = lambda n: 1e4 / (np.log(np.sqrt(n)) * n)

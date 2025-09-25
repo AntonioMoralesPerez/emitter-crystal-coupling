@@ -43,7 +43,7 @@ def compute_gr0r(E, dipole_moment, detuning_freq, kpts, rpts):
     prefactor = -1j * np.sqrt(detuning_freq / (2 * N))
 
     # .. define the exponential factor
-    exponential_factor = np.exp(-1j * (kpts @ np.transpose(rpts)))
+    exponential_factor = np.exp(-1j * (kpts @ rpts.T))
 
     # Output
     gr0r = prefactor * np.transpose(dipole_times_field) @ exponential_factor
