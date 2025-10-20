@@ -83,7 +83,7 @@ def arrange_data(fields_in, kpts_in, r0pts_in, freqs_in, lattice_vecs):
 
     # Get the list of k-points in cartesian coordinates
     # ..
-    lattice_vecs_recipr = find_reciprocal_lattice_vectors(lattice_vecs, two_pi=True)
+    lattice_vecs_recipr = find_reciprocal_lattice_vectors(lattice_vecs, twopi=True)
     # ..
     kpts_cartesian = lattice_to_cartesian(kpts_in, lattice_vecs_recipr)
 
@@ -265,7 +265,7 @@ def convert_epsilon(filename, md):
 
 
 ### Other auxiliary functions
-def find_reciprocal_lattice_vectors(lattice_vectors, two_pi=True):
+def find_reciprocal_lattice_vectors(lattice_vectors, twopi=True):
     """
         Return the reciprocal lattice vectors b1, b2, b3 corresponding to the lattice
         vectors a1, a2, a3.
@@ -291,7 +291,7 @@ def find_reciprocal_lattice_vectors(lattice_vectors, two_pi=True):
     """
     output = np.transpose(np.linalg.inv(lattice_vectors))
 
-    if two_pi:
+    if twopi:
         output = 2 * np.pi * output
 
     return output.tolist()
@@ -457,4 +457,4 @@ def find_positions(orbitals, lattice_vectors):
     return positions
 
 
-marker_size = lambda n: 1e4 / (np.log(np.sqrt(n)) * n)
+marker_size = lambda n: 1e5 / (np.log(np.sqrt(n)) * n)
