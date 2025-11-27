@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.sparse import csc_matrix
+from scipy.linalg import sqrtm  # for matrix square root
+from scipy.sparse import csc_matrix  # for sparse matrices
 
 
 def make_light_matter_Hamiltonian(
@@ -73,8 +74,8 @@ def make_light_matter_Hamiltonian(
         (v_hopping, (i_hopping, j_hopping)), shape=(H_dimension, H_dimension)
     )
 
-    ## Sum both parts
-    H_bath = H_onsite + H_hoppings
+    ## Sum both parts and take the square root of the total Hamiltonian
+    H_bath = sqrtm(H_onsite + H_hoppings)
 
     ### Emitters + coupling Hamiltonian .......................................
 

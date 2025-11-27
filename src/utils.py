@@ -5,21 +5,26 @@ import h5py
 import meep as mp
 import meep.mpb as mpb
 
+from typing import Any, Dict
+from typing import List, Union
+from typing import Tuple
+from matplotlib.axes import Axes
 
-def save(data_dict, filename, dirname=""):
+
+def save(data_dict: Dict[str, Any], filename: str, dirname: str = "") -> None:
     """
-    Save a dictionary of variables to a pickle file.
+    Save a dictionary of Python objects to a pickle file.
 
     Parameters
     ----------
     data_dict : dict
-        Dictionary mapping variable names (str) to values (any Python object).
-        Example: {"freqs": freqs, "Ex": Ex}
+        Dictionary mapping variable names (str) to Python objects.
+        Example: {"freqs": freqs, "Ex": Ex}.
     filename : str
-        Name of the pickle file to save (e.g. 'data.pkl').
+        Name of the pickle file to save (e.g., 'data.pkl').
     dirname : str, optional
         Directory where the file should be saved. If empty, saves in the
-        current directory. If the directory does not exist, it is created.
+        current working directory. If the directory does not exist, it is created.
 
     Returns
     -------
@@ -27,41 +32,68 @@ def save(data_dict, filename, dirname=""):
 
     Notes
     -----
-    Uses `pickle` for serialization. Be cautious when unpickling data from
-    untrusted sources.
+    Uses Python's built-in `pickle` module for serialization. Be cautious when
+    unpickling data from untrusted sources.
+
+    Raises
+    ------
+    OSError
+        If the file cannot be written due to permission or filesystem errors.
+    TypeError
+        If the data_dict cannot be pickled.
 
     Examples
     --------
-    >>> data = {"var1": 5, "var2": np.array([0,0,0])}
+    >>> data = {"var1": 5, "var2": np.array([0, 0, 0])}
     >>> save(data, "data.pkl", "./testfolder/testsubfolder")
     """
-    if dirname:
-        os.makedirs(dirname, exist_ok=True)
-        filename = os.path.join(dirname, filename)
+    try:
+        # Create directory if it does not exist
+        if dirname:
+            os.makedirs(dirname, exist_ok=True)
+            filepath = os.path.join(dirname, filename)
+        else:
+            filepath = filename
 
-    with open(filename, "wb") as f:
-        pickle.dump(data_dict, f)
+        # Save dictionary using pickle
+        with open(filepath, "wb") as f:
+            pickle.dump(data_dict, f)
+
+        # Optional: print confirmation
+        # print(f"Data successfully saved to {filepath}")
+
+    except (OSError, TypeError) as e:
+        raise RuntimeError(f"Failed to save data to '{filename}': {e}") from e
 
 
-def load(filename):
+def load(filename: str) -> Dict[str, Any]:
     """
     Load variables from a pickle file into a dictionary.
 
     Parameters
     ----------
     filename : str
-        Path to the pickle file (e.g. './testfolder/testsubfolder/data.pkl').
+        Path to the pickle file (e.g., './testfolder/testsubfolder/data.pkl').
 
     Returns
     -------
     dict
         Dictionary containing the stored variables, with the same keys as
-        passed to `save`.
+        were passed to `save`.
 
     Notes
     -----
-    Unlike older versions that set globals directly, this function returns
-    a dictionary. You should assign variables explicitly for clarity.
+    Unlike older versions that injected variables into the global namespace,
+    this function returns a dictionary. Assign variables explicitly for clarity.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the file does not exist at the given path.
+    OSError
+        If the file cannot be opened due to permission or filesystem errors.
+    pickle.UnpicklingError
+        If the file is not a valid pickle file.
 
     Examples
     --------
@@ -69,392 +101,613 @@ def load(filename):
     >>> freqs = data["freqs"]
     >>> Ex = data["Ex"]
     """
-    with open(filename, "rb") as f:
-        return pickle.load(f)
+    try:
+        with open(filename, "rb") as f:
+            data = pickle.load(f)
+
+        # Optional: print confirmation
+        # print(f"Data successfully loaded from {filename}")
+        return data
+
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"File not found: '{filename}'") from e
+    except (OSError, pickle.UnpicklingError) as e:
+        raise RuntimeError(f"Failed to load data from '{filename}': {e}") from e
 
 
 # ...
 
 
-def arrange_data(fields_in, kpts_in, r0pts_in, freqs_in, lattice_vecs):
+def arrange_data(
+    fields_in: np.ndarray,
+    kpts_in: np.ndarray,
+    r0pts_in: np.ndarray,
+    freqs_in: np.ndarray,
+    lattice_vecs: np.ndarray,
+) -> Dict[str, Any]:
     """
-    TODO: Document function
-    """
+    Arrange photonic crystal field data and points for real-space calculations.
 
-    # Get the list of k-points in cartesian coordinates
-    # ..
+    Converts k-points and r0-points to Cartesian coordinates, reshapes the
+    field data by band and component, and applies Bloch phases.
+
+    Parameters
+    ----------
+    fields_in : ndarray, shape (N, 3)
+        Electric field data for all r0-points and k-points, concatenated
+        along the first dimension. The last dimension indexes components
+        (x, y, z).
+    kpts_in : ndarray, shape (Nk, 3)
+        k-points in lattice coordinates.
+    r0pts_in : ndarray, shape (Nr, 3)
+        Emitter positions in lattice coordinates.
+    freqs_in : ndarray
+        Frequencies of the photonic modes.
+    lattice_vecs : ndarray, shape (3, 3)
+        Lattice vectors of the crystal.
+
+    Returns
+    -------
+    data_dict : dict
+        Dictionary containing:
+        - 'frequencies': Mode frequencies.
+        - 'ux', 'uy', 'uz': Reshaped field components (bands x Nk x Nr).
+        - 'Ex', 'Ey', 'Ez': Field components multiplied by Bloch phases.
+        - 'kpts-cartesian', 'r0pts-cartesian': Points in Cartesian coordinates.
+
+    Notes
+    -----
+    * Reshaping uses Fortran-style ('F') order to preserve band ordering.
+    * Bloch phases are applied with a positive exponent convention.
+
+    """
+    # --- Convert to Cartesian coordinates ---
     lattice_vecs_recipr = find_reciprocal_lattice_vectors(lattice_vecs, twopi=True)
-    # ..
     kpts_cartesian = lattice_to_cartesian(kpts_in, lattice_vecs_recipr)
-
-    # Get the list of r0-points in cartesian coordinates
     r0pts_cartesian = lattice_to_cartesian(r0pts_in, lattice_vecs)
 
-    #
-    number_of_r0pts = len(r0pts_in)
-    number_of_kpts = len(kpts_in)
+    Nk = len(kpts_in)
+    Nr = len(r0pts_in)
 
-    # Separate by components and do a first reshape of the output
-    ux_aux = fields_in[:, 0].reshape((number_of_r0pts, -1, number_of_kpts), order="F")
-    uy_aux = fields_in[:, 1].reshape((number_of_r0pts, -1, number_of_kpts), order="F")
-    uz_aux = fields_in[:, 2].reshape((number_of_r0pts, -1, number_of_kpts), order="F")
-    # .. after this reshaping we obtain the following:
-    #   ui_aux[:,0,:] component i=x,y,z of the 1-st band
-    #   ui_aux[:,1,:] component i=x,y,z of the 2-nd band
-    #        ...
-    #   ui_aux[:,n,:] component i=x,y,z of the n-th band
+    # --- Reshape field components by band ---
+    ux_aux = fields_in[:, 0].reshape((Nr, -1, Nk), order="F")
+    uy_aux = fields_in[:, 1].reshape((Nr, -1, Nk), order="F")
+    uz_aux = fields_in[:, 2].reshape((Nr, -1, Nk), order="F")
 
-    # Get the number of bands
-    number_of_bands = np.shape(ux_aux)[1]
+    number_of_bands = ux_aux.shape[1]
 
-    # Do second reshape to prepare data for calculation of the g(r0,r)
-    ux_list = []
-    uy_list = []
-    uz_list = []
-    for i in range(number_of_bands):
-        ux_list.append(np.transpose(ux_aux[:, i, :]))
-        uy_list.append(np.transpose(uy_aux[:, i, :]))
-        uz_list.append(np.transpose(uz_aux[:, i, :]))
-    # ..
-    ux = np.array(ux_list)
-    uy = np.array(uy_list)
-    uz = np.array(uz_list)
+    # --- Transpose to shape (bands x Nk x Nr) ---
+    ux = np.transpose(ux_aux, (1, 2, 0))  # shape: (Nb, Nk, Nr)
+    uy = np.transpose(uy_aux, (1, 2, 0))
+    uz = np.transpose(uz_aux, (1, 2, 0))
 
-    # Multiply by the bloch phase (we chose the positive sign)
-    # bloch_phase = np.exp(-1j * (kpts_cartesian @ np.transpose(r0pts_cartesian)))
-    bloch_phase = np.exp(+1j * (kpts_cartesian @ np.transpose(r0pts_cartesian)))
+    # --- Compute Bloch phase factor (Nk x Nr) ---
+    bloch_phase = np.exp(1j * kpts_cartesian @ r0pts_cartesian.T)
 
-    Ex = ux * bloch_phase
-    Ey = uy * bloch_phase
-    Ez = uz * bloch_phase
+    # --- Apply Bloch phase to each band ---
+    Ex = ux * bloch_phase[np.newaxis, :, :]
+    Ey = uy * bloch_phase[np.newaxis, :, :]
+    Ez = uz * bloch_phase[np.newaxis, :, :]
 
-    # Prepare the output as a dictionary:
-    d = dict()
-    d["frequencies"] = freqs_in
-    d["ux"] = ux
-    d["uy"] = uy
-    d["uz"] = uz
-    # ..
-    d["Ex"] = Ex
-    d["Ey"] = Ey
-    d["Ez"] = Ez
-    # ..
-    d["kpts-cartesian"] = kpts_cartesian
-    d["r0pts-cartesian"] = r0pts_cartesian
+    # --- Prepare output dictionary ---
+    data_dict = {
+        "frequencies": freqs_in,
+        "ux": ux,
+        "uy": uy,
+        "uz": uz,
+        "Ex": Ex,
+        "Ey": Ey,
+        "Ez": Ez,
+        "kpts-cartesian": kpts_cartesian,
+        "r0pts-cartesian": r0pts_cartesian,
+    }
 
-    return d
+    return data_dict
 
 
-def read_epsilon_file(epsilon_input_file):
-    """ """
-
-    # Read the epsilon data and lattice vectors form input file
-    with h5py.File(epsilon_input_file, "r") as f:
-        epsilon_data = f["data"][()]
-        lattice_vectors = f["lattice vectors"][()].tolist()
-
-    # Determine the resolution by looking at the shape of epsilon.h5 "data"
-    resolution = list(np.shape(epsilon_data))
-    # ..
-    while len(resolution) < 3:
-        resolution += [1]
-
-    # Determine lattice size by looking at the shape of epsilon.h5 "data"
-    # TODO: review and document this! I am assuming things here...
-    lattice_size = list(np.ones(len(np.shape(epsilon_data))))
-    # ..
-    while len(lattice_size) < 3:
-        lattice_size += [0]
-
-    # Prepare the output as a dictionary:
-    d = dict()
-    d["epsilon data"] = epsilon_data
-    d["lattice vectors"] = lattice_vectors
-    d["resolution"] = resolution
-    d["lattice size"] = lattice_size
-
-    return d  # epsilon_data, lattice_vectors, resolution
-
-
-def convert_epsilon(filename, md):
+def read_epsilon_file(epsilon_input_file: str) -> Dict[str, Any]:
     """
-    Return converted epsilon data in a convenient format
+    Read dielectric permittivity (epsilon) data and lattice vectors from an HDF5 file.
+
+    Parameters
+    ----------
+    epsilon_input_file : str
+        Path to the HDF5 file containing epsilon data. The file is expected to
+        have datasets:
+        - 'data': 3D or lower-dimensional array with permittivity values.
+        - 'lattice vectors': 3x3 array of lattice vectors.
+
+    Returns
+    -------
+    data_dict : dict
+        Dictionary containing:
+        - 'epsilon_data': ndarray with permittivity values.
+        - 'lattice_vectors': list of lattice vectors.
+        - 'resolution': list of integers specifying the number of points along each axis.
+        - 'lattice_size': list of integers, placeholder for lattice size (currently filled with ones).
+
+    Notes
+    -----
+    * The function pads dimensions to 3 if the data is lower-dimensional.
+    * 'lattice_size' is currently a placeholder initialized to ones; you may
+      need to adjust this depending on your lattice conventions.
+    """
+    # --- Read epsilon data and lattice vectors from HDF5 file ---
+    with h5py.File(epsilon_input_file, "r") as f:
+        if "data" not in f or "lattice vectors" not in f:
+            raise KeyError(
+                f"File {epsilon_input_file} must contain 'data' and 'lattice vectors' datasets."
+            )
+
+        epsilon_data = f["data"][()]  # type: ignore
+        lattice_vectors = f["lattice vectors"][()].tolist()  # type: ignore
+
+    # --- Determine resolution (number of points along each axis) ---
+    resolution = list(epsilon_data.shape)  # type: ignore
+    while len(resolution) < 3:
+        resolution.append(1)
+
+    # --- Determine lattice size (placeholder: ones) ---
+    # TODO: Adjust this if you have specific lattice size conventions
+    lattice_size = [1] * len(epsilon_data.shape)  # type: ignore
+    while len(lattice_size) < 3:
+        lattice_size.append(0)  # default 0 for missing axes
+
+    # --- Prepare output dictionary ---
+    data_dict = {
+        "epsilon_data": epsilon_data,
+        "lattice_vectors": lattice_vectors,
+        "resolution": resolution,
+        "lattice_size": lattice_size,
+    }
+
+    return data_dict
+
+
+def convert_epsilon(filename: str, md) -> Dict[str, Any]:
+    """
+    Convert dielectric function data from an HDF5 file to a convenient format
+    with positions in lattice and Cartesian coordinates.
 
     Parameters
     ----------
     filename : str
-        Name of the h5 file containing the dielectric function
-    md : mpb.MPBData() instance
-        mpb.MPBData instance to transform the input data
+        Path to the HDF5 file containing the dielectric function. Expected datasets:
+        - 'data': N-dimensional array with epsilon values.
+        - 'lattice vectors': 3x3 array of lattice vectors.
+    md : mpb.MPBData
+        MPBData instance used to transform the input data (e.g., to refine grid or convert to desired format).
 
     Returns
     -------
-        d : dictionary
-
-        d['epsilon values'] = epsilon_values
-        d['positions-cartesian'] = positions_car
-        d['positions-lattice'] = positions_lat
-        d['lattice vectors'] = lattice_vectors
-
-        epsilon_values : array
-            Dielectric function values on the corresponding positions
-        positions_car : array
-            Positions in the unit cell in cartesian coordinates
-        positions_lat : array
-            Positions in the unit cell in lattice coordinates
+    data_dict : dict
+        Dictionary containing:
+        - 'epsilon_values' : ndarray
+            Flattened dielectric function values on the corresponding positions.
+        - 'positions-cartesian' : ndarray, shape (N_points, 3)
+            Positions in the unit cell in Cartesian coordinates.
+        - 'positions-lattice' : ndarray, shape (N_points, 3)
+            Positions in the unit cell in lattice coordinates (normalized to lattice constants).
+        - 'lattice_vectors' : list of lists
+            Lattice vectors of the unit cell.
 
     Notes
     -----
-    See Also
-    --------
+    * The origin of the unit cell is placed at [0,0,0] in lattice coordinates.
+    * Positions are generated according to the grid size of the converted epsilon matrix.
+    * Assumes equal number of repeated periods along all directions as specified in md.multiply_size.
+
     Examples
     --------
-    >>> # The name of the h5 file
     >>> filename = 'epsilon.h5'
-    >>> # Create a MPBData instance to transform the dielectric function
     >>> md = mpb.MPBData(rectify=False, periods=3)
-    >>> epsilon_values, positions_car, positions_lat = convert_epsilon(filename, md)
-
+    >>> data = convert_epsilon(filename, md)
+    >>> epsilon_values = data['epsilon_values']
+    >>> positions_car = data['positions-cartesian']
+    >>> positions_lat = data['positions-lattice']
     """
-    # Read data from epsilon file
+    # --- Read epsilon data and lattice vectors from HDF5 ---
     with h5py.File(filename, "r") as f:
-        epsilon_data = f["data"][()]
-        lattice_vectors = f["lattice vectors"][()].tolist()
-    # Get `periods` from the input MPBData instance
-    # NOTE Here, I am assuming equal number of periods to be repeated along all directions
+        if "data" not in f or "lattice vectors" not in f:
+            raise KeyError(
+                f"File {filename} must contain 'data' and 'lattice vectors' datasets."
+            )
+        epsilon_data = f["data"][()]  # type: ignore
+        lattice_vectors = f["lattice vectors"][()].tolist()  # type: ignore
+
+    # --- Number of periods along each axis (assumes equal for all directions) ---
     periods = md.multiply_size[0]
-    # ...
-    # Create the MPBArray to feed mpb.MPBData.covert() function
+
+    # --- Convert to MPBArray and transform using MPBData ---
     epsilon_MPBArray = mpb.MPBArray(epsilon_data, lattice=lattice_vectors)
-    # Convert according to the MPBData instance defined above (output is a numpy.ndarray)
     epsilon_matrix = md.convert(epsilon_MPBArray)
-    # ...
-    # Obtain the grid size of the converted data = periods x resolution
-    grid_size = list(np.shape(epsilon_matrix))
-    # Place the origin of the unit cell in [0,0,0] and normalized to the lattice constant
-    # .. define the spatial shift
-    center = np.array(grid_size) / 2
-    spatial_shift = -np.tile(center, (np.prod(grid_size), 1))
-    # .. define the normalization factor
-    normalization_factor = np.array(grid_size) / periods
-    # TODO: Check if the choice above is consistent with all geometries
-    # ...
-    # Get the positions in pixel coordinates
-    iteration_range = np.arange(len(grid_size))
-    rg = list(
-        map(lambda i: np.arange(grid_size[i]), iteration_range)
-    )  # equivalent to [xg_1, xg_2, ...] with xg_i = np.arange(grid_size[i])
-    positions_pixels = meshgrid_points(
-        *rg
-    )  # indexing = 'xy'?          # equivalents to mf.meshgrid_points(xg_1, xg_2, ...)
-    # Get the positions in lattice coordinates
+
+    # --- Grid size of converted data ---
+    grid_size = np.array(epsilon_matrix.shape)
+
+    # --- Generate pixel positions in the unit cell ---
+    axes = [np.arange(n) for n in grid_size]
+    positions_pixels = meshgrid_points(*axes)  # shape: (N_points, ndim)
+
+    # --- Shift origin to [0,0,0] and normalize by periods/grid_size ---
+    center = grid_size / 2
+    spatial_shift = -center  # shape: (ndim,)
+    normalization_factor = grid_size / periods
     positions_lat = (positions_pixels + spatial_shift) / normalization_factor
-    # Get the positions in cartesian coordinates
+
+    # --- Convert lattice coordinates to Cartesian ---
     positions_car = lattice_to_cartesian(positions_lat, lattice_vectors)
-    # Get the epsilon values
+
+    # --- Flatten epsilon values ---
     epsilon_values = epsilon_matrix.flatten()
 
-    # Prepare the output as a dictionary:
-    d = dict()
-    d["epsilon values"] = epsilon_values
-    d["positions-cartesian"] = positions_car
-    d["positions-lattice"] = positions_lat
-    d["lattice vectors"] = lattice_vectors
+    # --- Prepare output dictionary ---
+    data_dict = {
+        "epsilon_values": epsilon_values,
+        "positions-cartesian": positions_car,
+        "positions-lattice": positions_lat,
+        "lattice_vectors": lattice_vectors,
+    }
 
-    return d
+    return data_dict
 
 
 ### Other auxiliary functions
-def find_reciprocal_lattice_vectors(lattice_vectors, twopi=True):
+def find_reciprocal_lattice_vectors(
+    lattice_vectors: Union[np.ndarray, List[List[float]]], twopi: bool = True
+) -> np.ndarray:
     """
-        Return the reciprocal lattice vectors b1, b2, b3 corresponding to the lattice
-        vectors a1, a2, a3.
+    Compute the reciprocal lattice vectors corresponding to a set of direct lattice vectors.
+
+    The reciprocal lattice vectors b1, b2, b3 satisfy:
+        a_i · b_j = 2π δ_ij  (if twopi=True)
+        or
+        a_i · b_j = δ_ij     (if twopi=False)
 
     Parameters
     ----------
+    lattice_vectors : array_like, shape (3, 3)
+        Direct lattice vectors a1, a2, a3. Each row corresponds to a lattice vector.
+    twopi : bool, optional
+        If True (default), reciprocal vectors are multiplied by 2π. If False,
+        returns the reciprocal vectors without the 2π factor.
 
     Returns
     -------
+    reciprocal_vectors : list of lists, shape (3, 3)
+        Reciprocal lattice vectors b1, b2, b3 as a list of 3 lists.
 
     Notes
     -----
-        See Joannopoulos, Photonic Crystals: Molding the flow of light p.235
-
-    See Also
-    --------
+    This uses the standard definition from solid state physics / photonic crystals:
+    b_i = 2π * (a_j × a_k) / (a1 · (a2 × a3)), with cyclic permutation of i,j,k.
+    See: Joannopoulos et al., "Photonic Crystals: Molding the Flow of Light", p. 235.
 
     Examples
     --------
-    >>>
-    >>> lattice_vectors = [[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]]
+    >>> lattice_vectors = [[1.0, 0.0, 0.0],
+    ...                    [0.0, 1.0, 0.0],
+    ...                    [0.0, 0.0, 1.0]]
     >>> b1, b2, b3 = find_reciprocal_lattice_vectors(lattice_vectors)
+    >>> b1
+    [6.283185307179586, 0.0, 0.0]
     """
-    output = np.transpose(np.linalg.inv(lattice_vectors))
+    # Convert input to ndarray
+    a = np.array(lattice_vectors, dtype=float)
+    if a.shape != (3, 3):
+        raise ValueError(f"lattice_vectors must be of shape (3,3), got {a.shape}")
 
+    # Reciprocal lattice vectors: b_i = inv(a).T * (optionally 2π)
+    b = np.linalg.inv(a).T
     if twopi:
-        output = 2 * np.pi * output
+        b *= 2 * np.pi
 
-    return output.tolist()
+    return b
 
 
-def lattice_to_cartesian(orbitals, lattice_vectors):
+def lattice_to_cartesian(
+    orbitals: Union[np.ndarray, List[List[float]]],
+    lattice_vectors: Union[np.ndarray, List[List[float]]],
+) -> np.ndarray:
     """
-    Return the positions in cartesian coordinates given the positions in the
-    lattice coordinates and the lattice vectors
+    Convert positions from lattice coordinates to Cartesian coordinates.
 
     Parameters
     ----------
-    orbitals : array
-        Array with the positions in lattice coordinates
-    lattice_vectors : array
-        3x3 array with each row containing the i-th lattice vector (ai)
-            lattice_vectors = [a1, a2, a3]
-        If the dimension of the lattice is 2: a3 -> [0,0,1]
-        If the dimension of the lattice is 1: a2 -> [0,1,0] and a3 --> [0,0,1]
+    orbitals : array_like, shape (N_points, ndim)
+        Positions in lattice coordinates. Each row is a point in the unit cell.
+        ndim can be 1, 2, or 3.
+    lattice_vectors : array_like, shape (3, 3)
+        Lattice vectors of the crystal. Each row corresponds to a lattice vector (a1, a2, a3).
+        If the lattice dimension is < 3, pad missing vectors as standard:
+            2D: a3 = [0,0,1], 1D: a2 = [0,1,0], a3 = [0,0,1]
 
     Returns
     -------
-    positions : array
-        Array with the positions in the cartesian coordinates
+    positions_cartesian : ndarray, shape (N_points, 3)
+        Positions in Cartesian coordinates.
 
     Notes
     -----
-
-    See Also
-    --------
+    Converts each position `r` in lattice coordinates to Cartesian coordinates using:
+        r_cartesian = r1*a1 + r2*a2 + r3*a3
 
     Examples
-    ----------
+    --------
     >>> orbitals = [[0,0], [0,1], [1,0], [1,1]]
-    >>> lattice_vectors = [[np.sqrt(3)/2,0.5,0], [np.sqrt(3)/2,-0.5,0], [0,0,1]]
-    >>> positions = lattice_to_cartesian(orbitals, lattice_vectors)
-    array([[ 0.        ,  0.        ,  0.        ],
-           [ 0.8660254 , -0.5       ,  0.        ],
-           [ 0.8660254 ,  0.5       ,  0.        ],
-           [ 1.73205081,  0.        ,  0.        ]])
+    >>> lattice_vectors = [[np.sqrt(3)/2,0.5,0],
+    ...                    [np.sqrt(3)/2,-0.5,0],
+    ...                    [0,0,1]]
+    >>> lattice_to_cartesian(orbitals, lattice_vectors)
+    array([[0.        , 0.        , 0.        ],
+           [0.8660254 , -0.5       , 0.        ],
+           [0.8660254 ,  0.5       , 0.        ],
+           [1.73205081, 0.        , 0.        ]])
     """
+    # Convert inputs to numpy arrays
+    orbitals = np.array(orbitals, dtype=float)
+    lattice_vectors = np.array(lattice_vectors, dtype=float)
 
-    # Transform to numpy.array (in case it is not)
-    orbitals = np.array(orbitals)
+    _, ndim = orbitals.shape
 
-    # get number of orbitals
-    N_orbitals = np.shape(orbitals)[0]
+    # Pad orbitals to 3D if necessary
+    if ndim < 3:
+        orbitals = np.pad(orbitals, ((0, 0), (0, 3 - ndim)), mode="constant")
 
-    # if 2D fill with zeros
-    while np.shape(orbitals)[1] < 3:
-        orbitals = np.c_[orbitals, np.zeros(N_orbitals)]
+    # Compute Cartesian positions (vectorized)
+    positions_cartesian = orbitals @ lattice_vectors
 
-    # Find the positions (in cartesian coordinates)
-    output = np.zeros(np.shape(orbitals))
-    for i in range(3):
-        output = output + orbitals[:, i].reshape(N_orbitals, 1) * lattice_vectors[i]
-
-    return output
+    return positions_cartesian
 
 
-def array_to_Vector3(arr):
+def array_to_Vector3(
+    arr: Union[np.ndarray, List[List[float]], List[float]],
+) -> List[mp.Vector3]:
     """
-    Take a list or a numpy.array and returns a meep.Vector3 object out of it.
-    If the input array has less than 3 columns, it fills with zeros
+    Convert an array or list of lattice vectors to a list of Meep Vector3 objects.
+
+    Pads vectors with zeros if they have less than 3 components.
 
     Parameters
     ----------
     arr : array_like
-        numpy array or list with 1, 2, or 3 columns and arbitrary (>=1) rows
+        1D array/list (single vector) or 2D array/list (multiple vectors)
+        with 1-3 components per vector.
 
     Returns
     -------
-
-    Notes
-    -----
-
-    See Also
-    --------
+    vectors : list of mp.Vector3
+        List of Meep Vector3 objects corresponding to input vectors.
 
     Examples
-    ----------
-
+    --------
+    >>> array_to_Vector3([1, 2])
+    [Vector3(1, 2, 0)]
+    >>> array_to_Vector3([[1,0], [0,1]])
+    [Vector3(1,0,0), Vector3(0,1,0)]
     """
-    dims = np.shape(arr)
-
-    if len(dims) == 1:
-
-        output = mp.Vector3(*arr)
-
-    else:
-
-        output = list(map(lambda i: mp.Vector3(*arr[i, :]), np.arange(dims[0])))
-
-    return output
+    arr = np.atleast_2d(np.array(arr, dtype=float))
+    # Pad all vectors to 3 components in one line
+    padded = np.pad(arr, ((0, 0), (0, 3 - arr.shape[1])), mode="constant")
+    # Convert to list of Vector3
+    return [mp.Vector3(*vec) for vec in padded]
 
 
-def meshgrid_points(*xi, indexing="ij"):
+def meshgrid_points(
+    *xi: Union[np.ndarray, List[float]], indexing: str = "ij"
+) -> np.ndarray:
     """
-    Returns a list of points created from a meshgrid.
+    Generate a 2D array of points from N 1D coordinate arrays using a meshgrid.
+
+    Each row of the output corresponds to a point in the N-dimensional grid.
 
     Parameters
     ----------
-    x1, x2,..., xn : array_like
-        1-D arrays representing the coordinates of a grid.
+    *xi : array_like
+        1-D arrays representing the coordinates along each dimension.
     indexing : {'xy', 'ij'}, optional
-        Matrix ('ij', default) or cartesian ('xy') indexing of output.
+        Matrix ('ij', default) or Cartesian ('xy') indexing of the output.
 
     Returns
     -------
+    points : ndarray, shape (N_points, N)
+        Array where each row is a point in the N-dimensional grid.
 
     Notes
     -----
+    This function is equivalent to flattening the output of `numpy.meshgrid`
+    into a list of coordinates for each point.
 
     See Also
     --------
-
-    https://numpy.org/doc/stable/reference/generated/numpy.meshgrid.html
-
-    https://stackoverflow.com/questions/12864445/how-to-convert-the-output-of-meshgrid-to-the-corresponding-array-of-points
-
+    numpy.meshgrid
 
     Examples
-    ----------
+    --------
     >>> x = np.linspace(0, 2, 3)
     >>> y = np.linspace(0, 2, 3)
-
     >>> meshgrid_points(x, y)
-    [[0. 0.]
-    [0. 1.]
-    [0. 2.]
-    [1. 0.]
-    [1. 1.]
-    [1. 2.]
-    [2. 0.]
-    [2. 1.]
-    [2. 2.]]
+    array([[0., 0.],
+           [0., 1.],
+           [0., 2.],
+           [1., 0.],
+           [1., 1.],
+           [1., 2.],
+           [2., 0.],
+           [2., 1.],
+           [2., 2.]])
     """
+    # Create N-dimensional meshgrid
+    grids = np.meshgrid(*xi, indexing=indexing)  # type: ignore
 
-    # Define a grid using the meshgrid function
-    grid = np.meshgrid(*xi, indexing=indexing)
+    # Flatten each grid and stack as columns, then transpose to get points
+    points = np.vstack([g.ravel() for g in grids]).T
 
-    # Transform the meshgrid output into a list of points
-    output = np.vstack(list(map(np.ravel, grid))).T
-
-    return output
+    return points
 
 
-def find_positions(orbitals, lattice_vectors):
-    # get lattice's dimension
-    lattice_dimension = np.shape(lattice_vectors)[0]
+def find_positions(
+    orbitals: Union[np.ndarray, List[List[float]]],
+    lattice_vectors: Union[np.ndarray, List[List[float]]],
+) -> np.ndarray:
+    """
+    Convert positions from lattice coordinates to Cartesian coordinates.
 
-    # get number of orbitals
-    N_orbitals = np.shape(orbitals)[0]
+    Parameters
+    ----------
+    orbitals : array_like, shape (N_points, dim_lattice)
+        Positions of orbitals in lattice coordinates. Each row is a point.
+    lattice_vectors : array_like, shape (dim_lattice, dim_cart)
+        Lattice vectors defining the unit cell. Each row corresponds to a lattice vector.
 
-    # Find the positions (in cartesian coordinates)
-    positions = np.zeros(np.shape(orbitals))
-    for i in range(lattice_dimension):
-        positions = (
-            positions + orbitals[:, i].reshape(N_orbitals, 1) * lattice_vectors[i]
+    Returns
+    -------
+    positions : ndarray, shape (N_points, dim_cart)
+        Positions in Cartesian coordinates.
+
+    Notes
+    -----
+    The Cartesian positions are computed as a linear combination of lattice vectors:
+        r_cartesian = sum_i (r_i * a_i)
+    where r_i are the lattice coordinates and a_i are the lattice vectors.
+
+    Examples
+    --------
+    >>> orbitals = [[0,0], [1,0], [0,1]]
+    >>> lattice_vectors = [[1,0], [0,1]]
+    >>> find_positions(orbitals, lattice_vectors)
+    array([[0., 0.],
+           [1., 0.],
+           [0., 1.]])
+    """
+    orbitals = np.array(orbitals, dtype=float)
+    lattice_vectors = np.array(lattice_vectors, dtype=float)
+
+    # Validate dimensions
+    if orbitals.shape[1] != lattice_vectors.shape[0]:
+        raise ValueError(
+            f"Number of orbital coordinates ({orbitals.shape[1]}) "
+            f"must match number of lattice vectors ({lattice_vectors.shape[0]})"
         )
 
-    ### Output ...
+    # Compute Cartesian positions (vectorized)
+    positions = orbitals @ lattice_vectors
+
     return positions
 
 
-marker_size = lambda n: 1e5 / (np.log(np.sqrt(n)) * n)
+def marker_size(n: float) -> float:
+    """
+    Compute a marker size for plotting that scales with the number of points.
+
+    The size decreases as the number of points increases, approximately as:
+        size ~ 1e5 / (log(sqrt(n)) * n)
+
+    Parameters
+    ----------
+    n : float
+        Number of points. Must be greater than 1.
+
+    Returns
+    -------
+    size : float
+        Computed marker size suitable for plotting.
+
+    Raises
+    ------
+    ValueError
+        If n <= 1, since log(sqrt(n)) would be zero or negative.
+
+    Examples
+    --------
+    >>> marker_size(10)
+    14477.026
+    >>> marker_size(1000)
+    1157.947
+    """
+    if n <= 1:
+        raise ValueError("n must be greater than 1 to compute marker size.")
+
+    return 1e5 / (np.log(np.sqrt(n)) * n)
+
+
+def draw_arrow(
+    ax: Axes,
+    R0: list[float],
+    angle: float,
+    color: str,
+    label: str,
+    length: float = 0.2,
+    offset: float = 0.1,
+    arrowstyle: str = "-|>",
+    lw: float = 2.2,
+    mutation_scale: float = 14,
+    fontsize: int = 11,
+) -> None:
+    """
+    Draw a clean arrow with a label on a Matplotlib axis.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Matplotlib Axes object to draw on.
+    R0 : list of float
+        Starting point [x0, y0] of the arrow.
+    angle : float
+        Angle of the arrow in radians, measured from the x-axis.
+    color : str
+        Color of the arrow and the label.
+    label : str
+        Text label to display near the arrow tip.
+    length : float, optional
+        Length of the arrow. Default is 0.2.
+    offset : float, optional
+        Distance from the arrow tip to place the label. Default is 0.1.
+    arrowstyle : str, optional
+        Arrow style for `matplotlib.patches.FancyArrowPatch`. Default is "-|>".
+    lw : float, optional
+        Line width of the arrow. Default is 2.2.
+    mutation_scale : float, optional
+        Scale factor for arrow head size. Default is 14.
+    fontsize : int, optional
+        Font size of the label. Default is 11.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> fig, ax = plt.subplots()
+    >>> draw_arrow(ax, (0,0), np.pi/4, 'red', 'A')
+    """
+    x0, y0 = R0
+    tip = (x0 + length * np.cos(angle), y0 + length * np.sin(angle))
+    label_pos = (
+        x0 + (length + offset) * np.cos(angle),
+        y0 + (length + offset) * np.sin(angle),
+    )
+
+    ax.annotate(
+        "",
+        xy=tip,
+        xytext=(x0, y0),
+        arrowprops=dict(
+            arrowstyle=arrowstyle,
+            lw=lw,
+            color=color,
+            shrinkA=0,
+            shrinkB=0,
+            mutation_scale=mutation_scale,
+        ),
+    )
+
+    ax.text(
+        *label_pos,
+        label,
+        color=color,
+        fontsize=fontsize,
+        ha="center",
+        va="center",
+        weight="bold",
+    )
