@@ -133,7 +133,7 @@ def arrange_data(
 
     Parameters
     ----------
-    fields_in : ndarray, shape (N, 3)
+    fields_in : ndarray, shape (Nk*Nb*Nr, 3)
         Electric field data for all r0-points and k-points, concatenated
         along the first dimension. The last dimension indexes components
         (x, y, z).
@@ -141,7 +141,7 @@ def arrange_data(
         k-points in lattice coordinates.
     r0pts_in : ndarray, shape (Nr, 3)
         Emitter positions in lattice coordinates.
-    freqs_in : ndarray
+    freqs_in : ndarray, shape (Nk, Nb)
         Frequencies of the photonic modes.
     lattice_vecs : ndarray, shape (3, 3)
         Lattice vectors of the crystal.
@@ -150,59 +150,54 @@ def arrange_data(
     -------
     data_dict : dict
         Dictionary containing:
-        - 'frequencies': Mode frequencies.
-        - 'ux', 'uy', 'uz': Reshaped field components (bands x Nk x Nr).
-        - 'Ex', 'Ey', 'Ez': Field components multiplied by Bloch phases.
-        - 'kpts-cartesian', 'r0pts-cartesian': Points in Cartesian coordinates.
+        - 'frequencies': Mode frequencies (Nk x Nb).
+        - 'uks': Reshaped field components without Bloch phase (Nr × Nb × Nk × 3).
+        - 'Eks': Field components multiplied by Bloch phases (Nr × Nb × Nk × 3).
+        - 'kpts_cartesian': k-points in Cartesian coordinates (Nk × 3).
+        - 'r0pts_cartesian': r0 points in Cartesian coordinates (Nr × 3).
 
     Notes
     -----
-    * Reshaping uses Fortran-style ('F') order to preserve band ordering.
-    * Bloch phases are applied with a positive exponent convention.
-
+    * Bloch phases are applied using the convention `exp(+i k·r)`.
+    * The function reshapes fields_in from (Nk*Nb*Nr, 3) → (Nk, Nb, Nr, 3) internally.
     """
+
+    # --- Input validation ---
+    Nk = kpts_in.shape[0]
+    Nr = r0pts_in.shape[0]
+    Nb = freqs_in.shape[1]
+
+    expected_size = Nk * Nb * Nr
+    if fields_in.shape[0] != expected_size or fields_in.shape[1] != 3:
+        raise ValueError(
+            f"fields_in must have shape ({expected_size}, 3), " f"got {fields_in.shape}"
+        )
+
     # --- Convert to Cartesian coordinates ---
     lattice_vecs_recipr = find_reciprocal_lattice_vectors(lattice_vecs, twopi=True)
-    kpts_cartesian = lattice_to_cartesian(kpts_in, lattice_vecs_recipr)
-    r0pts_cartesian = lattice_to_cartesian(r0pts_in, lattice_vecs)
+    kpts_cartesian = lattice_to_cartesian(kpts_in, lattice_vecs_recipr)  # Nk x 3
+    r0pts_cartesian = lattice_to_cartesian(r0pts_in, lattice_vecs)  # Nr x 3
 
-    Nk = len(kpts_in)
-    Nr = len(r0pts_in)
+    # --- Reshape fields: Nk x Nb x Nr x 3 ---
+    uks = fields_in.reshape((Nk, Nb, Nr, 3))
 
-    # --- Reshape field components by band ---
-    ux_aux = fields_in[:, 0].reshape((Nr, -1, Nk), order="F")
-    uy_aux = fields_in[:, 1].reshape((Nr, -1, Nk), order="F")
-    uz_aux = fields_in[:, 2].reshape((Nr, -1, Nk), order="F")
+    # --- Compute Bloch phase: Nk x Nr ---
+    bloch_phase = np.exp(1j * np.dot(kpts_cartesian, r0pts_cartesian.T))
 
-    number_of_bands = ux_aux.shape[1]
+    # --- Apply Bloch phase to each band and component ---
+    Eks = uks * bloch_phase[:, None, :, None]  # broadcasting over Nb and 3 components
 
-    # --- Transpose to shape (bands x Nk x Nr) ---
-    ux = np.transpose(ux_aux, (1, 2, 0))  # shape: (Nb, Nk, Nr)
-    uy = np.transpose(uy_aux, (1, 2, 0))
-    uz = np.transpose(uz_aux, (1, 2, 0))
+    # --- Reorder axes to Nr x Nb x Nk x 3 for convenience ---
+    uks = np.transpose(uks, (2, 1, 0, 3))
+    Eks = np.transpose(Eks, (2, 1, 0, 3))
 
-    # --- Compute Bloch phase factor (Nk x Nr) ---
-    bloch_phase = np.exp(1j * kpts_cartesian @ r0pts_cartesian.T)
-
-    # --- Apply Bloch phase to each band ---
-    Ex = ux * bloch_phase[np.newaxis, :, :]
-    Ey = uy * bloch_phase[np.newaxis, :, :]
-    Ez = uz * bloch_phase[np.newaxis, :, :]
-
-    # --- Prepare output dictionary ---
-    data_dict = {
+    return {
         "frequencies": freqs_in,
-        "ux": ux,
-        "uy": uy,
-        "uz": uz,
-        "Ex": Ex,
-        "Ey": Ey,
-        "Ez": Ez,
-        "kpts-cartesian": kpts_cartesian,
-        "r0pts-cartesian": r0pts_cartesian,
+        "uks": uks,
+        "Eks": Eks,
+        "kpts_cartesian": kpts_cartesian,
+        "r0pts_cartesian": r0pts_cartesian,
     }
-
-    return data_dict
 
 
 def read_epsilon_file(epsilon_input_file: str) -> Dict[str, Any]:

@@ -34,10 +34,9 @@ def compute_gr0r(
 
     Parameters
     ----------
-    E_k_r0 : ndarray, shape (3, Nk, Nb)
-        Electric field at the emitter position for each mode. The first dimension
-        indexes vector components (x, y, z), second dimension is k-points,
-        third is bands.
+    E_k_r0 : ndarray, shape (Nb, Nk, 3)
+        Electric field at the emitter position for each mode. First dimension
+        indexes bands, second dimension k-points, third is vector components.
     dipole_moment : ndarray, shape (3,)
         Dipole moment vector.
     omega_k : ndarray, shape (Nk, Nb)
@@ -53,50 +52,51 @@ def compute_gr0r(
     -------
     gr0r : ndarray, shape (Nb, Nr)
         Real-space coupling g(r) for each band and r-point.
-
-    Notes
-    -----
-    * g_k is computed per (k, band), then summed over k with the Fourier factor.
-    * The function assumes uniform discretization of k-points; if non-uniform
-      weights are needed, modify the prefactor accordingly.
     """
 
     # --- Helper: pad arrays to 3D ---
-    def pad_to_3d(array):
+    def pad_to_3d(array: np.ndarray) -> np.ndarray:
         array = np.atleast_2d(array)
         if array.shape[1] < 3:
             pad = np.zeros((array.shape[0], 3 - array.shape[1]))
             array = np.hstack([array, pad])
         return array
 
-    kpts = pad_to_3d(kpts)
-    rpts = pad_to_3d(rpts)
+    kpts = pad_to_3d(kpts)  # Nk x 3
+    rpts = pad_to_3d(rpts)  # Nr x 3
 
-    Nk = kpts.shape[0]
+    Nb, Nk, comp = E_k_r0.shape
 
     # --- Input sanity checks ---
     assert (
-        E_k_r0.shape[0] == 3
-    ), "First dimension of E_k_r0 must be 3 (vector components)."
+        comp == 3
+    ), f"Last dimension of E_k_r0 must be 3 (vector components), got {comp}."
     assert dipole_moment.shape == (3,), "Dipole moment must be a 3-component vector."
+    assert omega_k.shape == (
+        Nk,
+        Nb,
+    ), f"omega_k must have shape (Nk, Nb), got {omega_k.shape}."
     assert (
-        omega_k.shape[0] == Nk
-    ), "omega_k first dimension must match number of k-points."
+        kpts.shape[0] == Nk
+    ), f"Number of k-points {kpts.shape[0]} does not match Nk={Nk}."
 
-    # --- Dipole · Electric field: shape (Nk, Nb) ---
-    dipole_times_field = np.tensordot(dipole_moment, E_k_r0, axes=([0], [0]))
+    # --- Compute dipole · field: shape (Nb, Nk) ---
+    # Vectorized dot product over last dimension
+    dipole_times_field = np.einsum("i,bki->bk", dipole_moment, E_k_r0)
 
     # --- Prefactor: shape (Nk, Nb) ---
     prefactor = -1j * const * np.sqrt(omega_k / (2 * Nk))
+    # Transpose to match dipole_times_field: Nb x Nk
+    prefactor = prefactor.T
 
-    # --- Compute g_k(r0) ---
-    gk = prefactor * dipole_times_field  # shape (Nk, Nb)
+    # --- Compute g_k(r0): Nb x Nk ---
+    gk = prefactor * dipole_times_field
 
-    # --- Fourier factor: exp(-i k·r) shape (Nk, Nr) ---
-    exponential_factor = np.exp(-1j * np.dot(kpts, rpts.T))  # shape (Nk, Nr)
+    # --- Fourier factor: exp(-i k·r) Nk x Nr ---
+    exponential_factor = np.exp(-1j * np.dot(kpts, rpts.T))  # Nk x Nr
 
-    # --- Fourier transform over k-points: result (Nb, Nr) ---
-    gr0r = np.dot(gk.T, exponential_factor)
+    # --- Sum over k-points: result Nb x Nr ---
+    gr0r = np.dot(gk, exponential_factor)  # (Nb x Nk) · (Nk x Nr) -> Nb x Nr
 
     return gr0r
 
@@ -123,11 +123,11 @@ def compute_ldos(
     ----------
     omega_eval : array_like
         Frequencies at which to evaluate the LDOS. Can be a scalar or 1D array.
-    omega_k : ndarray, shape (Nk, Nb)
-        Frequencies of the modes. Nk = number of k-points, Nb = number of bands.
-    E_k_r0 : ndarray, shape (Nk, Nb, 3)
-        Electric field at the emitter position for each mode. Last dimension
-        indexes vector components (x, y, z).
+    omega_k : ndarray, shape (Nk,)
+        Frequencies of the modes. Nk = number of k-points.
+    E_k_r0 : ndarray, shape (Nk, 3)
+        Electric field at the emitter position. Last dimension indexes vector
+        components (x, y, z).
     p_vec : ndarray, shape (3,)
         Dipole moment vector.
     eta : float, optional
@@ -153,24 +153,22 @@ def compute_ldos(
     """
     # --- Input validation ---
     omega_eval = np.atleast_1d(omega_eval)
-    Nk, Nb = omega_k.shape
-    assert E_k_r0.shape == (Nk, Nb, 3), "E_k_r0 must have shape (Nk, Nb, 3)"
+    (Nk,) = omega_k.shape
+    assert E_k_r0.shape == (Nk, 3), "E_k_r0 must have shape (Nk, 3)"
     assert p_vec.shape == (3,), "p_vec must be a 3-component vector"
 
-    # --- Dipole-field overlap: |p · E|^2, shape (Nk, Nb) ---
-    overlaps = (
-        np.abs(np.tensordot(E_k_r0, p_vec, axes=([2], [0]))) ** 2
-    )  # shape (Nk, Nb)
+    # --- Dipole-field overlap: |p · E|^2, shape (Nk,) ---
+    overlaps = np.abs(np.einsum("ki,i", E_k_r0, p_vec)) ** 2
 
     # --- Prefactor from g_k definition ---
-    prefactor = const**2 * omega_k / (2 * Nk)  # shape (Nk, Nb)
+    prefactor = const**2 * omega_k / (2 * Nk)  # shape (Nk,)
 
     # --- Lorentzian kernel ---
-    Δ = omega_eval[:, None, None] - omega_k[None, :, :]  # shape (Nω, Nk, Nb)
+    Δ = omega_eval[:, None] - omega_k[None, :]  # shape (Nω, Nk)
     L = (1 / np.pi) * eta / (Δ**2 + eta**2)
 
     # --- LDOS: sum over k and bands ---
-    ldos = np.sum(prefactor * overlaps * L, axis=(1, 2))
+    ldos = np.sum(prefactor * overlaps * L, axis=1)
 
     # --- Return scalar if input was scalar ---
     return ldos[0] if np.isscalar(omega_eval) else ldos
