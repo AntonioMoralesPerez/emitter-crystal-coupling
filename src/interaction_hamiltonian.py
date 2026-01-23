@@ -18,7 +18,7 @@ def make_light_matter_Hamiltonian(
     # ...
 
     ###  Definitions
-    N_orbitals = model.get_number_of_orbitals()
+    N_orbitals = model.get_num_orbitals()
     N_emitters = len(couplings)
 
     H_dimension = N_orbitals + N_emitters
