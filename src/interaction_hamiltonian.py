@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.linalg import sqrtm  # for matrix square root
 from scipy.sparse import csc_matrix  # for sparse matrices
 
 
@@ -19,7 +18,7 @@ def make_light_matter_Hamiltonian(
     # ...
 
     ###  Definitions
-    N_orbitals = np.shape(model._orb)[0]
+    N_orbitals = model.get_number_of_orbitals()
     N_emitters = len(couplings)
 
     H_dimension = N_orbitals + N_emitters
@@ -75,7 +74,7 @@ def make_light_matter_Hamiltonian(
     )
 
     ## Sum both parts and take the square root of the total Hamiltonian
-    H_bath = sqrtm(H_onsite + H_hoppings)
+    H_bath = H_onsite + H_hoppings
 
     ### Emitters + coupling Hamiltonian .......................................
 
