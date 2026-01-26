@@ -156,7 +156,7 @@ def make_light_matter_Hamiltonian(
         )
 
     if check_hermitian:
-        diff = H_total - H_total.getH()
+        diff = H_total - H_total.getH()  # type: ignore
         max_dev = np.max(np.abs(diff.data)) if diff.nnz else 0.0
         if max_dev > atol:
             raise ValueError(f"H_total is not Hermitian (max deviation {max_dev})")
