@@ -1,130 +1,164 @@
 import numpy as np
-from scipy.sparse import csc_matrix  # for sparse matrices
+from scipy.sparse import csc_matrix, diags, bmat
+from scipy.linalg import eigh
 
 
 def make_light_matter_Hamiltonian(
-    model, emitter_detunings=[0], couplings=[[[0.5], [0]]]
+    model,
+    emitter_detunings=(0.0,),
+    couplings=(((0.5,), (0,)),),
+    check_hermitian=True,
+    atol=1e-10,
 ):
-    # ...
-    #
-    # The idea is to create a sparce matrix (this is relevant to speed up calculations or even made
-    # them attainable). To do that you need to provide the non-zero matrix elements H_{ij} and their
-    # corresponding the indexes i,j.
-    #
-    # First, I create the bath Hamiltonian H_bath, given by the sum of H_onsite and H_hoppings. To do
-    # that, I use the ouptuts from a finite pythonTB model. The emitter's and interaction's Hamiltonians
-    # all together using the `emitter_detuning` and `couplings` inputs.
-    #
-    # ...
+    """
+    Construct the total light–matter Hamiltonian
 
-    ###  Definitions
-    N_orbitals = model.get_num_orbitals()
+        H = [[ H_emitters , V ],
+             [ V^†         , H_bath ]]
+
+    where H_bath = sqrt(Θ) with Θ the single-particle tight-binding Hamiltonian
+    defined by ``model``.
+
+    Parameters
+    ----------
+    model
+        Tight-binding model providing ``get_num_orbitals()``, ``_site_energies``
+        and ``_hoppings``.
+
+    emitter_detunings
+        Iterable of on-site energies for the emitters. If a single value is
+        provided and multiple emitters are present, it is broadcast.
+
+    couplings
+        Sequence of tuples ``(g_vals, bath_indices)``, one per emitter, where
+        ``g_vals[k]`` couples the emitter to bath orbital ``bath_indices[k]``.
+
+    check_hermitian
+        If True, explicitly checks Hermiticity of the final Hamiltonian.
+
+    atol
+        Absolute tolerance for numerical zeroing and Hermiticity checks.
+
+    Returns
+    -------
+    H_total : scipy.sparse.csc_matrix
+        Full light–matter Hamiltonian.
+
+    V : numpy.ndarray
+        Eigenvector matrix diagonalizing Θ (Θ = V diag(eigvals) V†).
+    """
+
+    # ------------------------------------------------------------------
+    # Dimensions
+    # ------------------------------------------------------------------
+    N_orbitals = int(model.get_num_orbitals())
     N_emitters = len(couplings)
-
     H_dimension = N_orbitals + N_emitters
 
-    if np.size(emitter_detunings) == 1 and N_emitters > 1:
-        emitter_detunings = emitter_detunings * N_emitters
-    # ...
-    # NOTE: if a single emitter_detunings is given, but more than one emitter is considered, we assume all  to
-    #       emitters to feature the same detuning value.
-    # ...
+    # Broadcast emitter detunings if needed
+    if np.isscalar(emitter_detunings):
+        emitter_detunings = [emitter_detunings] * N_emitters
+    elif len(emitter_detunings) == 1 and N_emitters > 1:
+        emitter_detunings = list(emitter_detunings) * N_emitters
 
-    ### Bath Hamiltonian ......................................................
+    if len(emitter_detunings) != N_emitters:
+        raise ValueError("Length of emitter_detunings must match number of emitters")
 
-    ## On-site energies ...
+    # ------------------------------------------------------------------
+    # 1. Construct Θ in real space (dense)
+    # ------------------------------------------------------------------
+    Theta = np.zeros((N_orbitals, N_orbitals), dtype=complex)
 
-    # define the on-site Hamiltonian as a sparce matrix
-    v_onsite = model._site_energies
-    i_onsite = np.arange(0, N_orbitals, 1) + N_emitters
-    j_onsite = np.arange(0, N_orbitals, 1) + N_emitters
+    for i, val in enumerate(model._site_energies):
+        Theta[i, i] += val
 
-    H_onsite = csc_matrix(
-        (v_onsite, (i_onsite, j_onsite)), shape=(H_dimension, H_dimension)
+    for val, i, j in model._hoppings:
+        Theta[i, j] += val
+        Theta[j, i] += np.conjugate(val)
+
+    # ------------------------------------------------------------------
+    # 2. Diagonalize Θ and form H_bath = sqrt(Θ)
+    # ------------------------------------------------------------------
+    eigvals, V = eigh(Theta)
+    omegas = np.sqrt(np.clip(eigvals, 0.0, None))
+
+    H_bath = V @ np.diag(omegas) @ V.conj().T
+    H_bath[np.abs(H_bath) < atol] = 0.0
+    H_bath_csc = csc_matrix(H_bath)
+
+    # ------------------------------------------------------------------
+    # 3. Emitters
+    # ------------------------------------------------------------------
+    H_emitters = diags(
+        np.asarray(emitter_detunings, dtype=complex),
+        offsets=0,
+        shape=(N_emitters, N_emitters),
+        format="csc",
     )
 
-    ## Hopping terms ...
+    # ------------------------------------------------------------------
+    # 4. Coupling block V (emitters × bath)
+    # ------------------------------------------------------------------
+    coupling_vals = []
+    i_coupling = []
+    j_coupling = []
 
-    # define the hopping Hamiltonian as a sparce matrix
-    hopping_vals_aux1 = np.array(model._hoppings)[:, 0]  # get the hopping values
-    hopping_indx_aux1 = np.array(model._hoppings)[:, [1, 2]]  # get the hopping indexes
-    hopping_vals_aux2 = np.conjugate(
-        hopping_vals_aux1
-    )  # conjugate of the hopping values
-    hopping_indx_aux2 = hopping_indx_aux1[:, [1, 0]]  # exchange the i and j indexes
+    for emitter_idx, (g_vals, bath_indices) in enumerate(couplings):
+        g_vals = np.asarray(g_vals, dtype=complex)
+        bath_indices = np.asarray(bath_indices, dtype=int)
 
-    hopping_vals = np.hstack([hopping_vals_aux1, hopping_vals_aux2])
-    hopping_indx = np.vstack([hopping_indx_aux1, hopping_indx_aux2]) + N_emitters
+        if g_vals.shape != bath_indices.shape:
+            raise ValueError(
+                f"Emitter {emitter_idx}: g_vals and bath_indices must have same shape"
+            )
 
-    # ...
-    # NOTE_1: The aux quantities are defined to make the Hamiltonian Hermitian. The `model._hoppings`
-    #         output accounts for the coupling between sites in one direction, but the conjugate term
-    #         must be considered as well.
-    # NOTE_2: The "+ N_emitters" in `hopping_indx` is there to shift the indexes so that H_bath occupies
-    #         the lower right corner in the total Hamiltonian.
-    # ...
+        if (
+            bath_indices.min(initial=0) < 0
+            or bath_indices.max(initial=-1) >= N_orbitals
+        ):
+            raise ValueError(
+                f"Emitter {emitter_idx}: bath index out of range [0, {N_orbitals-1}]"
+            )
 
-    # define sparse hoppings matrix
-    v_hopping = hopping_vals
-    i_hopping = hopping_indx[:, 0]
-    j_hopping = hopping_indx[:, 1]
+        i_coupling.append(np.full_like(bath_indices, emitter_idx))
+        j_coupling.append(bath_indices)
+        coupling_vals.append(g_vals)
 
-    H_hoppings = csc_matrix(
-        (v_hopping, (i_hopping, j_hopping)), shape=(H_dimension, H_dimension)
+    if coupling_vals:
+        i_coupling = np.hstack(i_coupling)
+        j_coupling = np.hstack(j_coupling)
+        coupling_vals = np.hstack(coupling_vals)
+    else:
+        i_coupling = np.array([], dtype=int)
+        j_coupling = np.array([], dtype=int)
+        coupling_vals = np.array([], dtype=complex)
+
+    H_coupling = csc_matrix(
+        (coupling_vals, (i_coupling, j_coupling)),
+        shape=(N_emitters, N_orbitals),
+        dtype=complex,
     )
 
-    ## Sum both parts and take the square root of the total Hamiltonian
-    H_bath = H_onsite + H_hoppings
+    # ------------------------------------------------------------------
+    # 5. Full Hamiltonian
+    # ------------------------------------------------------------------
+    H_total = bmat(
+        [[H_emitters, H_coupling], [H_coupling.getH(), H_bath_csc]],
+        format="csc",
+    )
 
-    ### Emitters + coupling Hamiltonian .......................................
-
-    # define the emitters and interaction Hamiltonians as a sparse matrix
-
-    # define the non-zero values and indexes for the emitters' Hamiltonian
-    v_emitters = np.array(emitter_detunings)
-    i_emitters = np.arange(0, N_emitters, 1)
-    j_emitters = np.arange(0, N_emitters, 1)
-
-    # define the non-zero values and indexes for the interactions' Hamiltonian
-    coupling_vals_list = []
-    coupling_indx_i_list = []
-    coupling_indx_j_list = []
-    for i in range(N_emitters):
-        coupling_vals_list.append(couplings[i][0])
-        coupling_indx_i_list.append(
-            list(i * np.ones(np.shape(couplings[i][1]), dtype=int))
+    # ------------------------------------------------------------------
+    # 6. Consistency checks
+    # ------------------------------------------------------------------
+    if H_total.shape != (H_dimension, H_dimension):
+        raise ValueError(
+            f"Incorrect Hamiltonian shape {H_total.shape}, expected {(H_dimension, H_dimension)}"
         )
-        coupling_indx_j_list.append(list(np.array(couplings[i][1]) + N_emitters))
 
-    coupling_vals_aux1 = np.hstack(coupling_vals_list)
-    coupling_indx_i_aux1 = np.hstack(coupling_indx_i_list)
-    coupling_indx_j_aux1 = np.hstack(coupling_indx_j_list)
+    if check_hermitian:
+        diff = H_total - H_total.getH()
+        max_dev = np.max(np.abs(diff.data)) if diff.nnz else 0.0
+        if max_dev > atol:
+            raise ValueError(f"H_total is not Hermitian (max deviation {max_dev})")
 
-    coupling_vals_aux2 = np.conjugate(coupling_vals_aux1)
-    coupling_indx_i_aux2 = coupling_indx_j_aux1
-    coupling_indx_j_aux2 = coupling_indx_i_aux1
-
-    v_coupling = np.hstack([coupling_vals_aux1, coupling_vals_aux2])
-    i_coupling = np.hstack([coupling_indx_i_aux1, coupling_indx_i_aux2])
-    j_coupling = np.hstack([coupling_indx_j_aux1, coupling_indx_j_aux2])
-
-    # ...
-    # NOTE: I use similar procedure to the one use to create the H_hoppings matrix. This depends on
-    #       the particular way the coupling object is defined though. Therefore, if we change that,
-    #       we will need to revisit this part.
-    # ...
-
-    # merge the emitters' and interactions' values and indexes
-    v_all = np.hstack((v_emitters, v_coupling))
-    i_all = np.hstack((i_emitters, i_coupling))
-    j_all = np.hstack((j_emitters, j_coupling))
-
-    H_emitters_and_coupling = csc_matrix(
-        (v_all, (i_all, j_all)), shape=(H_dimension, H_dimension)
-    )
-
-    ### Total Hamiltonian
-    H_total = H_bath + H_emitters_and_coupling
-
-    ### Output ...
-    return H_total
+    return H_total, V
