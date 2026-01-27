@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.sparse import csc_matrix, diags, bmat
+from scipy.sparse import csr_matrix, diags, bmat
 from scipy.linalg import eigh
 
 
@@ -41,7 +41,7 @@ def make_light_matter_Hamiltonian(
 
     Returns
     -------
-    H_total : scipy.sparse.csc_matrix
+    H_total : scipy.sparse.csr_matrix
         Full light–matter Hamiltonian.
 
     V : numpy.ndarray
@@ -84,7 +84,7 @@ def make_light_matter_Hamiltonian(
 
     H_bath = V @ np.diag(omegas) @ V.conj().T
     H_bath[np.abs(H_bath) < atol] = 0.0
-    H_bath_csc = csc_matrix(H_bath)
+    H_bath_csc = csr_matrix(H_bath)
 
     # ------------------------------------------------------------------
     # 3. Emitters
@@ -93,7 +93,7 @@ def make_light_matter_Hamiltonian(
         np.asarray(emitter_detunings, dtype=complex),
         offsets=0,
         shape=(N_emitters, N_emitters),
-        format="csc",
+        format="csr",
     )
 
     # ------------------------------------------------------------------
@@ -133,7 +133,7 @@ def make_light_matter_Hamiltonian(
         j_coupling = np.array([], dtype=int)
         coupling_vals = np.array([], dtype=complex)
 
-    H_coupling = csc_matrix(
+    H_coupling = csr_matrix(
         (coupling_vals, (i_coupling, j_coupling)),
         shape=(N_emitters, N_orbitals),
         dtype=complex,
@@ -144,7 +144,7 @@ def make_light_matter_Hamiltonian(
     # ------------------------------------------------------------------
     H_total = bmat(
         [[H_emitters, H_coupling], [H_coupling.getH(), H_bath_csc]],
-        format="csc",
+        format="csr",
     )
 
     # ------------------------------------------------------------------
