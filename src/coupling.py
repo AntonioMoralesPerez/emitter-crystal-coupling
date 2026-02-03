@@ -22,7 +22,7 @@ def compute_gr0r(
     where N is the number of k-points, p is the dipole moment, and E_k(r0)
     is the electric field at the emitter position. The real-space coupling is
 
-        g(r) = Σ_k g_k(r0) * exp(-i k · r).
+        g_r(r0) = Σ_k g_k(r0) * exp(-i k · r).
 
     Parameters
     ----------
@@ -43,7 +43,7 @@ def compute_gr0r(
     Returns
     -------
     gr0r : ndarray, shape (Nb, Nr)
-        Real-space coupling g(r) for each band and r-point.
+        Real-space coupling g_r(r0) for each band and r-point.
     """
 
     # --- Helper: pad arrays to 3D ---
