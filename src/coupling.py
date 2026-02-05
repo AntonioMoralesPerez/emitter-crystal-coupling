@@ -1,6 +1,6 @@
 import numpy as np
 
-from constants import K_CONST, LORENTIAN_BROADENING
+from .constants import K_CONST, LORENTIAN_BROADENING
 
 
 def compute_gr0r(
