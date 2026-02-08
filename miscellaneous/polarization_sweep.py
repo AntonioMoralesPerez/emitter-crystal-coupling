@@ -66,14 +66,14 @@ N_CELLS = 41  # number of unit cells in each direction
 NK = 64  # number of points per direction for the Monkhorst-Pack grid
 
 # angles for the dipole moments of the quantum emitters and its dimensionless value
-THETAS = np.linspace(90, 140, 10) * np.pi / 180
+THETAS = np.linspace(90, 140, 6) * np.pi / 180
 P_DIMLESS = 1e-2  # TODO: modify when you know which value should we put
 DETUNING_FREQ = 0.274587  # [c/a]
 
 # Position of the quantum emitter in units of the lattice constant 'a'
 # list of positions are also allowed
 N_EMITTERS = 1
-R0 = [0.25, 0.5]
+R0 = [0.0, 0.0]
 
 # small inputs for the tight-binding model
 LAT = [[1, 0], [0, 1]]
