@@ -27,7 +27,7 @@ NK = 64  # number of points per direction for the Monkhorst-Pack grid
 
 # Position of the quantum emitter in units of the lattice constant 'a'
 # list of positions are also allowed
-R0_LIST = [[0.5, 0.5]]
+R0_LIST = [[-0.5, 0.5]]
 
 # ---------------------------------------------------------------------------- #
 

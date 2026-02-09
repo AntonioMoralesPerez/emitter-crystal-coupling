@@ -37,3 +37,40 @@ def binary_entropy(p: Union[float, np.ndarray], base: float = np.e) -> np.ndarra
     """
     p = np.clip(p, 1e-12, 1 - 1e-12)  # avoid log(0)
     return (-p * np.log(p) - (1 - p) * np.log(1 - p)) / np.log(base)
+
+
+def quadrant_entropy(x: np.array, y: np.array, amplitudes: np.array):
+    """
+    Parameters
+    ----------
+    x, y : (Nr,) arrays
+        Coordinates of bath sites
+    amplitudes : (Nt, Nr) complex array
+        Bath amplitudes C_r(t)
+
+    Returns
+    -------
+    S : (Nt,) array
+        Quadrant entropy vs time
+    p : (Nt, 4) array
+        Quadrant probabilities [++, -+, --, +-]
+    """
+    masks = np.stack(
+        [
+            (x > 0) & (y > 0),
+            (x < 0) & (y > 0),
+            (x < 0) & (y < 0),
+            (x > 0) & (y < 0),
+        ]
+    )  # (4, Nr)
+
+    weights = np.abs(amplitudes) ** 2  # (Nt, Nr)
+    P = weights @ masks.T  # (Nt, 4)
+    p = P  # / P.sum(axis=1, keepdims=True)  # normalize
+
+    with np.errstate(divide="ignore", invalid="ignore"):  # for avoiding log(0)
+        S = -np.nansum(p * np.log(p), axis=1)
+
+    print("checked")
+
+    return S, p

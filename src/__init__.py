@@ -19,4 +19,4 @@ from .utils import (
 from .monkhorst_pack import monkhorst_pack_sampling
 from .coupling import compute_gr0r, compute_ldos
 from .interaction_hamiltonian import make_light_matter_Hamiltonian
-from .entropy import binary_entropy
+from .entropy import binary_entropy, quadrant_entropy

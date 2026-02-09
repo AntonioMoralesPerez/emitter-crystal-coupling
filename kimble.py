@@ -78,6 +78,7 @@ THETA_2 = (135) * np.pi / 180
 P_DIMLESS = (
     1e-2  # TODO: not the value specified in the article. Consider a possible change
 )
+N_EMITTERS = 1
 
 # Position of the quantum emitter in units of the lattice constant 'a'
 # list of positions are also allowed
@@ -100,7 +101,7 @@ K_PATH = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 K_LABEL = [r"$\Gamma$", r"X", r"M", r"$\Gamma$"]
 
 T0 = 0  # initial time for the field snapshots
-TF = 50  # final time for the field snapshots
+TF = 80  # final time for the field snapshots
 T_STEPS = 100  # number of time steps for the field snapshots
 TIME_INDEX = 50  # time index to consider for the field snapshots
 
@@ -196,15 +197,14 @@ Eks = np.asarray(data["Eks"])  # Electric fields, shape: (Nr, Nb, Nk, 3)
 kpts = np.asarray(data["kpts"])  # k-points in cartesian coordinates, shape: (Nk, 3)
 
 # Define the dipole moments for the emitters
-dipole_moment_1 = P_DIMLESS * np.array([np.cos(THETA_1), np.sin(THETA_1), 0])
-dipole_moment_2 = P_DIMLESS * np.array([np.cos(THETA_2), np.sin(THETA_2), 0])
+thetas = [THETA_1, THETA_2]
+dipoles = [P_DIMLESS * np.array([np.cos(theta), np.sin(theta), 0]) for theta in thetas]
 
 # ---------------------------------------------------------------------------- #
 # Select the band of interest and position r0
 # ---------------------------------------------------------------------------- #
 
 E_k_r0 = Eks[0, :, :, :]  # Shape: (Nb, Nk, 3)
-omega_k = omegas  # Shape: (Nk, Nb)
 
 # ---------------------------------------------------------------------------- #
 # Define the real-space grid for interpolation
@@ -214,16 +214,12 @@ yg = np.linspace(-5, 5, 101)
 rpts = mf.meshgrid_points(xg, yg)  # Shape: (Nx*Ny, 2)
 
 # ---------------------------------------------------------------------------- #
-# Compute g(r0,r) for each dipole moment, shape (Nb, Nr)
+# Compute g(r0,r) for each dipole moment, shape (Nr,)
 # ---------------------------------------------------------------------------- #
-gr0rs_1 = mf.compute_gr0r(E_k_r0, dipole_moment_1, omega_k, kpts, rpts)
-gr0rs_2 = mf.compute_gr0r(E_k_r0, dipole_moment_2, omega_k, kpts, rpts)
-
-# ---------------------------------------------------------------------------- #
-# Pick the band of interest from g(r0,r), shape (Nr,)
-# ---------------------------------------------------------------------------- #
-gr0r_1 = gr0rs_1[BAND_INDEX, :]
-gr0r_2 = gr0rs_2[BAND_INDEX, :]
+gr0rs = [
+    mf.compute_gr0r(E_k_r0, dipole, omegas, kpts, rpts)[BAND_INDEX, :]
+    for dipole in dipoles
+]
 
 # ---------------------------------------------------------------------------- #
 fig, axs = plt.subplots(2, 2)  # two-column width
@@ -248,8 +244,8 @@ ax.set_ylabel(r"$y/a$")
 ax.set_aspect("equal")
 ax.text(-0.2, 1.1, panel_labels[0], transform=ax.transAxes)
 
-mf.draw_arrow(ax, R0, THETA_1, dip_colors[0], r"$\theta_1$", length=arrow_length)
-mf.draw_arrow(ax, R0, THETA_2, dip_colors[1], r"$\theta_2$", length=arrow_length)
+for i, theta in enumerate(thetas):
+    mf.draw_arrow(ax, R0, theta, dip_colors[i], rf"$\theta_{i+1}$", length=arrow_length)
 
 # ==============================================================================
 # --- Second quadrant: TE bands (b)
@@ -270,80 +266,51 @@ ax.set_title("TE modes")
 ax.text(-0.2, 1.05, panel_labels[1], transform=ax.transAxes)
 
 # ==============================================================================
-# --- Third quadrant: g(r0,r) dipole 1 (c)
+# --- Third and fourth quadrant: g(r0,r) for both dipoles (c-d)
 # ==============================================================================
 # define a maximum for the color scale
-vmax = max(np.abs(gr0r_1).max(), np.abs(gr0r_2).max())
-ax = axs[1, 0]
-sc2 = ax.scatter(
-    rpts[:, 0],
-    rpts[:, 1],
-    c=np.abs(gr0r_1),  # take absolute value for plotting
-    s=mf.marker_size(len(rpts)),
-    marker="o",
-    cmap="inferno",
-    vmin=0,
-    vmax=vmax,
-)
-cbar1 = fig.colorbar(sc2, ax=ax, label=r"$|g_\mathbf{r}(\mathbf{r}_0)| \, [c/a]$")
-cbar1.formatter.set_powerlimits((0, 0))  # type: ignore
+vmax = np.abs(gr0rs).max()
 
-ax.set_title(
-    r"$\theta_1 = {:.0f}^\circ$".format(THETA_1 * 180 / np.pi), color=dip_colors[0]
-)
-ax.set_xlabel(r"$x/a$")
-ax.set_ylabel(r"$y/a$")
-ax.set_aspect("equal")
-ax.text(-0.2, 1.1, panel_labels[2], transform=ax.transAxes)
+for i, theta in enumerate(thetas):
+    ax = axs[1, i]
 
-# ==============================================================================
-# --- Fourth quadrant: g(r0,r) dipole 2 (d)
-# ==============================================================================
-ax = axs[1, 1]
-sc3 = ax.scatter(
-    rpts[:, 0],
-    rpts[:, 1],
-    c=np.abs(gr0r_2),  # take absolute value for plotting
-    s=mf.marker_size(len(rpts)),
-    marker="o",
-    cmap="inferno",
-    vmin=0,
-    vmax=vmax,
-)
-cbar2 = fig.colorbar(sc3, ax=ax, label=r"$|g_\mathbf{r}(\mathbf{r}_0)| \, [c/a]$")
-cbar2.formatter.set_powerlimits((0, 0))  # type: ignore
+    sc2 = ax.scatter(
+        rpts[:, 0],
+        rpts[:, 1],
+        c=np.abs(gr0rs[i]),  # take absolute value for plotting
+        s=mf.marker_size(len(rpts)),
+        marker="o",
+        cmap="inferno",
+        vmin=0,
+        vmax=vmax,
+    )
+    cbar1 = fig.colorbar(sc2, ax=ax, label=r"$|g_\mathbf{r}(\mathbf{r}_0)| \, [c/a]$")
+    cbar1.formatter.set_powerlimits((0, 0))
 
-ax.set_title(
-    r"$\theta_2 = {:.0f}^\circ$".format(THETA_2 * 180 / np.pi), color=dip_colors[1]
-)
-ax.set_xlabel(r"$x/a$")
-ax.set_ylabel(r"$y/a$")
-ax.set_aspect("equal")
-ax.text(-0.2, 1.1, panel_labels[3], transform=ax.transAxes)
+    ax.set(
+        title=rf"$\theta_{i+1} = {theta*180/np.pi:.0f}º$",
+        xlabel=r"$x/a$",
+        ylabel=r"$y/a$",
+        aspect="equal",
+    )
+    ax.title.set_color(dip_colors[i])
+    ax.text(-0.2, 1.1, panel_labels[2], transform=ax.transAxes)
 
 # --- Layout and save ---
 fig.tight_layout()
-fig.savefig(f"./figures/miscellaneous/{R0}_figure2.png")
 plt.show()
+fig.savefig(f"./figures/figure2.png")
 
 # ------------------------------------------------------------------------------
 # Compute the LDOS to see how the emitters couple to the photonic bath
 # ------------------------------------------------------------------------------
-
-# -----------------------------
-# Define dipoles
-# -----------------------------
-thetas = [THETA_1, THETA_2]
-dipoles = [P_DIMLESS * np.array([np.cos(theta), np.sin(theta), 0]) for theta in thetas]
-dip_colors = ["#1f77b4", "#ff7f0e"]  # colors for each dipole
+omega_k = omegas[:, BAND_INDEX]  # Shape: (Nk,)
 
 # Frequency range for LDOS
-omega_eval = np.linspace(np.min(omegas), np.max(omegas), 500)
+omega_eval = np.linspace(np.min(omega_k), np.max(omega_k), 500)
 
 # Fields for the selected band
 E_k_r0_band = E_k_r0[BAND_INDEX, :, :]  # Shape: (Nk, 3)
-
-omega_k = omegas[:, BAND_INDEX]  # Shape: (Nk,)
 
 # -----------------------------
 # Compute LDOS for each dipole
@@ -380,7 +347,7 @@ ax.legend()
 
 fig.tight_layout()
 plt.show()
-fig.savefig(f"./figures/miscellaneous/{R0}_ldos_difference.png")
+fig.savefig(f"./figures/ldos_difference.png")
 
 # ------------------------------------------------------------------------------
 # Compute the time evolution of the emitter and the bath
@@ -446,17 +413,6 @@ band_energies_clipped = np.clip(band_energies, a_min=0.0, a_max=None)
 # -------------------------------------------------
 omega = np.sqrt(band_energies_clipped).reshape(NK, NK)
 
-# load the data from a file
-data_fields = mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_{R0}.pkl")
-Eks = data_fields["Eks"]  # shape: (Nr, Nb, Nk, 3)
-Eks_r0 = Eks[0, :, :, :]  # shape: (Nb, Nk, 3)
-omega_ks = data_fields["freqs"]  # shape: (Nk, Nb)
-kpts = data_fields["kpts"]  # shape: (Nk, 3)
-
-# .. Select the dipole moment
-thetas = [THETA_1, THETA_2]
-dipoles = [P_DIMLESS * np.array([np.cos(theta), np.sin(theta), 0]) for theta in thetas]
-
 # %% Finite model definition
 
 # Cut the system
@@ -479,9 +435,9 @@ rjpts = mf.meshgrid_points(xjg, yjg, indexing="xy")
 
 gr0rjs = [
     mf.compute_gr0r(
-        E_k_r0=Eks_r0,
+        E_k_r0=E_k_r0,
         dipole_moment=dipole,
-        omega_k=omega_ks,
+        omega_k=omegas,
         kpts=kpts,
         rpts=rjpts,
     )
@@ -530,9 +486,47 @@ psi0[0] = 1
 
 # Compute time evolution
 psit_1 = expm_multiply(-1j * H_total_1, psi0, T0, TF, T_STEPS, endpoint=True)
-psit_2 = expm_multiply(
-    -1j * H_total_2, psi0, T0, TF, T_STEPS, endpoint=True
-)  # Prepare data to be plotted ...
+psit_2 = expm_multiply(-1j * H_total_2, psi0, T0, TF, T_STEPS, endpoint=True)
+
+# ------------------------------------------------------------------------------
+# place another emitter at [-0.5,0.5] to see if it is exited when θ = 90º and
+# not when θ = 130º
+# ------------------------------------------------------------------------------
+new_R = [-0.5, 0.5]
+new_dipole = P_DIMLESS * np.array([1, 0, 0])
+
+add_data = mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_{new_R}.pkl")
+new_omegas = np.asarray(add_data["freqs"])  # (Nk, Nb)
+E_k_R = np.asarray(add_data["Eks"])[0, :, :, :]  # (Nb, Nk, 3)
+new_kpts = np.asarray(add_data["kpts"])
+
+gRrjs_norm = mf.compute_gr0r(E_k_R, new_dipole, new_omegas, new_kpts, rjpts) / np.sqrt(
+    np.abs(TAU_1)
+)  # (Nb, Nr)
+
+new_value = gRrjs_norm[BAND_INDEX, :]
+
+new_couplings_1 = [[list(values[0]), list(indexes)], [list(new_value), list(indexes)]]
+new_couplings_2 = [[list(values[1]), list(indexes)], [list(new_value), list(indexes)]]
+
+# build the light-matter Hamiltonian
+new_H_1, _ = mf.make_light_matter_Hamiltonian(
+    finiteModel, detuning_freq_norm, new_couplings_1
+)
+new_H_2, _ = mf.make_light_matter_Hamiltonian(
+    finiteModel, detuning_freq_norm, new_couplings_2
+)
+
+new_psi0 = np.zeros(new_H_1.shape[0])
+new_psi0[0] = 1
+
+# Compute time evolution
+new_psit_1 = expm_multiply(-1j * new_H_1, new_psi0, T0, TF, T_STEPS, endpoint=True)
+new_psit_2 = expm_multiply(-1j * new_H_2, new_psi0, T0, TF, T_STEPS, endpoint=True)
+
+# ------------------------------------------------------------------------------
+# Prepare data to be plotted
+# ------------------------------------------------------------------------------
 
 # get emitter component of the overall wavefunction
 mod_Ce_squared_1 = np.abs(psit_1[:, 0]) ** 2
@@ -546,81 +540,113 @@ entropy_2 = mf.binary_entropy(mod_Ce_squared_2)
 positions = mf.find_positions(finiteModel._orb, finiteModel._lat)
 
 # get photonic component of the overall wave function at selected time, i.e, tvals[time_index]
-mod_Cr_squared_1 = np.abs(psit_1[TIME_INDEX, 1 : np.shape(psit_1)[1]]) ** 2
-mod_Cr_squared_2 = np.abs(psit_2[TIME_INDEX, 1 : np.shape(psit_2)[1]]) ** 2
+mod_Cr_squared_1 = np.abs(psit_1[TIME_INDEX, N_EMITTERS:]) ** 2
+mod_Cr_squared_2 = np.abs(psit_2[TIME_INDEX, N_EMITTERS:]) ** 2
 
-x = positions[:, 0]
-y = positions[:, 1]
+x = positions[:, 0] - N_CELLS // 2  # shift the crystal to place emitter at the center
+y = positions[:, 1] - N_CELLS // 2
 z1 = mod_Cr_squared_1
 z2 = mod_Cr_squared_2
 
-fig, axs = plt.subplots(2, 2)  # no figsize unless absolutely needed
-panel_labels = ["(a)", "(b)", "(c)", "(d)"]
+# get all the emitters dynamics
+new_mod_Ce_1 = np.abs(new_psit_1[:, 0]) ** 2
+new_mod_Ce_2 = np.abs(new_psit_2[:, 0]) ** 2
+new_mod_Ce_probe_1 = np.abs(new_psit_1[:, 1]) ** 2
+new_mod_Ce_probe_2 = np.abs(new_psit_2[:, 1]) ** 2
 
+# compute the concurrence
+concurrence_1 = 2 * np.abs(new_mod_Ce_1 * np.conj(new_mod_Ce_probe_1))
+concurrence_2 = 2 * np.abs(new_mod_Ce_2 * np.conj(new_mod_Ce_probe_2))
+
+# ------------------------------------------------------------------------------
+
+fig, axs = plt.subplots(3, 2)  # no figsize unless absolutely needed
+panel_labels = ["(a)", "(b)", "(c)", "(d)", "(e)", "(f)"]
+
+# ------------------------------------------------------------------------------
+# First quadrant (a)
+# ------------------------------------------------------------------------------
 ax = axs[0, 0]
 c = ax.contourf(kx_grid, ky_grid, omega, levels=12, cmap="viridis")
-fig.colorbar(c, ax=ax, label=r"$\omega_\mathbf{k}\,[J_1^{-1}]$", pad=0.07)
+fig.colorbar(c, ax=ax, label=r"$\omega_\mathbf{k}\,[\tau_1^{-1/2}]$", pad=0.07)
 
 ax.contour(
     kx_grid, ky_grid, omega, levels=[detuning_freq_norm], colors="k", linewidths=2.0
 )
 
-ax.set(xlabel=r"$k_x$", ylabel=r"$k_y$", title=rf"$\omega_0/J_1 = {detuning_freq:.2f}$")
+ax.set(
+    xlabel=r"$k_x$",
+    ylabel=r"$k_y$",
+    title=rf"$\omega_0/\tau_1^{-1/2} = {detuning_freq:.2f}$",
+)
 ax.set_aspect("equal")
-ax.text(-0.2, 1.1, panel_labels[0], transform=ax.transAxes)
+# ax.text(-0.2, 1.1, panel_labels[0], transform=ax.transAxes)
+
+# ------------------------------------------------------------------------------
+# second quadrant (b)
+# ------------------------------------------------------------------------------
 
 ax1 = axs[0, 1]
-
-colors = ["#1f77b4", "#ff7f0e"]  # consistent with figure 2
 
 (l1,) = ax1.plot(
     tvals,
     mod_Ce_squared_1,
     lw=3,
-    color=colors[0],
+    color=dip_colors[0],
     label=r"$|C_e(t)|^2,\;\theta=90^\circ$",
 )
 (l2,) = ax1.plot(
     tvals,
     mod_Ce_squared_2,
     lw=2,
-    color=colors[1],
+    color=dip_colors[1],
     alpha=0.9,
     label=r"$|C_e(t)|^2,\;\theta=135^\circ$",
 )
 
 ax1.set(
-    xlabel=r"$t\,[J_1^{-1}]$",
+    xlabel=r"$t\,[\tau_1^{-1/2}]$",
     ylabel=r"$|C_e(t)|^2$",
-    title=rf"$\omega_0/J_1 = {detuning_freq:.2f}$, $R_0/a$={R0}",
+    title=rf"$\omega_0/\tau_1^{-1/2} = {detuning_freq:.2f}$",
+    xscale="log",
+    yscale="log",
 )
 
 ax2 = ax1.twinx()
 (l3,) = ax2.plot(
-    tvals, entropy_1, ls="--", color=colors[0], lw=3, label=r"$S(t),\;\theta=90^\circ$"
+    tvals,
+    entropy_1,
+    ls="--",
+    color=dip_colors[0],
+    lw=3,
+    label=r"$S(t),\;\theta=90^\circ$",
 )
 (l4,) = ax2.plot(
     tvals,
     entropy_2,
     ls="--",
-    color=colors[1],
+    color=dip_colors[1],
     alpha=0.9,
     lw=2.0,
     label=r"$S(t),\;\theta=135^\circ$",
 )
-ax2.set_ylabel(r"$S(t)$")
+ax2.set(ylabel=r"$S(t)$")
 
 # --- combined legend ---
 lines = [l1, l2, l3, l4]
 labels = [line.get_label() for line in lines]
 
-ax1.legend(lines, labels, loc="upper right", fontsize=7, frameon=False)
-ax1.text(-0.2, 1.05, panel_labels[1], transform=ax1.transAxes)
+# ax1.legend(lines, labels, loc="upper right", fontsize=7, frameon=False)
+# ax1.text(-0.2, 1.05, panel_labels[1], transform=ax1.transAxes)
+
+# ------------------------------------------------------------------------------
+# Third and fourth quadrant (c-d)
+# ------------------------------------------------------------------------------
 
 vmax = max(z1.max(), z2.max())
 
 for ax, z, theta, color, label in zip(
-    axs[1], [z1, z2], [90, 135], colors, panel_labels[2:]
+    axs[1], [z1, z2], [90, 135], dip_colors, panel_labels[2:4]
 ):
     sc = ax.scatter(
         x,
@@ -633,55 +659,51 @@ for ax, z, theta, color, label in zip(
         marker="o",
     )
     ax.set(
-        xlabel=r"$x/a$",
-        ylabel=r"$y/a$",
-        title=rf"$\theta = {theta}^\circ$, $R_0/a$={R0}",
+        xlabel=r"$x/a$", ylabel=r"$y/a$", title=rf"$\theta = {theta}$º", aspect="equal"
     )
     ax.title.set_color(color)
     ax.set_aspect("equal")
-    ax.text(-0.2, 1.1, label, transform=ax.transAxes)
+    # ax.text(-0.2, 1.1, label, transform=ax.transAxes)
     cbar = fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{r}(t)|^2$")
-    cbar.formatter.set_powerlimits((0, 0))  # type: ignore
+    cbar.formatter.set_powerlimits((0, 0))
+
+# ------------------------------------------------------------------------------
+# Fith and sixth quadrant (e-f)
+# ------------------------------------------------------------------------------
+for i, theta in enumerate(thetas):
+    ax = axs[2, i]
+    ax.plot(tvals, new_mod_Ce_1, c="k")
+    ax.plot(tvals, new_mod_Ce_probe_1, c="k", ls="--")
+    ax2 = ax.twinx()
+    ax2.plot(tvals, concurrence_1, c="r")
+    ax.set(
+        title=rf"$\theta = {theta*180/np.pi}$º",
+        xlabel=r"$t [\tau_1^{-1/2}]$",
+        ylabel=r"$|C_e(t)|^2$",
+    )
+    ax.title.set_color(dip_colors[i])
+    ax2.set_ylabel(r"$C(t)$", color="r")
+    ax2.tick_params(axis="y", colors="r")
+    ax2.spines["right"].set_color("r")
 
 # Layout adjustment and save
-fig.tight_layout()
+fig.tight_layout(h_pad=2)
 plt.show()
-fig.savefig(rf"./figures/miscellaneous/{R0}_figure3.png")
+fig.savefig(rf"./figures/figure3.png")
 
 # ------------------------------------------------------------------------------
-# logarithm plot to try to see if the power-law is achieved
+# compute the photon-photon entropy for each cuadrant to show that the one with
+# four chanels is equal to log(4) and the one with two chanels is equatl to log(2)
 # ------------------------------------------------------------------------------
+amplitudes_1 = psit_1[:, N_EMITTERS:]
+amplitudes_2 = psit_2[:, N_EMITTERS:]
 
-fig, ax = plt.subplots()
+S_1, _ = mf.quadrant_entropy(x, y, amplitudes_1)
+S_2, _ = mf.quadrant_entropy(x, y, amplitudes_2)
 
-colors = ["#1f77b4", "#ff7f0e"]
+check_1 = np.allclose(S_1[1:], np.log(4), atol=1e-3)
+check_2 = np.allclose(S_2[1:], np.log(2), atol=1e-3)
 
-ax.plot(
-    tvals,
-    mod_Ce_squared_1,
-    lw=3,
-    color=colors[0],
-    label=r"$|C_e(t)|^2,\;\theta=90^\circ$",
-)
+print(f"Is S_dir equal to log(4) for θ = {THETA_1*180/np.pi:.0f}º?", check_1)
 
-ax.plot(
-    tvals,
-    mod_Ce_squared_2,
-    lw=2,
-    color=colors[1],
-    alpha=0.9,
-    label=r"$|C_e(t)|^2,\;\theta=135^\circ$",
-)
-
-ax.set(
-    xlabel=r"$t\,[J_1^{-1}]$",
-    ylabel=r"$|C_e(t)|^2$",
-    title=rf"$\omega_0/J_1$ = {detuning_freq:.2f}, $R_0/a$ = {R0}",
-    yscale="log",
-    xscale="log",
-)
-
-ax.legend(frameon=False)
-fig.tight_layout()
-plt.show()
-fig.savefig(f"./figures/miscellaneous/{R0}_powerlaw.png")
+print(f"Is S_dir equal to log(2) for θ = {THETA_2*180/np.pi:.0f}º?", check_2)
