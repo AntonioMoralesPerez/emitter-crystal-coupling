@@ -73,7 +73,7 @@ DETUNING_FREQ = 0.274587  # [c/a]
 # Position of the quantum emitter in units of the lattice constant 'a'
 # list of positions are also allowed
 N_EMITTERS = 1
-R0 = [0.0, 0.0]
+R0 = [-10, 10]
 
 # small inputs for the tight-binding model
 LAT = [[1, 0], [0, 1]]

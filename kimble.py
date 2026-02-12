@@ -68,7 +68,7 @@ DIRNAME_OUTPUT = "data/kimble/"  # directory to save outputs
 
 TOLERANCE = 1e-12  # tolerance for the MPB calculations
 
-N_CELLS = 61  # number of unit cells in each direction
+N_CELLS = 51  # number of unit cells in each direction
 
 NK = 64  # number of points per direction for the Monkhorst-Pack grid
 
@@ -207,17 +207,24 @@ dipoles = [P_DIMLESS * np.array([np.cos(theta), np.sin(theta), 0]) for theta in 
 E_k_r0 = Eks[0, :, :, :]  # Shape: (Nb, Nk, 3)
 
 # ---------------------------------------------------------------------------- #
-# Define the real-space grid for interpolation
+# Define the real-space grid, we are going to take some lattice sites
 # ---------------------------------------------------------------------------- #
-xg = np.linspace(-5, 5, 101)
-yg = np.linspace(-5, 5, 101)
-rpts = mf.meshgrid_points(xg, yg)  # Shape: (Nx*Ny, 2)
+num_r = 13
+xjg = np.arange(-(num_r // 2), num_r // 2 + 1, 1)
+yjg = np.arange(-(num_r // 2), num_r // 2 + 1, 1)
+rjpts = mf.meshgrid_points(xjg, yjg, indexing="xy")
 
 # ---------------------------------------------------------------------------- #
-# Compute g(r0,r) for each dipole moment, shape (Nr,)
+# Compute g_r(r0) for each dipole moment, shape (Nr,)
 # ---------------------------------------------------------------------------- #
-gr0rs = [
-    mf.compute_gr0r(E_k_r0, dipole, omegas, kpts, rpts)[BAND_INDEX, :]
+gr0rj_matrices = [
+    mf.compute_gr0r(
+        E_k_r0=E_k_r0,
+        dipole_moment=dipole,
+        omega_k=omegas,
+        kpts=kpts,
+        rpts=rjpts,
+    )[BAND_INDEX, :].reshape(num_r, num_r)
     for dipole in dipoles
 ]
 
@@ -266,20 +273,18 @@ ax.set_title("TE modes")
 ax.text(-0.2, 1.05, panel_labels[1], transform=ax.transAxes)
 
 # ==============================================================================
-# --- Third and fourth quadrant: g(r0,r) for both dipoles (c-d)
+# --- Third and fourth quadrant: g_r(r0) for both dipoles (c-d)
 # ==============================================================================
 # define a maximum for the color scale
-vmax = np.abs(gr0rs).max()
+vmax = np.abs(gr0rjs).max()
 
 for i, theta in enumerate(thetas):
     ax = axs[1, i]
 
-    sc2 = ax.scatter(
-        rpts[:, 0],
-        rpts[:, 1],
-        c=np.abs(gr0rs[i]),  # take absolute value for plotting
-        s=mf.marker_size(len(rpts)),
-        marker="o",
+    sc2 = ax.pcolormesh(
+        xjg,
+        yjg,
+        np.abs(gr0rj_matrices[i]),  # take absolute value for plotting
         cmap="inferno",
         vmin=0,
         vmax=vmax,
@@ -492,8 +497,8 @@ psit_2 = expm_multiply(-1j * H_total_2, psi0, T0, TF, T_STEPS, endpoint=True)
 # place another emitter at [-0.5,0.5] to see if it is exited when θ = 90º and
 # not when θ = 130º
 # ------------------------------------------------------------------------------
-new_R = [-0.5, 0.5]
-new_dipole = P_DIMLESS * np.array([1, 0, 0])
+new_R = [-10, 10]
+new_dipole = P_DIMLESS * np.array([0, 1, 0])
 
 add_data = mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_{new_R}.pkl")
 new_omegas = np.asarray(add_data["freqs"])  # (Nk, Nb)
@@ -698,8 +703,8 @@ fig.savefig(rf"./figures/figure3.png")
 amplitudes_1 = psit_1[:, N_EMITTERS:]
 amplitudes_2 = psit_2[:, N_EMITTERS:]
 
-S_1, _ = mf.quadrant_entropy(x, y, amplitudes_1)
-S_2, _ = mf.quadrant_entropy(x, y, amplitudes_2)
+S_1, p_1 = mf.quadrant_entropy(x, y, amplitudes_1)
+S_2, p_2 = mf.quadrant_entropy(x, y, amplitudes_2)
 
 check_1 = np.allclose(S_1[1:], np.log(4), atol=1e-3)
 check_2 = np.allclose(S_2[1:], np.log(2), atol=1e-3)

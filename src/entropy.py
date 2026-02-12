@@ -66,7 +66,7 @@ def quadrant_entropy(x: np.array, y: np.array, amplitudes: np.array):
 
     weights = np.abs(amplitudes) ** 2  # (Nt, Nr)
     P = weights @ masks.T  # (Nt, 4)
-    p = P  # / P.sum(axis=1, keepdims=True)  # normalize
+    p = P / P.sum(axis=1, keepdims=True)  # normalize
 
     with np.errstate(divide="ignore", invalid="ignore"):  # for avoiding log(0)
         S = -np.nansum(p * np.log(p), axis=1)
