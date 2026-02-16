@@ -494,11 +494,11 @@ psit_1 = expm_multiply(-1j * H_total_1, psi0, T0, TF, T_STEPS, endpoint=True)
 psit_2 = expm_multiply(-1j * H_total_2, psi0, T0, TF, T_STEPS, endpoint=True)
 
 # ------------------------------------------------------------------------------
-# place another emitter at [-0.5,0.5] to see if it is exited when θ = 90º and
+# place another emitter at [-5,5] to see if it is exited when θ = 90º and
 # not when θ = 130º
 # ------------------------------------------------------------------------------
-new_R = [-10, 10]
-new_dipole = P_DIMLESS * np.array([0, 1, 0])
+new_R = [-5, 5]
+new_dipole = np.array([1, 1, 0])
 
 add_data = mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_{new_R}.pkl")
 new_omegas = np.asarray(add_data["freqs"])  # (Nk, Nb)
@@ -554,14 +554,14 @@ z1 = mod_Cr_squared_1
 z2 = mod_Cr_squared_2
 
 # get all the emitters dynamics
-new_mod_Ce_1 = np.abs(new_psit_1[:, 0]) ** 2
-new_mod_Ce_2 = np.abs(new_psit_2[:, 0]) ** 2
-new_mod_Ce_probe_1 = np.abs(new_psit_1[:, 1]) ** 2
-new_mod_Ce_probe_2 = np.abs(new_psit_2[:, 1]) ** 2
+new_mod_Ces = [np.abs(new_psit_1[:, 0]) ** 2, np.abs(new_psit_2[:, 0]) ** 2]
+new_mod_Ce_probes = [np.abs(new_psit_1[:, 1]) ** 2, np.abs(new_psit_2[:, 1]) ** 2]
 
 # compute the concurrence
-concurrence_1 = 2 * np.abs(new_mod_Ce_1 * np.conj(new_mod_Ce_probe_1))
-concurrence_2 = 2 * np.abs(new_mod_Ce_2 * np.conj(new_mod_Ce_probe_2))
+concurrences = [
+    2 * np.abs(new_mod_Ce_1 * np.conj(new_mod_Ce_probe_1)),
+    2 * np.abs(new_mod_Ce_2 * np.conj(new_mod_Ce_probe_2)),
+]
 
 # ------------------------------------------------------------------------------
 
@@ -582,7 +582,7 @@ ax.contour(
 ax.set(
     xlabel=r"$k_x$",
     ylabel=r"$k_y$",
-    title=rf"$\omega_0/\tau_1^{-1/2} = {detuning_freq:.2f}$",
+    title=rf"$\omega_0/\tau_1^{{-1/2}} = {detuning_freq:.2f}$",
 )
 ax.set_aspect("equal")
 # ax.text(-0.2, 1.1, panel_labels[0], transform=ax.transAxes)
@@ -612,7 +612,7 @@ ax1 = axs[0, 1]
 ax1.set(
     xlabel=r"$t\,[\tau_1^{-1/2}]$",
     ylabel=r"$|C_e(t)|^2$",
-    title=rf"$\omega_0/\tau_1^{-1/2} = {detuning_freq:.2f}$",
+    title=rf"$\omega_0/\tau_1^{{-1/2}} = {detuning_freq:.2f}$",
     xscale="log",
     yscale="log",
 )
@@ -651,7 +651,7 @@ labels = [line.get_label() for line in lines]
 vmax = max(z1.max(), z2.max())
 
 for ax, z, theta, color, label in zip(
-    axs[1], [z1, z2], [90, 135], dip_colors, panel_labels[2:4]
+    axs[1:, 0], [z1, z2], [90, 135], dip_colors, panel_labels[2:4]
 ):
     sc = ax.scatter(
         x,
@@ -676,13 +676,13 @@ for ax, z, theta, color, label in zip(
 # Fith and sixth quadrant (e-f)
 # ------------------------------------------------------------------------------
 for i, theta in enumerate(thetas):
-    ax = axs[2, i]
-    ax.plot(tvals, new_mod_Ce_1, c="k")
-    ax.plot(tvals, new_mod_Ce_probe_1, c="k", ls="--")
+    ax = axs[i + 1, 1]
+    ax.plot(tvals, new_mod_Ces[i], c="k")
+    ax.plot(tvals, new_mod_Ce_probes[i], c="k", ls="--")
     ax2 = ax.twinx()
-    ax2.plot(tvals, concurrence_1, c="r")
+    ax2.plot(tvals, concurrences[i], c="r")
     ax.set(
-        title=rf"$\theta = {theta*180/np.pi}$º",
+        title=rf"$\theta = {np.rad2deg(theta):.0f}$º",
         xlabel=r"$t [\tau_1^{-1/2}]$",
         ylabel=r"$|C_e(t)|^2$",
     )
@@ -692,7 +692,7 @@ for i, theta in enumerate(thetas):
     ax2.spines["right"].set_color("r")
 
 # Layout adjustment and save
-fig.tight_layout(h_pad=2)
+fig.tight_layout()
 plt.show()
 fig.savefig(rf"./figures/figure3.png")
 

@@ -161,4 +161,4 @@ def make_light_matter_Hamiltonian(
         if max_dev > atol:
             raise ValueError(f"H_total is not Hermitian (max deviation {max_dev})")
 
-    return H_total, V
+    return H_total, omegas
