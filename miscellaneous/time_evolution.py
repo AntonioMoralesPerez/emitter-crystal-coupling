@@ -401,9 +401,10 @@ fig, axs = plt.subplots(1, 2)
 for i, theta in enumerate(thetas):
     ax = axs[i]
     ax.plot(new_tvals, new_mod_Ces[i], c="k", label="Excited")
-    ax.plot(new_tvals, new_mod_Ce_probes[i], c="k", ls="--", label="Probe")
+    ax.plot(new_tvals, new_mod_Ce_probes[i], c="b", ls="--", label="Probe")
+    ax.axvline(tvals[TIME_INDEX], linewidth=0.5, color="k", ls="--")
     ax.set(
-        title=rf"$\theta = {np.rad2deg(theta):.0f}$º",
+        title=rf"$\theta = {np.rad2deg(theta):.0f}°$",
         xlabel=r"$t [\tau_1^{-1/2}]$",
         ylabel=r"$|C_e(t)|^2$",
         yscale="log",
@@ -414,4 +415,4 @@ for i, theta in enumerate(thetas):
 # Layout adjustment and save
 fig.tight_layout()
 plt.show()
-fig.savefig(f"./figures/miscellaneous/emitter_population_at_{new_R}")
+fig.savefig(f"./figures/miscellaneous/emit_pop_at_{new_R}_exciting_at_{R0}.png")
