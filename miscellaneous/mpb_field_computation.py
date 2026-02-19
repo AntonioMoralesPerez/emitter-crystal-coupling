@@ -16,20 +16,23 @@ from meep import mpb  # same case as the previous package
 import src as mf  # our package functions to work with
 
 # %% Define the main constants and parameters for the current simulation
-NUM_BANDS = 2
+NUM_BANDS = 1
 
 EPSILON_INPUT_FILE = "data/kimble/epsilon.h5"
 DIRNAME_OUTPUT = "data/kimble/"  # directory to save outputs
-
-TOLERANCE = 1e-12  # tolerance for the MPB calculations
 
 NK = 64  # number of points per direction for the Monkhorst-Pack grid
 
 # Position of the quantum emitter in units of the lattice constant 'a'
 # list of positions are also allowed
-R0_LIST = [[-4.5, 4.5]]
+# NOTE: temporally modified to compute the electric field in a mesh of points
+#       inside the unit cell to see the internal profile of it
+NR = 11
+xjs = np.linspace(-0.5, 0.5, NR)
+yjs = np.linspace(-0.5, 0.5, NR)
+R0_LIST = mf.meshgrid_points(xjs, yjs)
 
-# ---------------------------------------------------------------------------- #
+# ------------------------------------------------------------------------------
 
 # Read some data from the epsilon.h5 file
 d = mf.read_epsilon_file(EPSILON_INPUT_FILE)
@@ -44,11 +47,10 @@ print("Epsilon file used    = " + EPSILON_INPUT_FILE)
 print("Resolution           = " + str(resolution))
 print("Lattice size         = " + str(lattice_size))
 print("Lattice vectors      = " + str(lattice_vecs))
-print("Tolerance            = " + str(TOLERANCE))
 
-# ------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------
 # Monkhorst–Pack sampling of the Brillouin zone
-# ------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------
 
 # Compute reciprocal lattice vectors (without the 2π factor, since MPB expects that)
 b1, b2, b3 = mf.find_reciprocal_lattice_vectors(lattice_vecs, twopi=False)
@@ -59,9 +61,9 @@ k_points_array = mf.monkhorst_pack_sampling(N=NK, b1=b1, b2=b2, coordinates="lat
 # Convert k-points into Meep/MPB Vector3 objects
 k_points = mf.array_to_Vector3(k_points_array)
 
-# ------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------
 # Configure the MPB geometry lattice
-# ------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------
 geometry_lattice = mp.Lattice(
     size=lattice_size,
     basis1=lattice_vecs[0],
@@ -69,15 +71,13 @@ geometry_lattice = mp.Lattice(
     # basis3 omitted for 2D computation; MPB treats it implicitly
 )
 
-# ------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------
 # Build the MPB mode solver
-# ------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------
 ms = mpb.ModeSolver(
     num_bands=NUM_BANDS,
-    resolution=mp.Vector3(*resolution),  # type: ignore[arg-type]
+    resolution=mp.Vector3(*resolution),
     epsilon_input_file="./data/kimble/epsilon.h5",
-    mesh_size=1,
-    tolerance=TOLERANCE,
     geometry_lattice=geometry_lattice,
     k_points=k_points,
 )
@@ -85,9 +85,9 @@ ms = mpb.ModeSolver(
 # Map all k-points into the first Brillouin zone (important for symmetry)
 ms.k_points = [ms.first_brillouin_zone(k) for k in ms.k_points]
 
-# ------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------
 # Field extraction callback
-# ------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------
 fields_MPBarr = []
 
 # Ensure R0 is a 2D array (1 row if single point)
@@ -103,14 +103,14 @@ def get_efields(ms, band):
         fields_MPBarr.append(ms.get_bloch_field_point(mp.Vector3(*R0)))
 
 
-# ------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------
 # Run the MPB simulation (TE modes)
-# ------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------
 ms.run_te(mpb.fix_hfield_phase, get_efields)  # ensure consistent phase conventions
 
-# ------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------
 # Process and reorganize MPB output data
-# ------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------
 
 # Convert MPB results into NumPy arrays
 fields_in = np.asarray(fields_MPBarr)  # shape: (Nb*Nk*Nr, 3)
@@ -133,9 +133,9 @@ Ek = d["Eks"]  # shape: (Nr, Nb, Nk, 3)
 kpts = d["kpts_cartesian"]
 r0pts = d["r0pts_cartesian"]
 
-# ------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------
 # Package results and save to disk
-# ------------------------------------------------------------------------ #
+# ------------------------------------------------------------------------------
 output = {
     "freqs": freqs,
     "Eks": Ek,
@@ -145,8 +145,8 @@ output = {
 
 mf.save(
     output,
-    filename=f"{NK}_meshgrid_at_{R0_LIST[0]}.pkl",
+    filename=f"{NK}_meshgrid_at_whole_unitcell.pkl",
     dirname="./data/kimble/fields/",
 )
 
-# ---------------------------------------------------------------------------- #
+# ------------------------------------------------------------------------------

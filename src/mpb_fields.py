@@ -1,53 +1,60 @@
 import numpy as np
 
-from .constants import K_CONST, LORENTIAN_BROADENING
 
-
-def compute_gr0r(
+def compute_ERr0(
     E_k_r0: np.ndarray,
-    omega_k: np.ndarray,
     kpts: np.ndarray,
-    rpts: np.ndarray,
-    const: float = K_CONST,
+    Rpts: np.ndarray,
 ) -> np.ndarray:
-    # --- Helper: pad arrays to 3D ---
-    def pad_to_3d(array: np.ndarray) -> np.ndarray:
-        array = np.atleast_2d(array)
-        if array.shape[1] < 3:
-            pad = np.zeros((array.shape[0], 3 - array.shape[1]))
-            array = np.hstack([array, pad])
-        return array
+    """
+    Discrete inverse Bloch transform of MPB fields.
 
-    kpts = pad_to_3d(kpts)  # Nk x 3
-    rpts = pad_to_3d(rpts)  # Nr x 3
+    Computes lattice-resolved field amplitudes (Wannier sampling):
+
+        E_{n,R}(r0) = (1/Nk) * sum_k exp(-i k·R) E_{n,k}(r0)
+
+    Parameters
+    ----------
+    E_k_r0 : complex ndarray (Nb, Nk, 3)
+        Electric field evaluated at a fixed intracell position r0
+        for each band and k-point.
+
+    kpts : float ndarray (Nk, dim)
+        k-points in *Cartesian reciprocal coordinates* (units: 1/length).
+        IMPORTANT: If your k-points are fractional (MPB default),
+        you MUST convert them using the reciprocal lattice matrix.
+
+    Rpts : float ndarray (NR, dim)
+        Bravais lattice vectors in Cartesian real-space coordinates
+        (units: length). These represent which unit cells you want
+        to sample the Wannier function in.
+
+    Returns
+    -------
+    E_Rr0 : complex ndarray (Nb, NR, 3)
+        Field amplitude of the Wannier-like function at position r0
+        inside each lattice cell R.
+
+    Notes
+    -----
+    - This does NOT reconstruct the full spatial field; it reconstructs
+      the lattice dependence at a fixed intracell coordinate r0.
+    """
 
     Nb, Nk, comp = E_k_r0.shape
+    if comp != 3:
+        raise ValueError("Last dimension of E_k_r0 must be 3 (vector components)")
 
-    # --- Input sanity checks ---
-    assert (
-        comp == 3
-    ), f"Last dimension of E_k_r0 must be 3 (vector components), got {comp}."
-    assert dipole_moment.shape == (3,), "Dipole moment must be a 3-component vector."
-    assert omega_k.shape == (
-        Nk,
-        Nb,
-    ), f"omega_k must have shape (Nk, Nb), got {omega_k.shape}."
-    assert (
-        kpts.shape[0] == Nk
-    ), f"Number of k-points {kpts.shape[0]} does not match Nk={Nk}."
+    if kpts.shape[0] != Nk:
+        raise ValueError("kpts must have Nk rows")
 
-    # --- Prefactor: shape (Nk, Nb) ---
-    prefactor = -1j * const * np.sqrt(omega_k / (2 * Nk))
-    # Transpose to match dipole_times_field: Nb x Nk
-    prefactor = prefactor.T
+    if kpts.shape[1] != Rpts.shape[1]:
+        raise ValueError("kpts and Rpts must have same spatial dimension")
 
-    # --- Compute g_k(r0): Nb x Nk ---
-    gk = prefactor * dipole_times_field
+    # phase factor: exp(-i k·R)
+    phase = np.exp(-1j * (kpts @ Rpts.T))  # Nk x NR
 
-    # --- Fourier factor: exp(-i k·r) Nk x Nr ---
-    exponential_factor = np.exp(-1j * np.dot(kpts, rpts.T))  # Nk x Nr
+    # inverse Bloch sum
+    E_Rr0 = np.einsum("nkc,kr->nrc", E_k_r0, phase) / Nk
 
-    # --- Sum over k-points: result Nb x Nr ---
-    gr0r = np.dot(gk, exponential_factor)  # (Nb x Nk) · (Nk x Nr) -> Nb x Nr
-
-    return gr0r
+    return E_Rr0

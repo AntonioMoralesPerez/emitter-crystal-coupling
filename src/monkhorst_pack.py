@@ -27,7 +27,7 @@ def monkhorst_pack_sampling(
 
     Returns
     -------
-    kpoints : ndarray, shape (N1*N2*(N3), 3)
+    kpoints : ndarray, shape (N1*N2*N3, 3)
         Array of k-points in the first Brillouin zone.
 
     Notes
