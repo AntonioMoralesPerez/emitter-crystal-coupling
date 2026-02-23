@@ -95,8 +95,8 @@ def compute_gr0r(
 
 def compute_ldos(
     omega_eval: np.ndarray,
-    omega_k: np.ndarray,
-    E_k_r0: np.ndarray,
+    omega_ks: np.ndarray,
+    E_ks_r0: np.ndarray,
     p_vec: np.ndarray,
     eta: float = LORENTIAN_BROADENING,
     const: float = K_CONST,
@@ -115,9 +115,9 @@ def compute_ldos(
     ----------
     omega_eval : array_like
         Frequencies at which to evaluate the LDOS. Can be a scalar or 1D array.
-    omega_k : ndarray, shape (Nk,)
+    omega_ks : ndarray, shape (Nk,)
         Frequencies of the modes. Nk = number of k-points.
-    E_k_r0 : ndarray, shape (Nk, 3)
+    E_ks_r0 : ndarray, shape (Nk, 3)
         Electric field at the emitter position. Last dimension indexes vector
         components (x, y, z).
     p_vec : ndarray, shape (3,)
@@ -143,24 +143,31 @@ def compute_ldos(
 
         δ(ω - ω_k) → (1/π) * η / ((ω - ω_k)^2 + η^2)
     """
-    # --- Input validation ---
+    # --- Input validation
     omega_eval = np.atleast_1d(omega_eval)
-    (Nk,) = omega_k.shape
-    assert E_k_r0.shape == (Nk, 3), "E_k_r0 must have shape (Nk, 3)"
-    assert p_vec.shape == (3,), "p_vec must be a 3-component vector"
+    (Nk,) = omega_ks.shape
+    (Nω,) = omega_eval.shape
 
-    # --- Dipole-field overlap: |p · E|^2, shape (Nk,) ---
-    overlaps = np.abs(np.einsum("ki,i", E_k_r0, p_vec)) ** 2
+    if not E_ks_r0.shape == (Nk, 3):
+        raise ValueError("`E_ks_r0` must have shape (Nk, 3)")
+    if not p_vec.shape == (3,):
+        raise ValueError("`p_vec` must be a 3-component vector")
 
-    # --- Prefactor from g_k definition ---
-    prefactor = const**2 * omega_k / (2 * Nk)  # shape (Nk,)
+    # --- Dipole-field overlap: |p · E|^2, shape (Nk,)
+    overlaps = np.abs(np.einsum("ki,i", E_ks_r0, p_vec)) ** 2
 
-    # --- Lorentzian kernel ---
-    Δ = omega_eval[:, None] - omega_k[None, :]  # shape (Nω, Nk)
-    L = (1 / np.pi) * eta / (Δ**2 + eta**2)
+    # --- Prefactor from g_k definition
+    prefactor = const**2 * omega_ks / (2 * Nk)  # shape (Nk,)
 
-    # --- LDOS: sum over k and bands ---
+    # --- Lorentzian kernel
+    Δ = np.zeros((Nω, Nk))
+    for i, omega in enumerate(omega_eval):
+        Δ[i] = omega - omega_ks
+
+    L = (1 / np.pi) * eta / (Δ**2 + eta**2)  # shape (Nω, Nk)
+
+    # --- LDOS: sum over k and bands
     ldos = np.sum(prefactor * overlaps * L, axis=1)
 
-    # --- Return scalar if input was scalar ---
+    # --- Return scalar if input was scalar
     return ldos[0] if np.isscalar(omega_eval) else ldos

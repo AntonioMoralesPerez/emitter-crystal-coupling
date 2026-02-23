@@ -8,4 +8,4 @@ EPSILON_0 = 8.8541878128e-12  # Vacuum permittivity [F/m]
 
 K_CONST: float = E / np.sqrt(C * HBAR * EPSILON_0)  # Constant prefactor, dimensionless
 
-LORENTIAN_BROADENING: float = 1e-3  # Broadening factor for LDOS calculations
+LORENTIAN_BROADENING: float = 1e-2  # Broadening factor for LDOS calculations
