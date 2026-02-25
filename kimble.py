@@ -64,7 +64,6 @@ mpl.rcParams.update(
         "legend.fontsize": 10,
         "legend.frameon": False,
         # Save
-        "savefig.transparent": True,
     }
 )
 
@@ -237,7 +236,7 @@ panel_labels = ["(a)", "(b)", "(c)", "(d)"]
 
 # Some parameters to plot an schematic emitter
 dip_colors = ["#1f77b4", "#ff7f0e"]  # [dipole 1, dipole 2]
-arrow_length = 0.4
+arrow_length = 0.6
 
 # --- First quadrant: dielectric structure (a)
 ax = axs[0, 0]
@@ -250,7 +249,15 @@ ax.set(
 
 ax.text(-0.2, 1.1, panel_labels[0], transform=ax.transAxes)  # add the panel label
 for i, theta in enumerate(thetas):
-    mf.draw_arrow(ax, R0, theta, dip_colors[i], rf"$\theta_{i+1}$", length=arrow_length)
+    mf.draw_arrow(
+        ax,
+        R0,
+        theta,
+        dip_colors[i],
+        rf"$\theta_{i+1}$",
+        length=arrow_length,
+        offset=0.2,
+    )
 
 # --- Second quadrant: TE bands (b)
 ax = axs[0, 1]
@@ -329,7 +336,7 @@ fig, axs = plt.subplots(1, 2)
 for i, ldos in enumerate(ldos_list):
     ax = axs[i]
 
-    ax.scatter(omega_eval, ldos)
+    ax.scatter(omega_eval, ldos, c=dip_colors[i])
     ax.axvline(
         x=detuning_freq,
         color="k",
@@ -343,7 +350,7 @@ for i, ldos in enumerate(ldos_list):
         ylabel=r"$LDOS [c/a]$",
         title=rf"$R_0/a$={R0}, $\theta_1={np.degrees(thetas[i]):.0f}º$",
     )
-    ax.grid(True)
+    ax.title.set_color(dip_colors[i])
 
 fig.tight_layout()
 plt.show()
@@ -501,6 +508,7 @@ z2 = mod_Cr_squared_2.reshape(len(x), len(y))
 
 fig, axs = plt.subplots(2, 2)
 panel_labels = ["(a)", "(b)", "(c)", "(d)"]
+arrow_length = 15
 
 # --- First quadrant (a)
 ax = axs[0, 0]
@@ -529,7 +537,7 @@ ax1 = axs[0, 1]
     mod_Ce_squared_1,
     lw=3,
     color=dip_colors[0],
-    label=r"$|C_e(t)|^2, \theta=90º$",
+    label=r"$|C_e(t)|^2, \theta_1 = 90º$",
 )
 (l2,) = ax1.plot(
     tvals,
@@ -537,7 +545,7 @@ ax1 = axs[0, 1]
     lw=2,
     color=dip_colors[1],
     alpha=0.9,
-    label=r"$|C_e(t)|^2, \theta=135º$",
+    label=r"$|C_e(t)|^2, \theta_2 = 135º$",
 )
 
 ax1.set(
@@ -554,7 +562,7 @@ ax2 = ax1.twinx()
     ls="--",
     color=dip_colors[0],
     lw=3,
-    label=r"$S(t), \theta=90º$",
+    label=r"$S(t), \theta_1 = 90º$",
 )
 (l4,) = ax2.plot(
     tvals,
@@ -563,7 +571,7 @@ ax2 = ax1.twinx()
     color=dip_colors[1],
     alpha=0.9,
     lw=2.0,
-    label=r"$S(t), \theta=135º$",
+    label=r"$S(t), \theta_2 = 135º$",
 )
 ax2.set(ylabel=r"$S(t)$")
 
@@ -589,13 +597,15 @@ for i, (theta, z) in enumerate(zip(thetas, [z1, z2])):
         vmax=cbar_max,
     )
 
+    mf.draw_arrow(ax, R0, theta, color=dip_colors[i], length=arrow_length)
+
     cbar = fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{r}(t)|^2$")
     cbar.formatter.set_powerlimits((0, 0))
 
     ax.set(
         xlabel=r"$x/a$",
         ylabel=r"$y/a$",
-        title=rf"$\theta = {np.rad2deg(theta):.0f}º$",
+        title=rf"$\theta_{i+1} = {np.rad2deg(theta):.0f}º$",
         aspect="equal",
     )
     ax.title.set_color(dip_colors[i])
@@ -712,6 +722,8 @@ panel_labels = ["(a)", "(b)", "(c)", "(d)"]
 cbar_max = max(z1.max(), z2.max())
 concurrence_max = max(concurrences[0].max(), concurrences[1].max())
 arrow_length = 3
+new_dip_color = "#2ca02c"
+my_red = "#d62728"
 
 # --- First and Third quadrant (a,c)
 for i, (theta, z) in enumerate(zip(thetas, [z1, z2])):
@@ -725,7 +737,7 @@ for i, (theta, z) in enumerate(zip(thetas, [z1, z2])):
         vmax=cbar_max,
     )
 
-    mf.draw_arrow(ax, new_R, new_theta, length=arrow_length)
+    mf.draw_arrow(ax, new_R, new_theta, new_dip_color, length=arrow_length)
     mf.draw_arrow(ax, R0, theta, dip_colors[i], length=arrow_length)
 
     cbar = fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{r}(t)|^2$")
@@ -734,7 +746,7 @@ for i, (theta, z) in enumerate(zip(thetas, [z1, z2])):
     ax.set(
         xlabel=r"$x/a$",
         ylabel=r"$y/a$",
-        title=rf"$\theta = {np.rad2deg(theta):.0f}º$",
+        title=rf"$\theta_{i+1} = {np.rad2deg(theta):.0f}º$",
         aspect="equal",
         xlim=(-7, 7),
         ylim=(-7, 7),
@@ -746,22 +758,22 @@ for i, (theta, z) in enumerate(zip(thetas, [z1, z2])):
 for i, theta in enumerate(thetas):
     ax = axs[i, 1]
 
-    ax.plot(new_tvals, new_mod_Ces[i], c="k")
-    ax.plot(new_tvals, new_mod_Ce_probes[i], c="k", ls="--")
+    ax.plot(new_tvals, new_mod_Ces[i], c=dip_colors[i])
+    ax.plot(new_tvals, new_mod_Ce_probes[i], c=new_dip_color)
 
     ax2 = ax.twinx()
-    ax2.plot(new_tvals, concurrences[i], c="r")
+    ax2.plot(new_tvals, concurrences[i], c=my_red, ls="--")
 
     ax.set(
-        title=rf"$\theta = {np.rad2deg(theta):.0f}º$",
+        title=rf"$\theta_p = {np.rad2deg(new_theta):.0f}º$",
         xlabel=r"$t [\tau_1^{-1/2}]$",
         ylabel=r"$|C_e(t)|^2$",
         yscale="log",
     )
-    ax.title.set_color(dip_colors[i])
-    ax2.set_ylabel(r"$C(t)$", color="r")
-    ax2.tick_params(axis="y", colors="r")
-    ax2.spines["right"].set_color("r")
+    ax.title.set_color(new_dip_color)
+    ax2.set_ylabel(r"$C(t)$", color=my_red)
+    ax2.tick_params(axis="y", colors=my_red)
+    ax2.spines["right"].set_color(my_red)
     ax2.set_ylim((-1e-5, concurrence_max + 1e-5))
     ax2.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
 
