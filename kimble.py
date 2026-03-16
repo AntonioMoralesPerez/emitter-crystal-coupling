@@ -23,6 +23,9 @@ import numpy as np
 import meep as mp  # needed for the numerical simulation of the photonic crystal
 from meep import mpb  # same case as the previous package
 import pythtb as tb  # for easy simulation of the tight-binding model
+from scipy.sparse.linalg import (
+    expm_multiply,
+)  # for solving the time-dependent Schrödinger equation
 
 # some imports for plotting utilities
 import matplotlib as mpl
@@ -52,18 +55,11 @@ mpl.rcParams.update(
         "ytick.right": True,
         "xtick.labelsize": 10,
         "ytick.labelsize": 10,
-        # Tick length/width
-        "xtick.major.size": 4,
-        "xtick.major.width": 1,
-        "ytick.major.size": 4,
-        "ytick.major.width": 1,
-        # Grid (off by default, but can be enabled)
-        "grid.alpha": 0.3,
-        "grid.linestyle": "--",
         # Legend
         "legend.fontsize": 10,
         "legend.frameon": False,
         # Save
+        "savefig.bbox": "tight",
     }
 )
 
