@@ -633,66 +633,43 @@ def draw_arrow(
     color: str = "r",
     label: str = None,
     length: float = 0.2,
-    offset: float = 0.1,
-    arrowstyle: str = "-|>",
+    label_offset: float = 0.1,
+    arrow_offset: float = 0,
+    arrowstyle: str = "->",
     lw: float = 2.2,
     mutation_scale: float = 14,
     fontsize: int = 11,
 ) -> None:
     """
-    Draw a clean arrow with a label on a Matplotlib axis.
-
-    Parameters
-    ----------
-    ax : matplotlib.axes.Axes
-        Matplotlib Axes object to draw on.
-    R0 : list of float
-        Starting point [x0, y0] of the arrow.
-    angle : float
-        Angle of the arrow in radians, measured from the x-axis.
-    color : str
-        Color of the arrow and the label.
-    label : str
-        Text label to display near the arrow tip.
-    length : float, optional
-        Length of the arrow. Default is 0.2.
-    offset : float, optional
-        Distance from the arrow tip to place the label. Default is 0.1.
-    arrowstyle : str, optional
-        Arrow style for `matplotlib.patches.FancyArrowPatch`. Default is "-|>".
-    lw : float, optional
-        Line width of the arrow. Default is 2.2.
-    mutation_scale : float, optional
-        Scale factor for arrow head size. Default is 14.
-    fontsize : int, optional
-        Font size of the label. Default is 11.
-
-    Returns
-    -------
-    None
-
-    Examples
-    --------
-    >>> fig, ax = plt.subplots()
-    >>> draw_arrow(ax, (0,0), np.pi/4, 'red', 'A')
+    Draw a clean arrow centered at R0 with a label on a Matplotlib axis.
     """
     x0, y0 = R0
-    tip = (x0 + length * np.cos(angle), y0 + length * np.sin(angle))
+    half_L = length / 2
+
+    # Calculate the centered start and tip positions
+    start_pos = (
+        x0 - half_L * np.cos(angle),
+        y0 - half_L * np.sin(angle),
+    )
+    tip_pos = (
+        x0 + (half_L + arrow_offset) * np.cos(angle),
+        y0 + (half_L + arrow_offset) * np.sin(angle),
+    )
+
+    # Label position remains relative to the tip
     label_pos = (
-        x0 + (length + offset) * np.cos(angle),
-        y0 + (length + offset) * np.sin(angle),
+        x0 + (half_L + label_offset) * np.cos(angle),
+        y0 + (half_L + label_offset) * np.sin(angle),
     )
 
     ax.annotate(
         "",
-        xy=tip,
-        xytext=(x0, y0),
+        xy=tip_pos,
+        xytext=start_pos,
         arrowprops=dict(
             arrowstyle=arrowstyle,
             lw=lw,
             color=color,
-            shrinkA=0,
-            shrinkB=0,
             mutation_scale=mutation_scale,
         ),
     )
