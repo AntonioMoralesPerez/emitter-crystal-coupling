@@ -306,29 +306,27 @@ for i, θ in enumerate(θs):
 # ------------------------------------------------------------------------------
 # Compute the LDOS to see how the emitters couple to the photonic bath
 # ------------------------------------------------------------------------------
-omega_ks = omegas[:, BAND_INDEX]  # Shape: (Nk,)
+ω_ks = ω_ks_n[:, BAND_INDEX]  # Shape: (Nk,)
 
 # Frequency range for LDOS
-omega_eval = np.linspace(np.min(omega_ks), np.max(omega_ks), nk_points)
+ωs = np.linspace(np.min(ω_ks), np.max(ω_ks), n_k_points)
 
 # Fields for the selected band
-E_ks_r0_band = E_ks_r0[BAND_INDEX, :, :]  # Shape: (Nk, 3)
+fr0_ks = fr0_n_ks[BAND_INDEX, :, :]  # Shape: (Nk, 3)
 
 # Compute LDOS for each dipole
 ldos_list = [
-    mf.compute_ldos(
-        omega_eval=omega_eval, omega_ks=omega_ks, E_ks_r0=E_ks_r0_band, p_vec=dip
-    )
-    for dip in dipoles
+    mf.compute_ldos(ωs=ωs, ω_ks=ω_ks, fr0_ks=fr0_ks, dipole_moment=dipole)
+    for dipole in dipoles
 ]
 
 # --- Plot LDOS
 for i, ldos in enumerate(ldos_list):
     fig, ax = plt.subplots()
 
-    ax.scatter(omega_eval, ldos, c=dip_colors[i])
+    ax.scatter(ωs, ldos, c=dip_colors[i])
     ax.axvline(
-        x=detuning_freq,
+        x=ω_0,
         color="k",
         linestyle="--",
         label=r"$\omega_0$",
@@ -340,10 +338,10 @@ for i, ldos in enumerate(ldos_list):
     ax.set(
         xlabel=r"$\omega \, [c/a]$",
         ylabel=r"$\mathrm{LDOS} \, [c/a]$",
-        title=rf"$R_0/a$={R0}, $\theta_{i+1}={np.degrees(thetas[i]):.0f}º$",
+        title=rf"$R_0/a$={R_0}, $\theta_{i+1}={np.degrees(θs[i]):.0f}º$",
     )
 
-    fig.savefig(f"./figures/kimble/ldos_at_{R0}_θ_{np.rad2deg(thetas[i]):.0f}.svg")
+    fig.savefig(f"./figures/kimble/ldos_at_{R_0}_θ_{np.rad2deg(θs[i]):.0f}.svg")
     plt.show()
 
 # ------------------------------------------------------------------------------
