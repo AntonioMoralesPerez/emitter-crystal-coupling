@@ -67,28 +67,26 @@ mpl.rcParams.update(
 # ------------------------------------------------------------------------------
 
 # Parameters of the MPB simulation
-NUM_BANDS = 2
+N_BANDS = 2
 BAND_INDEX = 0  # index of the band to consider (0-based)
-EPSILON_INPUT_FILE = "data/kimble/epsilon.h5"
+ε_INPUT_FILE = "data/kimble/epsilon.h5"
 
-NK = 64  # number of points per direction in the Monkhorst-Pack grid,
+N_K = 64  # number of points per direction in the Monkhorst-Pack grid,
 #           also used to identify the file where the fields are stored
 
 # Parameters of the emitters that we are going to consider. In this case, we are
 # going to consider two emitters at the same position r₀ but with different orientations
-THETA_1 = (90) * np.pi / 180
-THETA_2 = (135) * np.pi / 180
-P_DIMLESS = (
-    1e-2  # TODO: not the value specified in the article. Consider a possible change
-)
+θ_1 = (90) * np.pi / 180
+θ_2 = (135) * np.pi / 180
+DIP_STRENGTH = 1e-2
 N_EMITTERS = 1  # per simulation.
-#                   NOTE: In this case there are two simulations (one per orientation)
-#                           and one emitter per simulation
-R0 = [0.0, 0.0]  # position(s) of the emitter. List of positions is also allowed
+# NOTE: In this case there are two simulations (one per orientation)
+#       and one emitter per simulation
+R_0 = [0.0, 0.0]  # position(s) of the emitter. List of positions is also allowed
 
 # wrap the emitter orientations and dipoles in lists
-thetas = [THETA_1, THETA_2]
-dipoles = [P_DIMLESS * np.array([np.cos(theta), np.sin(theta), 0]) for theta in thetas]
+θs = [θ_1, θ_2]
+dipoles = [DIP_STRENGTH * np.array([np.cos(θ), np.sin(θ), 0]) for θ in θs]
 dip_colors = ["#1f77b4", "#ff7f0e"]  # colors associated to each dipole
 
 # Parameters for the tight-binding model
@@ -97,9 +95,9 @@ ORB = [[0, 0]]  # position of the orbital in lattice units
 N_CELLS = 51  # number of unit cells in each direction
 
 # coefficients for the tight-binding model, considered until 3-rd nearest neighbors
-TAU_0 = 0.07755639
-TAU_1 = -0.01993698
-TAU_2 = 0.00053966
+J_0 = 0.07755639
+J_1 = -0.01993698
+J_2 = 0.00053966
 
 # nodes in the path inside the Brillouin zone for band structure calculation
 K_PATH = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
@@ -107,23 +105,23 @@ K_PATH = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 K_LABEL = [r"$\Gamma$", r"X", r"M", r"$\Gamma$"]
 
 # Parameters for the dynamic simulation
-T0 = 0  # starting time
-TF = 500  # final time
+T_0 = 0  # starting time
+T_F = 500  # final time
 T_STEPS = 100  # number of time steps considered
-TIME_INDEX = (
+SNAP_INDEX = (
     50  # time index to consider for the field snapshots, can go from 0 to `T_STEPS`
 )
 
 # Read some data from the epsilon.h5 file
-d = mf.read_epsilon_file(EPSILON_INPUT_FILE)
-resolution = d["resolution"]
-lattice_vecs = d["lattice_vectors"]
-lattice_size = d["lattice_size"]
+ε_data = mf.read_epsilon_file(ε_INPUT_FILE)
+resolution = ε_data["resolution"]
+lattice_vecs = ε_data["lattice_vectors"]
+lattice_size = ε_data["lattice_size"]
 
 # Print summary of parameters
 print("\n")
-print("Number of bands      = " + str(NUM_BANDS))
-print("Epsilon file used    = " + EPSILON_INPUT_FILE)
+print("Number of bands      = " + str(N_BANDS))
+print("Epsilon file used    = " + ε_INPUT_FILE)
 print("Resolution           = " + str(resolution))
 print("Lattice size         = " + str(lattice_size))
 print("Lattice vectors      = " + str(lattice_vecs))
@@ -132,11 +130,12 @@ print("Lattice vectors      = " + str(lattice_vecs))
 # Read epsilon data for plotting
 # ------------------------------------------------------------------------------
 md = mpb.MPBData(rectify=False, periods=2)
-d = mf.convert_epsilon("./data/kimble/epsilon.h5", md)
+ε_converted = mf.convert_epsilon("./data/kimble/epsilon.h5", md)
 
-x = d["positions-lattice"][:, 0]
-y = d["positions-lattice"][:, 1]
-z = d["epsilon_values"]
+# retrieve data for plotting
+x = ε_converted["positions-lattice"][:, 0]
+y = ε_converted["positions-lattice"][:, 1]
+z = ε_converted["epsilon_values"]
 
 # --- Plot the dielectric function
 fig, ax = plt.subplots()
@@ -145,11 +144,11 @@ sc = ax.scatter(x, y, c=z, marker="s", cmap="copper_r", s=mf.marker_size(len(x))
 fig.colorbar(sc, ax=ax, label=r"$\epsilon(\mathbf{r})$")
 ax.set(xlabel=r"$x/a$", ylabel=r"$y/a$", aspect="equal")
 
-for i, theta in enumerate(thetas):
+for i, θ in enumerate(θs):
     mf.draw_arrow(
         ax,
-        R0,
-        theta,
+        R_0,
+        θ,
         color=dip_colors[i],
         label=rf"$\theta_{i+1}$",
         length=0.4,
@@ -157,42 +156,45 @@ for i, theta in enumerate(thetas):
         arrow_offset=0.05,
     )
 
-fig.savefig(f"./figures/kimble/dielectric_function_dipoles_at_{R0}.png")
+fig.savefig(f"./figures/kimble/dielectric_function_dipoles_at_{R_0}.png")
 plt.show()
 
 # ------------------------------------------------------------------------------
 # Compute the TB bands and the MPB bands for comparison
 # ------------------------------------------------------------------------------
 
-infiniteModel = tb.tb_model(2, 2, LAT, ORB)
+# Initialize tight-binding model
+infinite_model = tb.tb_model(dim_k=2, dim_r=2, lat=LAT, orb=ORB)
 
-# onsite term
-infiniteModel.set_onsite([TAU_0])
+# Onsite terms
+infinite_model.set_onsite([J_0])
 
-# 1st nn
-infiniteModel.set_hop(TAU_1, 0, 0, [1, 0])
-infiniteModel.set_hop(TAU_1, 0, 0, [0, 1])
+# First nearest neighbors (1st nn)
+first_nn_vectors = np.array([[1, 0], [0, 1]])
+for vec in first_nn_vectors:
+    infinite_model.set_hop(J_1, 0, 0, vec)
 
-# 2nd nn
-infiniteModel.set_hop(TAU_2, 0, 0, [1, 1])
-infiniteModel.set_hop(TAU_2, 0, 0, [1, -1])
+# Second nearest neighbors (2nd nn)
+second_nn_vectors = np.array([[1, 1], [1, -1]])
+for vec in second_nn_vectors:
+    infinite_model.set_hop(J_2, 0, 0, vec)
 
 # --- Compute bands for the tight-binding model
 
 ### Compute bands along high-symmetry path
 
 # creates a path between the high-symmetry points
-nk_points = 300
-k_vec, k_dist, k_node = infiniteModel.k_path(K_PATH, nk_points, report=False)
+n_k_points = 100
+k_vec, k_dist, k_node = infinite_model.k_path(K_PATH, n_k_points, report=False)
 
 # solve the infinite model in the considered path
-evals = infiniteModel.solve_all(k_vec)
+tb_evals = infinite_model.solve_all(k_vec)
 
 ## Select the detuning frequency
 # we are picking the value of the frequency at the X point where there is the
 # saddle point of the band and a high density of states
-detuning_freq = np.sqrt(evals[BAND_INDEX][k_node[1] == k_dist].item())
-print(f"Detuning frequency selected at X point: {detuning_freq:.6f} (2πc/a)")
+ω_0 = np.sqrt(tb_evals[BAND_INDEX][k_node[1] == k_dist].item())
+print(f"Detuning frequency selected at X point: {ω_0:.6f} (2πc/a)")
 
 # --- Compute the bands with MPB for comparison
 
@@ -201,8 +203,8 @@ geometry_lattice = mp.Lattice(
 )
 
 ms = mpb.ModeSolver(
-    num_bands=NUM_BANDS,
-    epsilon_input_file=EPSILON_INPUT_FILE,
+    num_bands=N_BANDS,
+    epsilon_input_file=ε_INPUT_FILE,
     geometry_lattice=geometry_lattice,
     k_points=mf.array_to_Vector3(k_vec),
 )
@@ -215,15 +217,13 @@ freqs = ms.all_freqs
 # --- Plot the bands
 fig, ax = plt.subplots()
 
-for n in evals:
-    n_safe = np.clip(
-        np.real(n), 0, None
+for tb_eval in tb_evals:
+    tb_eval_clipped = np.clip(
+        np.real(tb_eval), 0, None
     )  # ensure no negative values due to numerical errors
-    ax.plot(k_dist, np.sqrt(n_safe), color="r", linestyle="--")
+    ax.plot(k_dist, np.sqrt(tb_eval_clipped), color="r", linestyle="--")
 ax.plot(k_dist, freqs, color="k")
-ax.hlines(
-    detuning_freq, xmin=k_dist[0], xmax=k_dist[-1], color="k", linestyle="--", alpha=0.5
-)
+ax.hlines(ω_0, xmin=k_dist[0], xmax=k_dist[-1], color="k", linestyle="--", alpha=0.5)
 
 ax.set(
     xlim=(k_node[0], k_node[-1]),
@@ -243,63 +243,64 @@ plt.show()
 
 # Load the fields, frequencies and k-points from the MPB calculation
 # NOTE that all this data is provided in the units MPB uses!
-data = mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_{R0}.pkl")
+fields_data = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{R_0}.pkl")
 
 # Extract relevant quantities
-omegas = np.asarray(data["freqs"])  # Frequencies (Nk, Nb)
-Eks = np.asarray(data["Eks"])  # Electric fields, shape: (Nr, Nb, Nk, 3)
-kpts = np.asarray(data["kpts"])  # k-points in cartesian coordinates, shape: (Nk, 3)
+ω_ks_n = np.asarray(fields_data["freqs"])  # Angular frequencies (N_k, N_b)
+frs_n_ks = np.asarray(fields_data["Eks"])  # Electric fields, shape: (N_r, N_b, N_k, 3)
+ks = np.asarray(
+    fields_data["kpts"]
+)  # k-points in Cartesian coordinates, shape: (N_k, 3)
 
 # Select the field at position r₀. Here we computed the field for only that point
-# so picking the first one is enough
-E_ks_r0 = Eks[0, :, :, :]  # Shape: (Nb, Nk, 3)
+fr0_n_ks = frs_n_ks[0, :, :, :]  # Shape: (N_b, N_k, 3)
 
 # Define the real-space grid. It should correspond to a set of lattice sites
-num_r = 13
-xjg = np.arange(-(num_r // 2), num_r // 2 + 1, 1)
-yjg = np.arange(-(num_r // 2), num_r // 2 + 1, 1)
-rjpts = mf.meshgrid_points(xjg, yjg, indexing="xy")
+n_r = 13
+xs = np.arange(-(n_r // 2), n_r // 2 + 1, 1)
+ys = np.arange(-(n_r // 2), n_r // 2 + 1, 1)
+rs = mf.meshgrid_points(xs, ys, indexing="xy")
 
 # Compute g_r(r₀) for each dipole moment, shape (Nr,)
-gr0rjsv = [
-    mf.compute_gr0r(
-        E_k_r0=E_ks_r0,
+gr0_rs_list = [
+    mf.compute_real_space_coupling(
+        fr0_n_ks=fr0_n_ks,
         dipole_moment=dipole,
-        omega_k=omegas,
-        kpts=kpts,
-        rpts=rjpts,
-    )[BAND_INDEX, :].reshape(num_r, num_r)
+        ω_ks_n=ω_ks_n,
+        ks=ks,
+        rs=rs,
+    )[BAND_INDEX, :].reshape(n_r, n_r)
     for dipole in dipoles
 ]
 
 # --- Plot both g_r(r₀)
 
-cbar_min = np.abs(gr0rjsv).min()  # set a minimum value for the colorbars
-cbar_max = np.abs(gr0rjsv).max()  # set a maximum value for the colorbars
+cbar_min = np.abs(gr0_rs_list).min()  # set a minimum value for the colorbars
+cbar_max = np.abs(gr0_rs_list).max()  # set a maximum value for the colorbars
 
-for i, theta in enumerate(thetas):
+for i, θ in enumerate(θs):
     fig, ax = plt.subplots()
 
     sc = ax.pcolormesh(
-        xjg,
-        yjg,
-        np.abs(gr0rjsv[i]),  # take absolute value for plotting
+        xs,
+        ys,
+        np.abs(gr0_rs_list[i]),  # take absolute value for plotting
         norm=colors.LogNorm(vmin=cbar_min, vmax=cbar_max),
     )
 
     cbar = fig.colorbar(sc, ax=ax, label=r"$|g_\mathbf{R}(\mathbf{r}_0)| \, [c/a]$")
 
-    mf.draw_arrow(ax, R0, theta, color=dip_colors[i], length=2, arrow_offset=0.3)
+    mf.draw_arrow(ax, R_0, θ, color=dip_colors[i], length=2, arrow_offset=0.3)
 
     ax.set(
-        title=rf"$\theta_{i+1} = {np.rad2deg(theta):.0f}º$",
+        title=rf"$\theta_{i+1} = {np.rad2deg(θ):.0f}º$",
         xlabel=r"$x/a$",
         ylabel=r"$y/a$",
         aspect="equal",
     )
     ax.title.set_color(dip_colors[i])
 
-    fig.savefig(f"./figures/kimble/g_r({R0})_for_θ_{np.rad2deg(theta):.0f}º.svg")
+    fig.savefig(f"./figures/kimble/g_r({R_0})_for_θ_{np.rad2deg(θ):.0f}º.svg")
     plt.show()
 
 # ------------------------------------------------------------------------------

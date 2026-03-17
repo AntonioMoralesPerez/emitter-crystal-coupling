@@ -17,7 +17,7 @@ from .utils import (
     draw_arrow,
 )
 from .monkhorst_pack import monkhorst_pack_sampling
-from .coupling import compute_gr0r, compute_ldos
+from .coupling import compute_real_space_coupling, compute_ldos
 from .interaction_hamiltonian import make_light_matter_Hamiltonian
 from .entropy import binary_entropy, quadrant_entropy
 from .mpb_fields import compute_ERr0

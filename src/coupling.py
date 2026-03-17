@@ -3,94 +3,100 @@ import numpy as np
 from .constants import K_CONST, LORENTIAN_BROADENING
 
 
-def compute_gr0r(
-    E_k_r0: np.ndarray,
+# --- Helper: pad arrays to 3D ---
+def pad_to_3d(array: np.ndarray) -> np.ndarray:
+    array = np.atleast_2d(array)
+    if array.shape[1] < 3:
+        pad = np.zeros((array.shape[0], 3 - array.shape[1]))
+        array = np.hstack([array, pad])
+    return array
+
+
+def compute_real_space_coupling(
+    fr0_n_ks: np.ndarray,
     dipole_moment: np.ndarray,
-    omega_k: np.ndarray,
-    kpts: np.ndarray,
-    rpts: np.ndarray,
+    ω_ks_n: np.ndarray,
+    ks: np.ndarray,
+    rs: np.ndarray,
     const: float = K_CONST,
 ) -> np.ndarray:
     """
-    Compute the real-space coupling g_r(r0) from reciprocal-space couplings g_k(r0)
-    via a discrete Fourier transform over k-points.
-
-    The mode-resolved coupling is defined as
-
-        g_k(r0) = -i * const * sqrt(ω_k / (2 N)) * (p · E_k(r0)),
-
-    where N is the number of k-points, p is the dipole moment, and E_k(r0)
-    is the electric field at the emitter position. The real-space coupling is
-
-        g_r(r0) = Σ_k g_k(r0) * exp(-i k · r).
+    Compute the real-space coupling g_{n,r}(r_0) from reciprocal-space couplings
+    g_{n,k}(r_0) via a discrete Fourier transform over k-points.
 
     Parameters
     ----------
-    E_k_r0 : ndarray, shape (Nb, Nk, 3)
-        Electric field at the emitter position for each mode. First dimension
-        indexes bands, second dimension k-points, third is vector components.
+    fr0_n_ks : ndarray, shape (Nb, Nk, 3)
+        Electric field's profile at the emitter position for each mode.
+        First dimension indexes bands, second dimension k-points, third is vector
+        components.
     dipole_moment : ndarray, shape (3,)
-        Dipole moment vector.
-    omega_k : ndarray, shape (Nk, Nb)
-        Mode frequencies.
-    kpts : ndarray, shape (Nk, 3)
+        Dipole moment vector normalized by the dipole unit.
+    ω_ks_n : ndarray, shape (Nk, Nb)
+        Mode frequencies in units of c/a.
+    ks : ndarray, shape (Nk, 3)
         k-point coordinates. Shorter vectors are padded with zeros.
-    rpts : ndarray, shape (Nr, 3)
+    rs : ndarray, shape (Nr, 3)
         Real-space points where g_r(r0) is evaluated. Shorter vectors are padded with zeros.
     const : float, optional
-        Prefactor constant in the definition of g_k. Default is `K_CONST`.
+        Prefactor constant in the definition of g_{n,k}(r_0).
+        Default is `K_CONST`.
 
     Returns
     -------
-    gr0r : ndarray, shape (Nb, Nr)
-        Real-space coupling g_r(r0) for each band and r-point.
+    gr0_n_rs : ndarray, shape (Nb, Nr)
+        Real-space coupling g_{n,r}(r_0) for each band and r-point.
+
+    Notes
+    -----
+    The mode-resolved coupling is defined as:
+
+        g_{n,k}(r_0) = -i * const * sqrt(ω_{n,k} / (2 N_k)) * (p·f_{n,k}(r_0)),
+    where N_k is the number of k-points, p is the dipole moment, and f_{n,k}(r_0)
+    is the electric field's profile at the emitter position.
+
+    The real-space coupling is computed by:
+
+        g_{n,r}(r_0) = 1/sqrt(N_k) Σ_k g_{n,k}(r_0) * exp(-i k·r).
     """
 
-    # --- Helper: pad arrays to 3D ---
-    def pad_to_3d(array: np.ndarray) -> np.ndarray:
-        array = np.atleast_2d(array)
-        if array.shape[1] < 3:
-            pad = np.zeros((array.shape[0], 3 - array.shape[1]))
-            array = np.hstack([array, pad])
-        return array
+    ks = pad_to_3d(ks)  # Nk x 3
+    rs = pad_to_3d(rs)  # Nr x 3
 
-    kpts = pad_to_3d(kpts)  # Nk x 3
-    rpts = pad_to_3d(rpts)  # Nr x 3
-
-    Nb, Nk, comp = E_k_r0.shape
+    N_b, N_k, N_comp = fr0_n_ks.shape
 
     # --- Input sanity checks ---
     assert (
-        comp == 3
-    ), f"Last dimension of E_k_r0 must be 3 (vector components), got {comp}."
+        N_comp == 3
+    ), f"Last dimension of `fr0_n_ks` must be 3 (vector components), got {N_comp}."
     assert dipole_moment.shape == (3,), "Dipole moment must be a 3-component vector."
-    assert omega_k.shape == (
-        Nk,
-        Nb,
-    ), f"omega_k must have shape (Nk, Nb), got {omega_k.shape}."
+    assert ω_ks_n.shape == (
+        N_k,
+        N_b,
+    ), f"`ω_ks_n` must have shape (N_k, N_b), got {ω_ks_n.shape}."
     assert (
-        kpts.shape[0] == Nk
-    ), f"Number of k-points {kpts.shape[0]} does not match Nk={Nk}."
+        ks.shape[0] == N_k
+    ), f"Number of k-points {ks.shape[0]} does not match N_k={N_k}."
 
     # --- Compute dipole · field: shape (Nb, Nk) ---
     # Vectorized dot product over last dimension
-    dipole_times_field = np.einsum("i,bki->bk", dipole_moment, E_k_r0)
+    dipole_times_field = np.einsum("i,bki->bk", dipole_moment, fr0_n_ks)
 
     # --- Prefactor: shape (Nk, Nb) ---
-    prefactor = -1j * const * np.sqrt(omega_k / (2 * Nk))
+    prefactor = -1j * const * np.sqrt(ω_ks_n / (2 * N_k))
     # Transpose to match dipole_times_field: Nb x Nk
     prefactor = prefactor.T
 
     # --- Compute g_k(r0): Nb x Nk ---
-    gk = prefactor * dipole_times_field
+    gr0_n_ks = prefactor * dipole_times_field
 
     # --- Fourier factor: exp(-i k·r) Nk x Nr ---
-    exponential_factor = np.exp(-1j * np.dot(kpts, rpts.T))  # Nk x Nr
+    exponential_factor = np.exp(-1j * np.dot(ks, rs.T))  # Nk x Nr
 
     # --- Sum over k-points: result Nb x Nr ---
-    gr0r = np.dot(gk, exponential_factor)  # (Nb x Nk) · (Nk x Nr) -> Nb x Nr
+    gr0_n_rs = np.dot(gr0_n_ks, exponential_factor)  # (Nb x Nk) · (Nk x Nr) -> Nb x Nr
 
-    return gr0r
+    return gr0_n_rs
 
 
 def compute_ldos(
