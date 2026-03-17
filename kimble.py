@@ -94,7 +94,7 @@ dip_colors = ["#1f77b4", "#ff7f0e"]  # colors associated to each dipole
 # Parameters for the tight-binding model
 LAT = [[1, 0], [0, 1]]
 ORB = [[0, 0]]  # position of the orbital in lattice units
-N_CELLS = 71  # number of unit cells in each direction
+N_CELLS = 51  # number of unit cells in each direction
 
 # coefficients for the tight-binding model, considered until 3-rd nearest neighbors
 TAU_0 = 0.07755639
@@ -108,7 +108,7 @@ K_LABEL = [r"$\Gamma$", r"X", r"M", r"$\Gamma$"]
 
 # Parameters for the dynamic simulation
 T0 = 0  # starting time
-TF = 80  # final time
+TF = 500  # final time
 T_STEPS = 100  # number of time steps considered
 TIME_INDEX = (
     50  # time index to consider for the field snapshots, can go from 0 to `T_STEPS`
@@ -353,30 +353,6 @@ for i, ldos in enumerate(ldos_list):
 # Computed the normalized isofrequency contour
 # ------------------------------------------------------------------------------
 
-# Normalize parameters. We do this to refer everything in terms of the first nearest
-# neighbor coupling strength. Since TAU_1 has units of ω² while g_rj(r0) has units
-# of frequency, we need to divide by sqrt(|TAU_1|)
-alpha_norm = TAU_0 / np.abs(TAU_1)
-j1_norm = TAU_1 / np.abs(TAU_1)
-j2_norm = TAU_2 / np.abs(TAU_1)
-detuning_freq_norm = detuning_freq / np.sqrt(np.abs(TAU_1))
-
-# Initialize tight-binding model
-infiniteModel = tb.tb_model(dim_k=2, dim_r=2, lat=LAT, orb=ORB)
-
-# Onsite terms
-infiniteModel.set_onsite([alpha_norm])
-
-# First nearest neighbors (1st nn)
-first_nn_vectors = np.array([[1, 0], [0, 1]])
-for vec in first_nn_vectors:
-    infiniteModel.set_hop(j1_norm, 0, 0, vec)
-
-# Second nearest neighbors (2nd nn)
-second_nn_vectors = np.array([[1, 1], [1, -1]])
-for vec in second_nn_vectors:
-    infiniteModel.set_hop(j2_norm, 0, 0, vec)
-
 # --- Generate 2D k-point grid in the Brillouin zone
 kx = np.linspace(-0.5, 0.5, nk_points)
 ky = np.linspace(-0.5, 0.5, nk_points)
@@ -407,7 +383,7 @@ ax.contour(
     kx_grid,
     ky_grid,
     omega,
-    levels=[detuning_freq_norm],
+    levels=[detuning_freq],
     colors="k",
     linewidths=2,
 )
@@ -418,7 +394,7 @@ ax.set(
     aspect="equal",
 )
 
-fig.savefig(f"./figures/kimble/normalized_isofrequency.svg")
+fig.savefig(f"./figures/kimble/tb_isofrequency_contour.svg")
 plt.show()
 
 # ------------------------------------------------------------------------------
@@ -455,7 +431,7 @@ gr0rjs = [
 ]
 
 # we want to normalize also the couplings by the 1-st nn coupling strength
-gr0rjs_norm = [gr0rj / np.sqrt(np.abs(TAU_1)) for gr0rj in gr0rjs]
+gr0rjs_norm = [gr0rj for gr0rj in gr0rjs]
 
 # --- Build the light-matter Hamiltonian
 
@@ -472,10 +448,10 @@ interaction_2 = [[list(couplings[1]), list(indexes)]]
 
 # build the light-matter Hamiltonian
 H_total_1, omegas_total_1 = mf.make_light_matter_Hamiltonian(
-    finiteModel, detuning_freq_norm, interaction_1
+    finiteModel, detuning_freq, interaction_1
 )
 H_total_2, omegas_total_2 = mf.make_light_matter_Hamiltonian(
-    finiteModel, detuning_freq_norm, interaction_2
+    finiteModel, detuning_freq, interaction_2
 )
 
 # --- Compute time evolution
