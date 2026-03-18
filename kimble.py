@@ -68,7 +68,7 @@ mpl.rcParams.update(
 
 # Parameters of the MPB simulation
 N_BANDS = 2
-BAND_INDEX = 0  # index of the band to consider (0-based)
+BAND_IDX = 0  # index of the band to consider (0-based)
 ε_INPUT_FILE = "data/kimble/epsilon.h5"
 
 N_K = 64  # number of points per direction in the Monkhorst-Pack grid,
@@ -79,7 +79,7 @@ N_K = 64  # number of points per direction in the Monkhorst-Pack grid,
 θ_1 = (90) * np.pi / 180
 θ_2 = (135) * np.pi / 180
 DIP_STRENGTH = 1e-2
-N_EMITTERS = 1  # per simulation.
+N_E = 1  # number of emitters per simulation.
 # NOTE: In this case there are two simulations (one per orientation)
 #       and one emitter per simulation
 R_0 = [0.0, 0.0]  # position(s) of the emitter. List of positions is also allowed
@@ -108,7 +108,7 @@ K_LABEL = [r"$\Gamma$", r"X", r"M", r"$\Gamma$"]
 T_0 = 0  # starting time
 T_F = 500  # final time
 T_STEPS = 100  # number of time steps considered
-SNAP_INDEX = (
+SNAP_IDX = (
     50  # time index to consider for the field snapshots, can go from 0 to `T_STEPS`
 )
 
@@ -193,7 +193,7 @@ tb_evals = infinite_model.solve_all(k_vec)
 ## Select the detuning frequency
 # we are picking the value of the frequency at the X point where there is the
 # saddle point of the band and a high density of states
-ω_0 = np.sqrt(tb_evals[BAND_INDEX][k_node[1] == k_dist].item())
+ω_0 = np.sqrt(tb_evals[BAND_IDX][k_node[1] == k_dist].item())
 print(f"Detuning frequency selected at X point: {ω_0:.6f} (2πc/a)")
 
 # --- Compute the bands with MPB for comparison
@@ -269,7 +269,7 @@ gr0_rs_list = [
         ω_ks_n=ω_ks_n,
         ks=ks,
         rs=rs,
-    )[BAND_INDEX, :].reshape(n_r, n_r)
+    )[BAND_IDX, :].reshape(n_r, n_r)
     for dipole in dipoles
 ]
 
@@ -306,13 +306,13 @@ for i, θ in enumerate(θs):
 # ------------------------------------------------------------------------------
 # Compute the LDOS to see how the emitters couple to the photonic bath
 # ------------------------------------------------------------------------------
-ω_ks = ω_ks_n[:, BAND_INDEX]  # Shape: (Nk,)
+ω_ks = ω_ks_n[:, BAND_IDX]  # Shape: (Nk,)
 
 # Frequency range for LDOS
 ωs = np.linspace(np.min(ω_ks), np.max(ω_ks), n_k_points)
 
 # Fields for the selected band
-fr0_ks = fr0_n_ks[BAND_INDEX, :, :]  # Shape: (Nk, 3)
+fr0_ks = fr0_n_ks[BAND_IDX, :, :]  # Shape: (Nk, 3)
 
 # Compute LDOS for each dipole
 ldos_list = [
@@ -353,36 +353,36 @@ for i, ldos in enumerate(ldos_list):
 # ------------------------------------------------------------------------------
 
 # --- Generate 2D k-point grid in the Brillouin zone
-kx = np.linspace(-0.5, 0.5, nk_points)
-ky = np.linspace(-0.5, 0.5, nk_points)
-kx_grid, ky_grid = np.meshgrid(kx, ky, indexing="ij")
+k_x = np.linspace(-0.5, 0.5, n_k_points)
+k_y = np.linspace(-0.5, 0.5, n_k_points)
+k_x_grid, k_y_grid = np.meshgrid(k_x, k_y, indexing="ij")
 
 # Flatten grid for evaluation
-k_points = np.column_stack((kx_grid.ravel(), ky_grid.ravel()))
+ks_grid_flat = np.column_stack((k_x_grid.ravel(), k_y_grid.ravel()))
 
 # --- Compute band energies for the selected band
-band_energies = np.array(
-    [infiniteModel.solve_one(k)[BAND_INDEX] for k in k_points],
+tb_evals_grid = np.array(
+    [infinite_model.solve_one(k)[BAND_IDX] for k in ks_grid_flat],
 )
 
 # Clip all negative values (remove numerical noise)
-band_energies_clipped = np.clip(band_energies, a_min=0.0, a_max=None)
+tb_evals_grid_clipped = np.clip(tb_evals_grid, a_min=0.0, a_max=None)
 
 # Reshape and compute omega = sqrt(E)
-omega = np.sqrt(band_energies_clipped).reshape(nk_points, nk_points)
+ω_grid = np.sqrt(tb_evals_grid_clipped).reshape(n_k_points, n_k_points)
 
 # --- Plot the isofrequency contour
 fig, ax = plt.subplots()
 
-c = ax.contourf(kx_grid, ky_grid, omega, levels=12)
+c = ax.contourf(k_x_grid, k_y_grid, ω_grid, levels=12)
 cbar = fig.colorbar(c, ax=ax, label=r"$\omega_\mathbf{k} \, [c/a]$")
 cbar.formatter.set_powerlimits((0, 0))
 
 ax.contour(
-    kx_grid,
-    ky_grid,
-    omega,
-    levels=[detuning_freq],
+    k_x_grid,
+    k_y_grid,
+    ω_grid,
+    levels=[ω_0],
     colors="k",
     linewidths=2,
 )
@@ -401,91 +401,88 @@ plt.show()
 # ------------------------------------------------------------------------------
 
 # Cut the system
-temporalModel = infiniteModel.cut_piece(
+temporal_model = infinite_model.cut_piece(
     N_CELLS, fin_dir=0, glue_edgs=False
 )  # cutout along 1st direction
-finiteModel = temporalModel.cut_piece(
+finite_model = temporal_model.cut_piece(
     N_CELLS, fin_dir=1, glue_edgs=False
 )  # cutout along 2nd direction
 
-# --- Compute g_rj(r0) on the finite grid
+# --- Compute g_r(r_0) on the finite grid
 
 if N_CELLS % 2 == 0:
-    xjg = np.arange(-N_CELLS / 2, N_CELLS / 2, 1)
-    yjg = np.arange(-N_CELLS / 2, N_CELLS / 2 + 1, 1)
+    xs = np.arange(-N_CELLS / 2, N_CELLS / 2, 1)
+    ys = np.arange(-N_CELLS / 2, N_CELLS / 2 + 1, 1)
 else:
-    xjg = np.arange(-(N_CELLS // 2), N_CELLS // 2 + 1, 1)
-    yjg = np.arange(-(N_CELLS // 2), N_CELLS // 2 + 1, 1)
-rjpts = mf.meshgrid_points(xjg, yjg, indexing="xy")
+    xs = np.arange(-(N_CELLS // 2), N_CELLS // 2 + 1, 1)
+    ys = np.arange(-(N_CELLS // 2), N_CELLS // 2 + 1, 1)
+rs = mf.meshgrid_points(xs, ys, indexing="xy")
 
-gr0rjs = [
-    mf.compute_gr0r(
-        E_k_r0=E_ks_r0,
+gr0_n_rs_list = [
+    mf.compute_real_space_coupling(
+        fr0_n_ks=fr0_n_ks,
         dipole_moment=dipole,
-        omega_k=omegas,
-        kpts=kpts,
-        rpts=rjpts,
+        ω_ks_n=ω_ks_n,
+        ks=ks,
+        rs=rs,
     )
     for dipole in dipoles
 ]
 
-# we want to normalize also the couplings by the 1-st nn coupling strength
-gr0rjs_norm = [gr0rj for gr0rj in gr0rjs]
-
 # --- Build the light-matter Hamiltonian
 
-couplings = [gr0rj_norm[BAND_INDEX, :] for gr0rj_norm in gr0rjs_norm]
+# pick only the band of interest
+couplings = [gr0_n_rs[BAND_IDX, :] for gr0_n_rs in gr0_n_rs_list]
 
 # small check before proceeding
 assert len(couplings[0]) == len(
     couplings[1]
 ), "Unexpected different lengths for the couplings!"
 
-indexes = np.arange(0, len(couplings[0]), 1)
-interaction_1 = [[list(couplings[0]), list(indexes)]]
-interaction_2 = [[list(couplings[1]), list(indexes)]]
+idxs = np.arange(0, len(couplings[0]), 1)
+interaction_1 = [[list(couplings[0]), list(idxs)]]
+interaction_2 = [[list(couplings[1]), list(idxs)]]
 
 # build the light-matter Hamiltonian
-H_total_1, omegas_total_1 = mf.make_light_matter_Hamiltonian(
-    finiteModel, detuning_freq, interaction_1
+H_1, ωs_1 = mf.make_light_matter_Hamiltonian(
+    tb_model=finite_model, ω_0s=ω_0, gr0s_rs=interaction_1
 )
-H_total_2, omegas_total_2 = mf.make_light_matter_Hamiltonian(
-    finiteModel, detuning_freq, interaction_2
+H_2, ωs_2 = mf.make_light_matter_Hamiltonian(
+    tb_model=finite_model, ω_0s=ω_0, gr0s_rs=interaction_2
 )
 
 # --- Compute time evolution
 
-tvals = np.linspace(T0, TF, T_STEPS, endpoint=True)  # for later plotting
+ts = np.linspace(T_0, T_F, T_STEPS, endpoint=True)  # for later plotting
 
 # Small check before computing the time evolution
-assert (
-    H_total_1.shape == H_total_2.shape
-), "Unexpected different shapes for the Hamiltonians!"
+assert H_1.shape == H_2.shape, "Unexpected different shapes for the Hamiltonians!"
 
 # Initial condition
-psi0 = np.zeros(H_total_1.shape[0])
-psi0[0] = 1
+ψ_0 = np.zeros(H_1.shape[0])
+ψ_0[0] = 1
 
 # Compute time evolution
-psit_1 = expm_multiply(-1j * H_total_1, psi0, T0, TF, T_STEPS, endpoint=True)
-psit_2 = expm_multiply(-1j * H_total_2, psi0, T0, TF, T_STEPS, endpoint=True)
+ψ_t_1 = expm_multiply(-1j * H_1, ψ_0, T_0, T_F, T_STEPS, endpoint=True)
+ψ_t_2 = expm_multiply(-1j * H_2, ψ_0, T_0, T_F, T_STEPS, endpoint=True)
 
 # --- Prepare data to be plotted
 
-# get emitter component of the overall wavefunction
-mod_Ce_squared_1 = np.abs(psit_1[:, 0]) ** 2
-mod_Ce_squared_2 = np.abs(psit_2[:, 0]) ** 2
+# get emitter component of the overall wave function
+mod_Ce_squared_t_1 = np.abs(ψ_t_1[:, 0]) ** 2
+mod_Ce_squared_t_2 = np.abs(ψ_t_2[:, 0]) ** 2
 
 # compute the entanglement for both cases
-entropy_1 = mf.binary_entropy(mod_Ce_squared_1)
-entropy_2 = mf.binary_entropy(mod_Ce_squared_2)
+S_t_1 = mf.binary_entropy(mod_Ce_squared_t_1)
+S_t_2 = mf.binary_entropy(mod_Ce_squared_t_2)
 
 # get positions in Cartesian coordinates
-positions = mf.find_positions(finiteModel._orb, finiteModel._lat)
+positions = mf.find_positions(finite_model._orb, finite_model._lat)
 
-# get photonic component of the overall wave function at selected time, i.e, tvals[time_index]
-mod_Cr_squared_1 = np.abs(psit_1[TIME_INDEX, N_EMITTERS:]) ** 2
-mod_Cr_squared_2 = np.abs(psit_2[TIME_INDEX, N_EMITTERS:]) ** 2
+# get photonic component of the overall wave function at selected time, i.e,
+# `ts[SNAP_IDX]``
+mod_Cr_squared_1 = np.abs(ψ_t_1[SNAP_IDX, N_E:]) ** 2
+mod_Cr_squared_2 = np.abs(ψ_t_2[SNAP_IDX, N_E:]) ** 2
 
 # shift the crystal to place emitter at the center
 x = np.unique(positions[:, 0]) - N_CELLS // 2
@@ -498,15 +495,15 @@ z2 = mod_Cr_squared_2.reshape(len(x), len(y))
 fig, ax = plt.subplots()
 
 (l1,) = ax.plot(
-    tvals,
-    mod_Ce_squared_1,
+    ts,
+    mod_Ce_squared_t_1,
     lw=3,
     color=dip_colors[0],
     label=r"$|C_e(t)|^2$, $\theta_1 = 90º$",
 )
 (l2,) = ax.plot(
-    tvals,
-    mod_Ce_squared_2,
+    ts,
+    mod_Ce_squared_t_2,
     lw=2,
     color=dip_colors[1],
     alpha=0.9,
@@ -517,16 +514,16 @@ ax.set(xlabel=r"$t \, [a/c]$", ylabel=r"$|C_e(t)|^2$", yscale="log")
 
 ax2 = ax.twinx()
 (l3,) = ax2.plot(
-    tvals,
-    entropy_1,
+    ts,
+    S_t_1,
     ls="--",
     color=dip_colors[0],
     lw=3,
     label=r"$S(t)$, $\theta_1 = 90º$",
 )
 (l4,) = ax2.plot(
-    tvals,
-    entropy_2,
+    ts,
+    S_t_1,
     ls="--",
     color=dip_colors[1],
     alpha=0.9,
@@ -540,14 +537,14 @@ lines = [l1, l2, l3, l4]
 labels = [line.get_label() for line in lines]
 ax.legend(lines, labels)
 
-fig.savefig(f"./figures/kimble/emitter_timeevolution_entropy_at_{R0}.svg")
+fig.savefig(f"./figures/kimble/emitter_timeevolution_entropy_at_{R_0}.svg")
 plt.show()
 
 # --- Plot a bath population snapshot in time
 
 cbar_max = max(z1.max(), z2.max())
 
-for i, (theta, z) in enumerate(zip(thetas, [z1, z2])):
+for i, (θ, z) in enumerate(zip(θs, [z1, z2])):
     fig, ax = plt.subplots()
 
     sc = ax.pcolormesh(
@@ -558,7 +555,7 @@ for i, (theta, z) in enumerate(zip(thetas, [z1, z2])):
         vmax=cbar_max,
     )
 
-    mf.draw_arrow(ax, R0, theta, color=dip_colors[i], length=8, arrow_offset=2)
+    mf.draw_arrow(ax, R_0, θ, color=dip_colors[i], length=8, arrow_offset=2)
 
     cbar = fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{R}(t)|^2$")
     cbar.formatter.set_powerlimits((0, 0))
@@ -566,32 +563,30 @@ for i, (theta, z) in enumerate(zip(thetas, [z1, z2])):
     ax.set(
         xlabel=r"$x/a$",
         ylabel=r"$y/a$",
-        title=rf"$\mathbf{{r}}_0/a = {R0}$",
+        title=rf"$\mathbf{{r}}_0/a = {R_0}$",
         aspect="equal",
     )
 
     fig.tight_layout()
-    fig.savefig(
-        f"./figures/kimble/bath_snapshot_at_{R0}_θ_{np.rad2deg(theta):.0f}º.svg"
-    )
+    fig.savefig(f"./figures/kimble/bath_snapshot_at_{R_0}_θ_{np.rad2deg(θ):.0f}º.svg")
     plt.show()
 
 # ------------------------------------------------------------------------------
-# compute the photon-photon entropy for each cuadrant to show that the one with
+# Compute the photon-photon entropy for each cuadrant to show that the one with
 # four chanels is equal to log(4) and the one with two chanels is equatl to log(2)
 # ------------------------------------------------------------------------------
-amplitudes_1 = psit_1[:, N_EMITTERS:]
-amplitudes_2 = psit_2[:, N_EMITTERS:]
+Cr_t_1 = ψ_t_1[:, N_E:]
+Cr_t_2 = ψ_t_2[:, N_E:]
 
-S_1, p_1 = mf.quadrant_entropy(rjpts[:, 0], rjpts[:, 1], amplitudes_1)
-S_2, p_2 = mf.quadrant_entropy(rjpts[:, 0], rjpts[:, 1], amplitudes_2)
+S_1, p_1 = mf.quadrant_entropy(rs[:, 0], rs[:, 1], Cr_t_1)
+S_2, p_2 = mf.quadrant_entropy(rs[:, 0], rs[:, 1], Cr_t_2)
 
 check_1 = np.allclose(S_1[1:], np.log(4), atol=1e-3)
 check_2 = np.allclose(S_2[1:], np.log(2), atol=1e-3)
 
-print(f"Is S_dir equal to log(4) for θ = {np.rad2deg(THETA_1):.0f}º?", check_1)
+print(f"Is S_dir equal to log(4) for θ = {np.rad2deg(θ_1):.0f}º?", check_1)
 
-print(f"Is S_dir equal to log(2) for θ = {np.rad2deg(THETA_2):.0f}º?", check_2)
+print(f"Is S_dir equal to log(2) for θ = {np.rad2deg(θ_2):.0f}º?", check_2)
 
 # ------------------------------------------------------------------------------
 # --- Place another emitter to probe directional emission
@@ -600,86 +595,100 @@ print(f"Is S_dir equal to log(2) for θ = {np.rad2deg(THETA_2):.0f}º?", check_2
 # We are going to place another emitter at position [-4.5,4.5] with orientation
 # of 45º to check that this emitter should be excited when the first excited
 # emitter has orientation 90º and not when 135º
-new_n_emitters = 2
+new_n_e = 2
 new_R = [-4.5, 4.5]
-new_theta = np.deg2rad(45)
-new_dipole = 1e-1 * np.array([np.cos(new_theta), np.sin(new_theta), 0])
+new_θ = np.deg2rad(45)
+new_dipole = 1e-1 * np.array([np.cos(new_θ), np.sin(new_θ), 0])
 new_dip_color = "#2ca02c"
 my_red = "#d62728"
 
 # we also need to provide a detuning frequency, we are going to pick the one
 # associated to a state localized near the position of the emitter
 target = [-5, 5]
-idx = np.where(np.all(np.isclose(rjpts, target), axis=1))[0][0]
-new_detuning_1 = omegas_total_1[idx]
-new_detuning_2 = omegas_total_2[idx]
+idx = np.where(np.all(np.isclose(rs, target), axis=1))[0][0]
+assert ωs_1[idx] == ωs_2[idx]
+new_ω_0 = ωs_1[idx]
 
 # for this study it is not necessary to go for times as big as the previous ones,
 # so we are going to cut the simulations at previous times
-new_tf = 50
-new_tvals = np.linspace(T0, new_tf, T_STEPS, endpoint=True)
-new_time_index = (
-    20  # approximate time snapshot when the bath's excitation hits the emitter probe
-)
+new_t_f = 200
+new_ts = np.linspace(T_0, new_t_f, T_STEPS, endpoint=True)
+new_snap_idx = 45
+# NOTE: the previous snapshot is take around the time the bath excitation hits
+#       the new emitter. If a different position is chosen, this value might change.
 
-add_data = mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_{new_R}.pkl")
-new_omegas = np.asarray(add_data["freqs"])  # (Nk, Nb)
-E_ks_R = np.asarray(add_data["Eks"])[0, :, :, :]  # (Nb, Nk, 3)
-new_kpts = np.asarray(add_data["kpts"])
+add_fields_data = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{new_R}.pkl")
+new_ω_ks_n = np.asarray(add_fields_data["freqs"])  # (Nk, Nb)
+fR_n_ks = np.asarray(add_fields_data["Eks"])[0, :, :, :]  # (Nb, Nk, 3)
+new_ks = np.asarray(add_fields_data["kpts"])
 
-gRrjs_norm = mf.compute_gr0r(E_ks_R, new_dipole, new_omegas, new_kpts, rjpts) / np.sqrt(
-    np.abs(TAU_1)
+gR_n_rs = mf.compute_real_space_coupling(
+    fr0_n_ks=fR_n_ks, dipole_moment=new_dipole, ω_ks_n=new_ω_ks_n, ks=new_ks, rs=rs
 )  # (Nb, Nr)
 
-new_couplings = gRrjs_norm[BAND_INDEX, :]
+new_coupling = gR_n_rs[BAND_IDX, :]
 
 new_interaction_1 = [
-    [list(couplings[0]), list(indexes)],
-    [list(new_couplings), list(indexes)],
+    [list(couplings[0]), list(idxs)],
+    [list(new_coupling), list(idxs)],
 ]
 new_interaction_2 = [
-    [list(couplings[1]), list(indexes)],
-    [list(new_couplings), list(indexes)],
+    [list(couplings[1]), list(idxs)],
+    [list(new_coupling), list(idxs)],
 ]
 
 # --- Build the light-matter Hamiltonian
 new_H_1, _ = mf.make_light_matter_Hamiltonian(
-    finiteModel, [detuning_freq_norm, new_detuning_1], new_interaction_1
+    tb_model=finite_model, ω_0s=[ω_0, new_ω_0], gr0s_rs=new_interaction_1
 )
 new_H_2, _ = mf.make_light_matter_Hamiltonian(
-    finiteModel, [detuning_freq_norm, new_detuning_2], new_interaction_2
+    tb_model=finite_model, ω_0s=[ω_0, new_ω_0], gr0s_rs=new_interaction_2
 )
 
-new_psi0 = np.zeros(new_H_1.shape[0])
-new_psi0[0] = 1
+new_ψ_0 = np.zeros(new_H_1.shape[0])
+new_ψ_0[0] = 1
 
 # --- Compute time evolution
-new_psit_1 = expm_multiply(-1j * new_H_1, new_psi0, T0, new_tf, T_STEPS, endpoint=True)
-new_psit_2 = expm_multiply(-1j * new_H_2, new_psi0, T0, new_tf, T_STEPS, endpoint=True)
+new_ψ_t_1 = expm_multiply(-1j * new_H_1, new_ψ_0, T_0, new_t_f, T_STEPS, endpoint=True)
+new_ψ_t_2 = expm_multiply(-1j * new_H_2, new_ψ_0, T_0, new_t_f, T_STEPS, endpoint=True)
 
-# get photonic component of the overall wave function at selected time, i.e, tvals[time_index]
-new_mod_Cr_1 = np.abs(new_psit_1[new_time_index, new_n_emitters:]) ** 2
-new_mod_Cr_2 = np.abs(new_psit_2[new_time_index, new_n_emitters:]) ** 2
+# get photonic component of the overall wave function at selected time, i.e,
+# ts[new_snap_idx]
+new_mod_Cr_squared_1 = np.abs(new_ψ_t_1[new_snap_idx, new_n_e:]) ** 2
+new_mod_Cr_squared_2 = np.abs(new_ψ_t_2[new_snap_idx, new_n_e:]) ** 2
 
-z1 = new_mod_Cr_1.reshape(len(x), len(y))
-z2 = new_mod_Cr_2.reshape(len(x), len(y))
+new_z1 = new_mod_Cr_squared_1.reshape(len(x), len(y))
+new_z2 = new_mod_Cr_squared_2.reshape(len(x), len(y))
 
 # get all the emitters dynamics
-new_mod_Ces = [np.abs(new_psit_1[:, 0]) ** 2, np.abs(new_psit_2[:, 0]) ** 2]
-new_mod_Ce_probes = [np.abs(new_psit_1[:, 1]) ** 2, np.abs(new_psit_2[:, 1]) ** 2]
+new_mod_Ce_excited_squared_ts = [
+    np.abs(new_ψ_t_1[:, 0]) ** 2,
+    np.abs(new_ψ_t_2[:, 0]) ** 2,
+]
+new_mod_Ce_probe_squared_ts = [
+    np.abs(new_ψ_t_1[:, 1]) ** 2,
+    np.abs(new_ψ_t_2[:, 1]) ** 2,
+]
 
-# compute the concurrence
-concurrences = [
-    2 * np.abs(new_mod_Ces[0] * np.conj(new_mod_Ce_probes[0])),
-    2 * np.abs(new_mod_Ces[1] * np.conj(new_mod_Ce_probes[1])),
+# compute the concurrences for the two systems
+C_ts = [
+    2
+    * np.abs(
+        new_mod_Ce_excited_squared_ts[0] * np.conj(new_mod_Ce_probe_squared_ts[0])
+    ),
+    2
+    * np.abs(
+        new_mod_Ce_excited_squared_ts[1] * np.conj(new_mod_Ce_probe_squared_ts[1])
+    ),
 ]
 
 # ------------------------------------------------------------------------------
-# Plot the previous emission for visualizing the situation
+# Plot the emission for visualizing the situation when the excitation reaches
+# the probe emitter
 # ------------------------------------------------------------------------------
-cbar_max = max(z1.max(), z2.max())
+cbar_max = max(new_z1.max(), new_z2.max())
 
-for i, (theta, z) in enumerate(zip(thetas, [z1, z2])):
+for i, (θ, z) in enumerate(zip(θs, [new_z1, new_z2])):
     fig, ax = plt.subplots()
 
     sc = ax.pcolormesh(
@@ -690,8 +699,8 @@ for i, (theta, z) in enumerate(zip(thetas, [z1, z2])):
         vmax=cbar_max,
     )
 
-    mf.draw_arrow(ax, new_R, new_theta, new_dip_color, length=2, arrow_offset=0.2)
-    mf.draw_arrow(ax, R0, theta, dip_colors[i], length=2, arrow_offset=0.2)
+    mf.draw_arrow(ax, new_R, new_θ, new_dip_color, length=2, arrow_offset=0.2)
+    mf.draw_arrow(ax, R_0, θ, dip_colors[i], length=2, arrow_offset=0.2)
 
     cbar = fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{r}(t)|^2$")
     cbar.formatter.set_powerlimits((0, 0))
@@ -700,7 +709,7 @@ for i, (theta, z) in enumerate(zip(thetas, [z1, z2])):
         xlabel=r"$x/a$",
         ylabel=r"$y/a$",
         aspect="equal",
-        title=rf"$\theta_{i+1} = {np.rad2deg(theta):.0f}º$",
+        title=rf"$\theta_{i+1} = {np.rad2deg(θ):.0f}º$",
         xlim=(-7, 7),
         ylim=(-7, 7),
     )
@@ -708,7 +717,7 @@ for i, (theta, z) in enumerate(zip(thetas, [z1, z2])):
 
     fig.tight_layout()
     fig.savefig(
-        f"./figures/kimble/bath_snapshot_at_{R0}_θ_{np.rad2deg(theta):.0f}º_with_probe.svg"
+        f"./figures/kimble/bath_snapshot_at_{R_0}_θ_{np.rad2deg(θ):.0f}º_with_probe.svg"
     )
     plt.show()
 
@@ -716,20 +725,20 @@ for i, (theta, z) in enumerate(zip(thetas, [z1, z2])):
 # Plot the emitters time evolution to test the previous hypothesis
 # ------------------------------------------------------------------------------
 
-concurrence_max = max(concurrences[0].max(), concurrences[1].max())
+C_max = max(C_ts[0].max(), C_ts[1].max())
 
-for i, theta in enumerate(thetas):
+for i, θ in enumerate(θs):
     fig, ax = plt.subplots()
 
-    ax.plot(new_tvals, new_mod_Ces[i], c=dip_colors[i])
-    ax.plot(new_tvals, new_mod_Ce_probes[i], c=new_dip_color)
+    ax.plot(new_ts, new_mod_Ce_excited_squared_ts[i], c=dip_colors[i])
+    ax.plot(new_ts, new_mod_Ce_probe_squared_ts[i], c=new_dip_color)
 
     ax2 = ax.twinx()
-    ax2.plot(new_tvals, concurrences[i], c=my_red, ls="--")
+    ax2.plot(new_ts, C_ts[i], c=my_red, ls="--")
 
     ax.set(
-        title=rf"$\theta_p = {np.rad2deg(new_theta):.0f}º$",
-        xlabel=r"$t [\tau_1^{-1/2}]$",
+        title=rf"$\theta_p = {np.rad2deg(new_θ):.0f}º$",
+        xlabel=r"$t [a/c]$",
         ylabel=r"$|C_e(t)|^2$",
         yscale="log",
     )
@@ -737,11 +746,11 @@ for i, theta in enumerate(thetas):
     ax2.set_ylabel(r"$C(t)$", color=my_red)
     ax2.tick_params(axis="y", colors=my_red)
     ax2.spines["right"].set_color(my_red)
-    ax2.set_ylim((-1e-5, concurrence_max + 1e-5))
+    ax2.set_ylim((-1e-5, C_max + 1e-5))
     ax2.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
 
     fig.tight_layout()
     fig.savefig(
-        f"./figures/kimble/emitter_timeevolution_concurrence_at_{R0}_θ_{np.rad2deg(theta):.0f}º_and_{new_R}.svg"
+        f"./figures/kimble/emitter_timeevolution_concurrence_at_{R_0}_θ_{np.rad2deg(θ):.0f}º_and_{new_R}.svg"
     )
     plt.show()
