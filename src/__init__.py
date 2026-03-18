@@ -16,6 +16,7 @@ from .utils import (
     marker_size,
     draw_arrow,
     unit_dip,
+    free_spontaneous_emission,
 )
 from .monkhorst_pack import monkhorst_pack_sampling
 from .coupling import compute_real_space_coupling, compute_ldos

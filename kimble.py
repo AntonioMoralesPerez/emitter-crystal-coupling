@@ -462,7 +462,10 @@ H_2, ωs_2 = mf.make_light_matter_Hamiltonian(
 
 # --- Compute time evolution
 
-ts = np.linspace(T_0, T_F, T_STEPS, endpoint=True)  # for later plotting
+# transform times into units of Γ₀⁻¹ for later plotting
+ts = np.linspace(T_0, T_F, T_STEPS, endpoint=True)
+Γ_0 = mf.free_spontaneous_emission(ω_0=ω_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM)
+transformed_ts = LAT_PARAM / mf.constants.c * ts / Γ_0
 
 # Small check before computing the time evolution
 assert H_1.shape == H_2.shape, "Unexpected different shapes for the Hamiltonians!"
@@ -504,14 +507,14 @@ z2 = mod_Cr_squared_2.reshape(len(x), len(y))
 fig, ax = plt.subplots()
 
 (l1,) = ax.plot(
-    ts,
+    transformed_ts,
     mod_Ce_squared_t_1,
     lw=3,
     color=dip_colors[0],
     label=r"$|C_e(t)|^2$, $\theta_1 = 90º$",
 )
 (l2,) = ax.plot(
-    ts,
+    transformed_ts,
     mod_Ce_squared_t_2,
     lw=2,
     color=dip_colors[1],
@@ -519,11 +522,11 @@ fig, ax = plt.subplots()
     label=r"$|C_e(t)|^2$, $\theta_2 = 135º$",
 )
 
-ax.set(xlabel=r"$t \, [a/c]$", ylabel=r"$|C_e(t)|^2$", yscale="log")
+ax.set(xlabel=r"$t \, [\Gamma_0^{-1}]$", ylabel=r"$|C_e(t)|^2$", yscale="log")
 
 ax2 = ax.twinx()
 (l3,) = ax2.plot(
-    ts,
+    transformed_ts,
     S_t_1,
     ls="--",
     color=dip_colors[0],
@@ -531,7 +534,7 @@ ax2 = ax.twinx()
     label=r"$S(t)$, $\theta_1 = 90º$",
 )
 (l4,) = ax2.plot(
-    ts,
+    transformed_ts,
     S_t_1,
     ls="--",
     color=dip_colors[1],
@@ -621,6 +624,7 @@ new_ω_0 = ωs_1[idx]
 # so we are going to cut the simulations at previous times
 new_t_f = 200
 new_ts = np.linspace(T_0, new_t_f, T_STEPS, endpoint=True)
+new_transformed_ts = LAT_PARAM / mf.constants.c * new_ts / Γ_0
 new_snap_idx = 45
 # NOTE: the previous snapshot is take around the time the bath excitation hits
 #       the new emitter. If a different position is chosen, this value might change.
@@ -737,15 +741,15 @@ C_max = max(C_ts[0].max(), C_ts[1].max())
 for i, θ in enumerate(θs):
     fig, ax = plt.subplots()
 
-    ax.plot(new_ts, new_mod_Ce_excited_squared_ts[i], c=dip_colors[i])
-    ax.plot(new_ts, new_mod_Ce_probe_squared_ts[i], c=new_dip_color)
+    ax.plot(new_transformed_ts, new_mod_Ce_excited_squared_ts[i], c=dip_colors[i])
+    ax.plot(new_transformed_ts, new_mod_Ce_probe_squared_ts[i], c=new_dip_color)
 
     ax2 = ax.twinx()
-    ax2.plot(new_ts, C_ts[i], c=my_red, ls="--")
+    ax2.plot(new_transformed_ts, C_ts[i], c=my_red, ls="--")
 
     ax.set(
         title=rf"$\theta_p = {np.rad2deg(new_θ):.0f}º$",
-        xlabel=r"$t [a/c]$",
+        xlabel=r"$t [\Gamma_0^{-1}]$",
         ylabel=r"$|C_e(t)|^2$",
         yscale="log",
     )

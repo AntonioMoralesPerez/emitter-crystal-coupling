@@ -5,7 +5,7 @@ import h5py
 import meep as mp
 import meep.mpb as mpb
 
-from .constants import e
+from .constants import e, c, H_BAR, ε_0
 
 from typing import Any, Dict, List, Union
 from matplotlib.axes import Axes
@@ -704,6 +704,28 @@ def unit_dip(a: float) -> float:
     return p_a
 
 
+def debye2cm(dip_strength_in: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+    """
+    Transform dipole moments strength from Debyes to SI units of C·m.
+
+    Parameter
+    ---------
+    dip_strength_in : float, np.ndarray
+        Dipole moment strength in Debyes.
+
+    Returns
+    -------
+    dip_strength_out : float, np.ndarray
+        Dipole moment strength in C·m.
+
+    Notes
+    -----
+    1 D ≈ 3.33564e-30 Cm
+    """
+    dip_strength_out = 3.33564e-30 * dip_strength_in
+    return dip_strength_out
+
+
 def cm2debye(dip_strength_in: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
     """
     Transform dipole moments strength from SI units of C·m to Debyes.
@@ -724,3 +746,58 @@ def cm2debye(dip_strength_in: Union[float, np.ndarray]) -> Union[float, np.ndarr
     """
     dip_strength_out = dip_strength_in / 3.33564e-30
     return dip_strength_out
+
+
+def mpb2hz(ω_in: Union[float, np.ndarray], a: float) -> np.ndarray:
+    """
+    Translate MPB frequencies (normalized to c/a) into SI units of Hz.
+
+    Parameters
+    ----------
+    ω_in : float, np.ndarray
+        Frequencies obtained from MPB (normalized by c/a).
+
+    a : float
+        Lattice parameter of the crystal in meters.
+
+    Returns
+    -------
+    ω_out: np.ndarray
+        Frequencies in SI units of Hz.
+    """
+    ω_out = ω_in * c / a
+    return ω_out
+
+
+def free_spontaneous_emission(ω_0: float, dip_strength: float, a: float) -> float:
+    """
+    Compute the (average) free-space spontaneous emission rate Γ₀ of the emitter(s)
+    in rad/s.
+
+    Parameters
+    ----------
+    ω_0 : float
+        (Average) Resonant frequency of the emitter(s) in c/a.
+
+    dip_strength : float
+        (Average) Dipole moment strength of the emitter(s) in Debeys.
+
+    a : float
+        Lattice parameter of the photonic crystal in meters.
+
+    Returns
+    -------
+    Γ_0 : float
+        (Average) free-space spontaneous emission rate of the emitter(s) in rad/s.
+
+    Notes
+    -----
+    We use the following formula for obtaining the free-space spontaneous emission
+    rate:
+        Γ₀ = ω₀³ p² / (3 π ε₀ hbar c³),
+    """
+    ω_0_si = mpb2hz(ω_0, a)
+    dip_strength_si = debye2cm(dip_strength)
+
+    Γ_0 = ω_0_si**3 * dip_strength_si**2 / (3 * np.pi * ε_0 * H_BAR * c**3)
+    return Γ_0
