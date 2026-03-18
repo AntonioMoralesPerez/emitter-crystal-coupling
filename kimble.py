@@ -67,7 +67,7 @@ mpl.rcParams.update(
 # ------------------------------------------------------------------------------
 
 # Parameters of the MPB simulation
-LAT_PARAM = 100e-9  # lattice parameter of the PhC in meters
+LAT_PARAM = 30e-9  # lattice parameter of the PhC in meters
 N_BANDS = 2
 BAND_IDX = 0  # index of the band to consider (0-based)
 ε_INPUT_FILE = "data/kimble/epsilon.h5"  # file where the dielectric tensor is stored
@@ -80,7 +80,7 @@ N_K = 64  # number of points per direction in the Monkhorst-Pack grid
 # orientations
 θ_1 = (90) * np.pi / 180
 θ_2 = (135) * np.pi / 180
-DIP_STRENGTH = 50  # dipole moment strength of the emitter in Debyes
+DIP_STRENGTH = 1100  # dipole moment strength of the emitter in Debyes
 
 # Normalize the dipole strength by the dipole unit p_a = e*a
 p_a = mf.unit_dip(a=LAT_PARAM)
@@ -100,7 +100,7 @@ dip_colors = ["#1f77b4", "#ff7f0e"]  # colors associated to each dipole
 # Parameters for the tight-binding model
 LAT = [[1, 0], [0, 1]]
 ORB = [[0, 0]]  # position of the orbital in lattice units
-N_CELLS = 51  # number of unit cells in each direction
+N_CELLS = 61  # number of unit cells in each direction
 
 # Coefficients for the tight-binding model, considered until 3-rd nearest neighbors.
 # Notice that this coefficients will have units of (c/a)².
@@ -753,7 +753,8 @@ for i, θ in enumerate(θs):
     ax2.set_ylabel(r"$C(t)$", color=my_red)
     ax2.tick_params(axis="y", colors=my_red)
     ax2.spines["right"].set_color(my_red)
-    ax2.set_ylim((-1e-5, C_max + 1e-5))
+    pad = C_max * 0.05
+    ax2.set_ylim((-pad, C_max + pad))
     ax2.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
 
     fig.savefig(

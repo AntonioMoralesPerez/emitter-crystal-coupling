@@ -65,7 +65,7 @@ def compute_real_space_coupling(
 
     N_b, N_k, N_comp = fr0_n_ks.shape
 
-    # --- Input sanity checks ---
+    # Input sanity checks
     assert (
         N_comp == 3
     ), f"Last dimension of `fr0_n_ks` must be 3 (vector components), got {N_comp}."
@@ -78,23 +78,24 @@ def compute_real_space_coupling(
         ks.shape[0] == N_k
     ), f"Number of k-points {ks.shape[0]} does not match N_k={N_k}."
 
-    # --- Compute dipole · field: shape (Nb, Nk) ---
-    # Vectorized dot product over last dimension
+    # Compute dipole times field, shape: (N_b, N_k)
     dipole_times_field = np.einsum("i,bki->bk", dipole_moment, fr0_n_ks)
 
-    # --- Prefactor: shape (Nk, Nb) ---
+    # Prefactor, shape (N_k, N_b)
     prefactor = -1j * const * np.sqrt(ω_ks_n / (2 * N_k))
-    # Transpose to match dipole_times_field: Nb x Nk
+    # Transpose to match dipole_times_field, shape (N_b, N_k)
     prefactor = prefactor.T
 
-    # --- Compute g_k(r0): Nb x Nk ---
+    # Compute g_k(r_0), shape (N_b, N_k)
     gr0_n_ks = prefactor * dipole_times_field
 
-    # --- Fourier factor: exp(-i k·r) Nk x Nr ---
-    exponential_factor = np.exp(-1j * np.dot(ks, rs.T))  # Nk x Nr
+    # Fourier factor: 1/sqrt(N_k) * exp(-i k·r), shape (N_k, N_r)
+    exponential_factor = np.exp(-1j * np.dot(ks, rs.T)) / np.sqrt(N_k)
 
-    # --- Sum over k-points: result Nb x Nr ---
-    gr0_n_rs = np.dot(gr0_n_ks, exponential_factor)  # (Nb x Nk) · (Nk x Nr) -> Nb x Nr
+    # Sum over k-points, shape (N_b, N_r)
+    gr0_n_rs = np.dot(
+        gr0_n_ks, exponential_factor
+    )  # (N_b, N_k)·(N_k, N_r) -> (N_b, N_r)
 
     return gr0_n_rs
 
