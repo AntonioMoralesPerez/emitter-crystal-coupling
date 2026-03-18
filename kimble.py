@@ -69,20 +69,22 @@ mpl.rcParams.update(
 # Parameters of the MPB simulation
 N_BANDS = 2
 BAND_IDX = 0  # index of the band to consider (0-based)
-ε_INPUT_FILE = "data/kimble/epsilon.h5"
+ε_INPUT_FILE = "data/kimble/epsilon.h5"  # file where the dielectric tensor is stored
 
-N_K = 64  # number of points per direction in the Monkhorst-Pack grid,
-#           also used to identify the file where the fields are stored
+N_K = 64  # number of points per direction in the Monkhorst-Pack grid
+# NOTE: This is also used to identify the file where the fields are stored.
 
 # Parameters of the emitters that we are going to consider. In this case, we are
-# going to consider two emitters at the same position r₀ but with different orientations
+# going to consider two emitters at the same position r₀ but with different
+# orientations
 θ_1 = (90) * np.pi / 180
 θ_2 = (135) * np.pi / 180
 DIP_STRENGTH = 1e-2
 N_E = 1  # number of emitters per simulation.
 # NOTE: In this case there are two simulations (one per orientation)
 #       and one emitter per simulation
-R_0 = [0.0, 0.0]  # position(s) of the emitter. List of positions is also allowed
+R_0 = [0.0, 0.0]  # position(s) of the emitter in lattice units
+# NOTE: List of positions is also allowed.
 
 # wrap the emitter orientations and dipoles in lists
 θs = [θ_1, θ_2]
@@ -94,19 +96,20 @@ LAT = [[1, 0], [0, 1]]
 ORB = [[0, 0]]  # position of the orbital in lattice units
 N_CELLS = 51  # number of unit cells in each direction
 
-# coefficients for the tight-binding model, considered until 3-rd nearest neighbors
+# Coefficients for the tight-binding model, considered until 3-rd nearest neighbors.
+# Notice that this coefficients will have units of (c/a)².
 J_0 = 0.07755639
 J_1 = -0.01993698
 J_2 = 0.00053966
 
-# nodes in the path inside the Brillouin zone for band structure calculation
+# Nodes in the path inside the Brillouin zone for band structure calculation
 K_PATH = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
-# define high-symmetry points labels
+# Define high-symmetry points labels
 K_LABEL = [r"$\Gamma$", r"X", r"M", r"$\Gamma$"]
 
-# Parameters for the dynamic simulation
-T_0 = 0  # starting time
-T_F = 500  # final time
+# Times to consider for the dynamic simulation
+T_0 = 0  # starting time in a/c units
+T_F = 500  # final time in a/c units
 T_STEPS = 100  # number of time steps considered
 SNAP_IDX = (
     50  # time index to consider for the field snapshots, can go from 0 to `T_STEPS`
