@@ -5,9 +5,9 @@ import h5py
 import meep as mp
 import meep.mpb as mpb
 
-from typing import Any, Dict
-from typing import List, Union
-from typing import Tuple
+from .constants import e
+
+from typing import Any, Dict, List, Union
 from matplotlib.axes import Axes
 
 
@@ -683,3 +683,44 @@ def draw_arrow(
         va="center",
         weight="bold",
     )
+
+
+def unit_dip(a: float) -> float:
+    """
+    Compute the dipolar unit for the corresponding lattice parameter `a`. It is
+    defined as `p_a = e*a`. The result is returned in Debyes.
+
+    Parameters
+    ----------
+    a : float
+        Lattice parameter of the crystal in meters.
+
+    Returns
+    -------
+    p_a : float
+        Dipolar unit corresponding to the lattice parameter in Debyes.
+    """
+    p_a = cm2debye(e * a)
+    return p_a
+
+
+def cm2debye(dip_strength_in: Union[float, np.ndarray]) -> Union[float, np.ndarray]:
+    """
+    Transform dipole moments strength from SI units of C·m to Debyes.
+
+    Parameter
+    ---------
+    dip_strength_in : float, np.ndarray
+        Dipole moment strength in C·m.
+
+    Returns
+    -------
+    dip_strength_out : float, np.ndarray
+        Dipole moment strength in Debyes.
+
+    Notes
+    -----
+    1 D ≈ 3.33564e-30 Cm
+    """
+    dip_strength_out = dip_strength_in / 3.33564e-30
+    return dip_strength_out

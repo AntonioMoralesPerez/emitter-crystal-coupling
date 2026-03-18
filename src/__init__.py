@@ -15,6 +15,7 @@ from .utils import (
     find_positions,
     marker_size,
     draw_arrow,
+    unit_dip,
 )
 from .monkhorst_pack import monkhorst_pack_sampling
 from .coupling import compute_real_space_coupling, compute_ldos

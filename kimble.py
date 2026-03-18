@@ -67,6 +67,7 @@ mpl.rcParams.update(
 # ------------------------------------------------------------------------------
 
 # Parameters of the MPB simulation
+LAT_PARAM = 100e-9  # lattice parameter of the PhC in meters
 N_BANDS = 2
 BAND_IDX = 0  # index of the band to consider (0-based)
 ε_INPUT_FILE = "data/kimble/epsilon.h5"  # file where the dielectric tensor is stored
@@ -79,7 +80,12 @@ N_K = 64  # number of points per direction in the Monkhorst-Pack grid
 # orientations
 θ_1 = (90) * np.pi / 180
 θ_2 = (135) * np.pi / 180
-DIP_STRENGTH = 1e-2
+DIP_STRENGTH = 50  # dipole moment strength of the emitter in Debyes
+
+# Normalize the dipole strength by the dipole unit p_a = e*a
+p_a = mf.unit_dip(a=LAT_PARAM)
+dip_strength_norm = DIP_STRENGTH / p_a
+
 N_E = 1  # number of emitters per simulation.
 # NOTE: In this case there are two simulations (one per orientation)
 #       and one emitter per simulation
@@ -88,7 +94,7 @@ R_0 = [0.0, 0.0]  # position(s) of the emitter in lattice units
 
 # wrap the emitter orientations and dipoles in lists
 θs = [θ_1, θ_2]
-dipoles = [DIP_STRENGTH * np.array([np.cos(θ), np.sin(θ), 0]) for θ in θs]
+dipoles = [dip_strength_norm * np.array([np.cos(θ), np.sin(θ), 0]) for θ in θs]
 dip_colors = ["#1f77b4", "#ff7f0e"]  # colors associated to each dipole
 
 # Parameters for the tight-binding model
@@ -570,7 +576,6 @@ for i, (θ, z) in enumerate(zip(θs, [z1, z2])):
         aspect="equal",
     )
 
-    fig.tight_layout()
     fig.savefig(f"./figures/kimble/bath_snapshot_at_{R_0}_θ_{np.rad2deg(θ):.0f}º.svg")
     plt.show()
 
@@ -718,7 +723,6 @@ for i, (θ, z) in enumerate(zip(θs, [new_z1, new_z2])):
     )
     ax.title.set_color(dip_colors[i])
 
-    fig.tight_layout()
     fig.savefig(
         f"./figures/kimble/bath_snapshot_at_{R_0}_θ_{np.rad2deg(θ):.0f}º_with_probe.svg"
     )
@@ -752,7 +756,6 @@ for i, θ in enumerate(θs):
     ax2.set_ylim((-1e-5, C_max + 1e-5))
     ax2.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
 
-    fig.tight_layout()
     fig.savefig(
         f"./figures/kimble/emitter_timeevolution_concurrence_at_{R_0}_θ_{np.rad2deg(θ):.0f}º_and_{new_R}.svg"
     )
