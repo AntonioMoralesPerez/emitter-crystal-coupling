@@ -165,7 +165,7 @@ for i, θ in enumerate(θs):
         arrow_offset=0.05,
     )
 
-fig.savefig(f"./figures/kimble/dielectric_function_dipoles_at_{R_0}.png")
+fig.savefig(f"./figures/kimble/dielectric_function_dipoles_at_{R_0}.svg")
 # plt.show()
 
 # ------------------------------------------------------------------------------
@@ -243,7 +243,7 @@ ax.set(
 )
 ax.grid(axis="x")
 
-fig.savefig(f"./figures/kimble/MPBvTB_bandstructure.png")
+fig.savefig(f"./figures/kimble/MPBvTB_bandstructure.svg")
 # plt.show()
 
 # ------------------------------------------------------------------------------
@@ -309,7 +309,7 @@ for i, θ in enumerate(θs):
     )
     ax.title.set_color(dip_colors[i])
 
-    fig.savefig(f"./figures/kimble/g_r({R_0})_for_θ_{np.rad2deg(θ):.0f}º.png")
+    fig.savefig(f"./figures/kimble/g_r({R_0})_for_θ_{np.rad2deg(θ):.0f}º.svg")
     # plt.show()
 
 # ------------------------------------------------------------------------------
@@ -350,7 +350,7 @@ for i, ldos in enumerate(ldos_list):
         title=rf"$R_0/a$={R_0}, $\theta_{i+1}={np.degrees(θs[i]):.0f}º$",
     )
 
-    fig.savefig(f"./figures/kimble/ldos_at_{R_0}_θ_{np.rad2deg(θs[i]):.0f}.png")
+    fig.savefig(f"./figures/kimble/ldos_at_{R_0}_θ_{np.rad2deg(θs[i]):.0f}.svg")
     # plt.show()
 
 # ------------------------------------------------------------------------------
@@ -402,7 +402,7 @@ ax.set(
     aspect="equal",
 )
 
-fig.savefig(f"./figures/kimble/tb_isofrequency_contour.png")
+fig.savefig(f"./figures/kimble/tb_isofrequency_contour.svg")
 # plt.show()
 
 # ------------------------------------------------------------------------------
@@ -549,7 +549,7 @@ lines = [l1, l2, l3, l4]
 labels = [line.get_label() for line in lines]
 ax.legend(lines, labels)
 
-fig.savefig(f"./figures/kimble/emitter_timeevolution_entropy_at_{R_0}.png")
+fig.savefig(f"./figures/kimble/emitter_timeevolution_entropy_at_{R_0}.svg")
 # plt.show()
 
 # --- Plot a bath population snapshot in time
@@ -579,7 +579,7 @@ for i, (θ, z) in enumerate(zip(θs, [z1, z2])):
         aspect="equal",
     )
 
-    fig.savefig(f"./figures/kimble/bath_snapshot_at_{R_0}_θ_{np.rad2deg(θ):.0f}º.png")
+    fig.savefig(f"./figures/kimble/bath_snapshot_at_{R_0}_θ_{np.rad2deg(θ):.0f}º.svg")
     # plt.show()
 
 # ------------------------------------------------------------------------------
@@ -728,7 +728,7 @@ for i, (θ, z) in enumerate(zip(θs, [new_z1, new_z2])):
     ax.title.set_color(dip_colors[i])
 
     fig.savefig(
-        f"./figures/kimble/bath_snapshot_at_{R_0}_θ_{np.rad2deg(θ):.0f}º_with_probe.png"
+        f"./figures/kimble/bath_snapshot_at_{R_0}_θ_{np.rad2deg(θ):.0f}º_with_probe.svg"
     )
     # plt.show()
 
@@ -762,6 +762,6 @@ for i, θ in enumerate(θs):
     ax2.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
 
     fig.savefig(
-        f"./figures/kimble/emitter_timeevolution_concurrence_at_{R_0}_θ_{np.rad2deg(θ):.0f}º_and_{new_R}.png"
+        f"./figures/kimble/emitter_timeevolution_concurrence_at_{R_0}_θ_{np.rad2deg(θ):.0f}º_and_{new_R}.svg"
     )
     # plt.show()
