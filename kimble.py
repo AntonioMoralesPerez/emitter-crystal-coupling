@@ -588,9 +588,7 @@ def compute_and_plot_isofrequency(model: tb.tb_model, omega_0: float) -> None:
     k_x_grid, k_y_grid = np.meshgrid(k_x, k_y, indexing="ij")
 
     ks_grid_flat = np.column_stack((k_x_grid.ravel(), k_y_grid.ravel()))
-    tb_evals_grid = np.array(
-        [model.solve_one(k)[BAND_IDX] for k in ks_grid_flat]
-    )
+    tb_evals_grid = np.array([model.solve_one(k)[BAND_IDX] for k in ks_grid_flat])
     omega_grid = mf.safe_sqrt(tb_evals_grid).reshape(N_K_PATH, N_K_PATH)
 
     fig, ax = plt.subplots()

@@ -6,7 +6,11 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+<<<<<<< HEAD
     <dc:date>2026-03-25T11:28:25.591753</dc:date>
+=======
+    <dc:date>2026-03-20T10:04:56.903050</dc:date>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -79,7 +83,11 @@ L 98.736021 66.522847
 L 98.274178 65.585839 
 L 98.180667 65.184732 
 z
+<<<<<<< HEAD
 " clip-path="url(#p19ae78138f)" style="fill: #471365"/>
+=======
+" clip-path="url(#p31af275ead)" style="fill: #471365"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 94.325123 67.459855 
 L 93.987338 66.522847 
 L 93.767575 65.585839 
@@ -194,7 +202,11 @@ L 98.180667 63.175923
 L 98.062275 63.711823 
 L 98.062275 64.648831 
 z
+<<<<<<< HEAD
 " clip-path="url(#p19ae78138f)" style="fill: #463480"/>
+=======
+" clip-path="url(#p31af275ead)" style="fill: #463480"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 89.504766 67.459855 
 L 89.269852 66.522847 
 L 89.114615 65.585839 
@@ -381,7 +393,11 @@ L 93.767575 65.585839
 L 93.987338 66.522847 
 L 94.325123 67.459855 
 z
+<<<<<<< HEAD
 " clip-path="url(#p19ae78138f)" style="fill: #3b528b"/>
+=======
+" clip-path="url(#p31af275ead)" style="fill: #3b528b"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 84.093868 65.585839 
 L 84.028002 64.648831 
 L 84.028002 63.711823 
@@ -656,7 +672,11 @@ L 89.114615 65.585839
 L 89.269852 66.522847 
 L 89.504766 67.459855 
 z
+<<<<<<< HEAD
 " clip-path="url(#p19ae78138f)" style="fill: #2f6c8e"/>
+=======
+" clip-path="url(#p31af275ead)" style="fill: #2f6c8e"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 78.495199 66.522847 
 L 78.367522 65.585839 
 L 78.303695 64.648831 
@@ -1027,7 +1047,11 @@ L 84.028002 63.711823
 L 84.028002 64.648831 
 L 84.093868 65.585839 
 z
+<<<<<<< HEAD
 " clip-path="url(#p19ae78138f)" style="fill: #25848e"/>
+=======
+" clip-path="url(#p31af275ead)" style="fill: #25848e"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 71.001536 64.648831 
 L 71.001536 63.711823 
 L 71.007438 63.641129 
@@ -1510,7 +1534,11 @@ L 78.303695 64.648831
 L 78.367522 65.585839 
 L 78.495199 66.522847 
 z
+<<<<<<< HEAD
 " clip-path="url(#p19ae78138f)" style="fill: #1e9c89"/>
+=======
+" clip-path="url(#p31af275ead)" style="fill: #1e9c89"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 56.015313 69.333871 
 L 56.015313 68.396863 
 L 56.015313 67.459855 
@@ -2185,7 +2213,11 @@ L 71.007438 63.641129
 L 71.001536 63.711823 
 L 71.001536 64.648831 
 z
+<<<<<<< HEAD
 " clip-path="url(#p19ae78138f)" style="fill: #2fb47c"/>
+=======
+" clip-path="url(#p31af275ead)" style="fill: #2fb47c"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 56.015313 81.514973 
 L 56.015313 80.577965 
 L 56.015313 79.640957 
@@ -2894,7 +2926,11 @@ L 109.054067 21.546469
 L 108.619811 20.609461 
 L 108.487753 20.212367 
 z
+<<<<<<< HEAD
 " clip-path="url(#p19ae78138f)" style="fill: #5ec962"/>
+=======
+" clip-path="url(#p31af275ead)" style="fill: #5ec962"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 56.015313 90.885052 
 L 56.015313 89.948044 
 L 56.015313 89.011036 
@@ -3395,7 +3431,11 @@ L 121.23257 23.420485
 L 120.918133 22.483477 
 L 120.668856 21.58314 
 z
+<<<<<<< HEAD
 " clip-path="url(#p19ae78138f)" style="fill: #9bd93c"/>
+=======
+" clip-path="url(#p31af275ead)" style="fill: #9bd93c"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 56.015313 109.625209 
 L 56.015313 108.688201 
 L 56.015313 107.751193 
@@ -3732,28 +3772,48 @@ L 130.196395 20.609461
 L 130.044639 19.672453 
 L 130.038935 19.613899 
 z
+<<<<<<< HEAD
 " clip-path="url(#p19ae78138f)" style="fill: #dfe318"/>
+=======
+" clip-path="url(#p31af275ead)" style="fill: #dfe318"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
    </g>
    <g id="matplotlib.axis_1">
     <g id="xtick_1">
      <g id="line2d_1">
       <defs>
+<<<<<<< HEAD
        <path id="mcfb7d76837" d="M 0 0 
+=======
+       <path id="me4e2c170fa" d="M 0 0 
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
 L 0 -3.5 
 " style="stroke: #000000; stroke-width: 0.8"/>
       </defs>
       <g>
+<<<<<<< HEAD
        <use xlink:href="#mcfb7d76837" x="56.015313" y="110.562217" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#me4e2c170fa" x="56.015313" y="110.562217" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="line2d_2">
       <defs>
+<<<<<<< HEAD
        <path id="md0afb9b3d7" d="M 0 0 
+=======
+       <path id="mc4c3c0fedf" d="M 0 0 
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
 L 0 3.5 
 " style="stroke: #000000; stroke-width: 0.8"/>
       </defs>
       <g>
+<<<<<<< HEAD
        <use xlink:href="#md0afb9b3d7" x="56.015313" y="17.798437" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#mc4c3c0fedf" x="56.015313" y="17.798437" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="text_1">
@@ -3837,12 +3897,20 @@ z
     <g id="xtick_2">
      <g id="line2d_3">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#mcfb7d76837" x="102.397202" y="110.562217" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#me4e2c170fa" x="102.397202" y="110.562217" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="line2d_4">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#md0afb9b3d7" x="102.397202" y="17.798437" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#mc4c3c0fedf" x="102.397202" y="17.798437" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="text_2">
@@ -3857,12 +3925,20 @@ z
     <g id="xtick_3">
      <g id="line2d_5">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#mcfb7d76837" x="148.779092" y="110.562217" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#me4e2c170fa" x="148.779092" y="110.562217" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="line2d_6">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#md0afb9b3d7" x="148.779092" y="17.798437" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#mc4c3c0fedf" x="148.779092" y="17.798437" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="text_3">
@@ -4102,22 +4178,38 @@ z
     <g id="ytick_1">
      <g id="line2d_7">
       <defs>
+<<<<<<< HEAD
        <path id="me7b9b77e0d" d="M 0 0 
+=======
+       <path id="m2588ec3f68" d="M 0 0 
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
 L 3.5 0 
 " style="stroke: #000000; stroke-width: 0.8"/>
       </defs>
       <g>
+<<<<<<< HEAD
        <use xlink:href="#me7b9b77e0d" x="56.015313" y="110.562217" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#m2588ec3f68" x="56.015313" y="110.562217" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="line2d_8">
       <defs>
+<<<<<<< HEAD
        <path id="m3027bf7ba4" d="M 0 0 
+=======
+       <path id="me011293d29" d="M 0 0 
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
 L -3.5 0 
 " style="stroke: #000000; stroke-width: 0.8"/>
       </defs>
       <g>
+<<<<<<< HEAD
        <use xlink:href="#m3027bf7ba4" x="148.779092" y="110.562217" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#me011293d29" x="148.779092" y="110.562217" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="text_5">
@@ -4134,12 +4226,20 @@ L -3.5 0
     <g id="ytick_2">
      <g id="line2d_9">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#me7b9b77e0d" x="56.015313" y="87.371272" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#m2588ec3f68" x="56.015313" y="87.371272" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="line2d_10">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#m3027bf7ba4" x="148.779092" y="87.371272" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#me011293d29" x="148.779092" y="87.371272" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="text_6">
@@ -4183,12 +4283,20 @@ z
     <g id="ytick_3">
      <g id="line2d_11">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#me7b9b77e0d" x="56.015313" y="64.180327" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#m2588ec3f68" x="56.015313" y="64.180327" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="line2d_12">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#m3027bf7ba4" x="148.779092" y="64.180327" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#me011293d29" x="148.779092" y="64.180327" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="text_7">
@@ -4204,12 +4312,20 @@ z
     <g id="ytick_4">
      <g id="line2d_13">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#me7b9b77e0d" x="56.015313" y="40.989382" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#m2588ec3f68" x="56.015313" y="40.989382" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="line2d_14">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#m3027bf7ba4" x="148.779092" y="40.989382" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#me011293d29" x="148.779092" y="40.989382" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="text_8">
@@ -4225,12 +4341,20 @@ z
     <g id="ytick_5">
      <g id="line2d_15">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#me7b9b77e0d" x="56.015313" y="17.798437" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#m2588ec3f68" x="56.015313" y="17.798437" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="line2d_16">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#m3027bf7ba4" x="148.779092" y="17.798437" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#me011293d29" x="148.779092" y="17.798437" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="text_9">
@@ -4690,7 +4814,11 @@ L 56.95232 63.408285
 L 56.27639 63.711823 
 L 56.27639 64.648831 
 z
+<<<<<<< HEAD
 " clip-path="url(#p19ae78138f)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+=======
+" clip-path="url(#p31af275ead)" style="fill: none; stroke: #000000; stroke-width: 2"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
    </g>
    <g id="patch_3">
     <path d="M 56.015313 110.562217 
@@ -4728,68 +4856,112 @@ L 162.753895 110.562217
 L 162.753895 101.285839 
 L 158.115706 101.285839 
 L 158.115706 110.562217 
+<<<<<<< HEAD
 " clip-path="url(#p61d48ea515)" style="fill: #471365"/>
+=======
+" clip-path="url(#p6affcf977a)" style="fill: #471365"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 158.115706 101.285839 
 L 162.753895 101.285839 
 L 162.753895 92.009461 
 L 158.115706 92.009461 
 L 158.115706 101.285839 
+<<<<<<< HEAD
 " clip-path="url(#p61d48ea515)" style="fill: #463480"/>
+=======
+" clip-path="url(#p6affcf977a)" style="fill: #463480"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 158.115706 92.009461 
 L 162.753895 92.009461 
 L 162.753895 82.733083 
 L 158.115706 82.733083 
 L 158.115706 92.009461 
+<<<<<<< HEAD
 " clip-path="url(#p61d48ea515)" style="fill: #3b528b"/>
+=======
+" clip-path="url(#p6affcf977a)" style="fill: #3b528b"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 158.115706 82.733083 
 L 162.753895 82.733083 
 L 162.753895 73.456705 
 L 158.115706 73.456705 
 L 158.115706 82.733083 
+<<<<<<< HEAD
 " clip-path="url(#p61d48ea515)" style="fill: #2f6c8e"/>
+=======
+" clip-path="url(#p6affcf977a)" style="fill: #2f6c8e"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 158.115706 73.456705 
 L 162.753895 73.456705 
 L 162.753895 64.180327 
 L 158.115706 64.180327 
 L 158.115706 73.456705 
+<<<<<<< HEAD
 " clip-path="url(#p61d48ea515)" style="fill: #25848e"/>
+=======
+" clip-path="url(#p6affcf977a)" style="fill: #25848e"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 158.115706 64.180327 
 L 162.753895 64.180327 
 L 162.753895 54.903949 
 L 158.115706 54.903949 
 L 158.115706 64.180327 
+<<<<<<< HEAD
 " clip-path="url(#p61d48ea515)" style="fill: #1e9c89"/>
+=======
+" clip-path="url(#p6affcf977a)" style="fill: #1e9c89"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 158.115706 54.903949 
 L 162.753895 54.903949 
 L 162.753895 45.627571 
 L 158.115706 45.627571 
 L 158.115706 54.903949 
+<<<<<<< HEAD
 " clip-path="url(#p61d48ea515)" style="fill: #2fb47c"/>
+=======
+" clip-path="url(#p6affcf977a)" style="fill: #2fb47c"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 158.115706 45.627571 
 L 162.753895 45.627571 
 L 162.753895 36.351193 
 L 158.115706 36.351193 
 L 158.115706 45.627571 
+<<<<<<< HEAD
 " clip-path="url(#p61d48ea515)" style="fill: #5ec962"/>
+=======
+" clip-path="url(#p6affcf977a)" style="fill: #5ec962"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 158.115706 36.351193 
 L 162.753895 36.351193 
 L 162.753895 27.074815 
 L 158.115706 27.074815 
 L 158.115706 36.351193 
+<<<<<<< HEAD
 " clip-path="url(#p61d48ea515)" style="fill: #9bd93c"/>
+=======
+" clip-path="url(#p6affcf977a)" style="fill: #9bd93c"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
     <path d="M 158.115706 27.074815 
 L 162.753895 27.074815 
 L 162.753895 17.798437 
 L 158.115706 17.798437 
 L 158.115706 27.074815 
+<<<<<<< HEAD
 " clip-path="url(#p61d48ea515)" style="fill: #dfe318"/>
+=======
+" clip-path="url(#p6affcf977a)" style="fill: #dfe318"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
    </g>
    <g id="matplotlib.axis_3"/>
    <g id="matplotlib.axis_4">
     <g id="ytick_6">
      <g id="line2d_17">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#m3027bf7ba4" x="162.753895" y="110.562217" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#me011293d29" x="162.753895" y="110.562217" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="text_11">
@@ -4804,7 +4976,11 @@ L 158.115706 27.074815
     <g id="ytick_7">
      <g id="line2d_18">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#m3027bf7ba4" x="162.753895" y="92.009461" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#me011293d29" x="162.753895" y="92.009461" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="text_12">
@@ -4860,7 +5036,11 @@ z
     <g id="ytick_8">
      <g id="line2d_19">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#m3027bf7ba4" x="162.753895" y="73.456705" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#me011293d29" x="162.753895" y="73.456705" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="text_13">
@@ -4922,7 +5102,11 @@ z
     <g id="ytick_9">
      <g id="line2d_20">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#m3027bf7ba4" x="162.753895" y="54.903949" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#me011293d29" x="162.753895" y="54.903949" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="text_14">
@@ -4962,7 +5146,11 @@ z
     <g id="ytick_10">
      <g id="line2d_21">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#m3027bf7ba4" x="162.753895" y="36.351193" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#me011293d29" x="162.753895" y="36.351193" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="text_15">
@@ -5013,7 +5201,11 @@ z
     <g id="ytick_11">
      <g id="line2d_22">
       <g>
+<<<<<<< HEAD
        <use xlink:href="#m3027bf7ba4" x="162.753895" y="17.798437" style="stroke: #000000; stroke-width: 0.8"/>
+=======
+       <use xlink:href="#me011293d29" x="162.753895" y="17.798437" style="stroke: #000000; stroke-width: 0.8"/>
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
       </g>
      </g>
      <g id="text_16">
@@ -5194,10 +5386,17 @@ z
   </g>
  </g>
  <defs>
+<<<<<<< HEAD
   <clipPath id="p19ae78138f">
    <rect x="56.015313" y="17.798437" width="92.76378" height="92.76378"/>
   </clipPath>
   <clipPath id="p61d48ea515">
+=======
+  <clipPath id="p31af275ead">
+   <rect x="56.015313" y="17.798437" width="92.76378" height="92.76378"/>
+  </clipPath>
+  <clipPath id="p6affcf977a">
+>>>>>>> dab0283 (Final corrections and improvemnts on the figures (#2))
    <rect x="158.115706" y="17.798437" width="4.638189" height="92.76378"/>
   </clipPath>
  </defs>
