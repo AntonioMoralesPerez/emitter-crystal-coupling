@@ -35,9 +35,11 @@ import matplotlib.colors as colors
 import src as mf  # our package, see `./src/requirements.txt` for dependencies
 
 # Some set-ups for the plotting of the figures
+mm2in = 1 / 25.4  # to transform millimeters to inches
 mpl.rcParams.update(
     {
         # Figure
+        "figure.figsize": (85 * mm2in, 42.5 * mm2in),
         "figure.dpi": 300,  # higher resolution
         # Font
         "font.family": "serif",  # switch to serif (journal-style)
@@ -160,13 +162,13 @@ for i, θ in enumerate(θs):
         θ,
         color=dip_colors[i],
         label=rf"$\theta_{i+1}$",
-        length=0.4,
-        label_offset=0.09,
-        arrow_offset=0.05,
+        length=0.7,
+        label_offset=0.17,
+        arrow_offset=0.07,
     )
 
 fig.savefig(f"./figures/kimble/dielectric_function_dipoles_at_{R_0}.svg")
-# plt.show()
+plt.show()
 
 # ------------------------------------------------------------------------------
 # Compute the TB bands and the MPB bands for comparison
@@ -244,7 +246,7 @@ ax.set(
 ax.grid(axis="x")
 
 fig.savefig(f"./figures/kimble/MPBvTB_bandstructure.svg")
-# plt.show()
+plt.show()
 
 # ------------------------------------------------------------------------------
 # Compute the emitter-bath coupling in real space g_r(r₀)
@@ -299,7 +301,7 @@ for i, θ in enumerate(θs):
 
     cbar = fig.colorbar(sc, ax=ax, label=r"$|g_\mathbf{R}(\mathbf{r}_0)| \, [c/a]$")
 
-    mf.draw_arrow(ax, R_0, θ, color=dip_colors[i], length=2, arrow_offset=0.3)
+    mf.draw_arrow(ax, R_0, θ, color=dip_colors[i], length=4, arrow_offset=0.3)
 
     ax.set(
         title=rf"$\theta_{i+1} = {np.rad2deg(θ):.0f}º$",
@@ -310,7 +312,7 @@ for i, θ in enumerate(θs):
     ax.title.set_color(dip_colors[i])
 
     fig.savefig(f"./figures/kimble/g_r({R_0})_for_θ_{np.rad2deg(θ):.0f}º.svg")
-    # plt.show()
+    plt.show()
 
 # ------------------------------------------------------------------------------
 # Compute the LDOS to see how the emitters couple to the photonic bath
@@ -351,7 +353,7 @@ for i, ldos in enumerate(ldos_list):
     )
 
     fig.savefig(f"./figures/kimble/ldos_at_{R_0}_θ_{np.rad2deg(θs[i]):.0f}.svg")
-    # plt.show()
+    plt.show()
 
 # ------------------------------------------------------------------------------
 # --- Compute the time evolution of the emitter and the bath
@@ -403,7 +405,7 @@ ax.set(
 )
 
 fig.savefig(f"./figures/kimble/tb_isofrequency_contour.svg")
-# plt.show()
+plt.show()
 
 # ------------------------------------------------------------------------------
 # Finite model definition and time evolution
@@ -545,12 +547,12 @@ ax2 = ax.twinx()
 ax2.set(ylabel=r"$S(t)$")
 
 # combined legend
-lines = [l1, l2, l3, l4]
+lines = [l1, l4]
 labels = [line.get_label() for line in lines]
 ax.legend(lines, labels)
 
 fig.savefig(f"./figures/kimble/emitter_timeevolution_entropy_at_{R_0}.svg")
-# plt.show()
+plt.show()
 
 # --- Plot a bath population snapshot in time
 
@@ -567,9 +569,9 @@ for i, (θ, z) in enumerate(zip(θs, [z1, z2])):
         vmax=cbar_max,
     )
 
-    mf.draw_arrow(ax, R_0, θ, color=dip_colors[i], length=8, arrow_offset=2)
+    mf.draw_arrow(ax, R_0, θ, color=dip_colors[i], length=16, arrow_offset=2)
 
-    cbar = fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{R}(t)|^2$")
+    cbar = fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{R}(t)|^2$", pad=0.1)
     cbar.formatter.set_powerlimits((0, 0))
 
     ax.set(
@@ -580,7 +582,7 @@ for i, (θ, z) in enumerate(zip(θs, [z1, z2])):
     )
 
     fig.savefig(f"./figures/kimble/bath_snapshot_at_{R_0}_θ_{np.rad2deg(θ):.0f}º.svg")
-    # plt.show()
+    plt.show()
 
 # ------------------------------------------------------------------------------
 # Compute the photon-photon entropy for each cuadrant to show that the one with
@@ -711,8 +713,8 @@ for i, (θ, z) in enumerate(zip(θs, [new_z1, new_z2])):
         vmax=cbar_max,
     )
 
-    mf.draw_arrow(ax, new_R, new_θ, new_dip_color, length=2, arrow_offset=0.2)
-    mf.draw_arrow(ax, R_0, θ, dip_colors[i], length=2, arrow_offset=0.2)
+    mf.draw_arrow(ax, new_R, new_θ, new_dip_color, length=4, arrow_offset=0.2)
+    mf.draw_arrow(ax, R_0, θ, dip_colors[i], length=4, arrow_offset=0.2)
 
     cbar = fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{r}(t)|^2$")
     cbar.formatter.set_powerlimits((0, 0))
@@ -730,7 +732,7 @@ for i, (θ, z) in enumerate(zip(θs, [new_z1, new_z2])):
     fig.savefig(
         f"./figures/kimble/bath_snapshot_at_{R_0}_θ_{np.rad2deg(θ):.0f}º_with_probe.svg"
     )
-    # plt.show()
+    plt.show()
 
 # ------------------------------------------------------------------------------
 # Plot the emitters time evolution to test the previous hypothesis
@@ -764,4 +766,4 @@ for i, θ in enumerate(θs):
     fig.savefig(
         f"./figures/kimble/emitter_timeevolution_concurrence_at_{R_0}_θ_{np.rad2deg(θ):.0f}º_and_{new_R}.svg"
     )
-    # plt.show()
+    plt.show()
