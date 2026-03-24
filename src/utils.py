@@ -5,7 +5,7 @@ import h5py
 import meep as mp
 import meep.mpb as mpb
 
-from .constants import E_CHARGE, c, H_BAR, EPSILON_0
+from .constants import E_CHARGE, C_LIGHT, H_BAR, EPSILON_0
 
 from typing import Any, Dict, List, Union
 from matplotlib.axes import Axes
