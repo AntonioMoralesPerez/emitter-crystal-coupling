@@ -467,7 +467,7 @@ H_2, ωs_2 = mf.make_light_matter_Hamiltonian(
 # transform times into units of Γ₀⁻¹ for later plotting
 ts = np.linspace(T_0, T_F, T_STEPS, endpoint=True)
 Γ_0 = mf.free_spontaneous_emission(ω_0=ω_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM)
-transformed_ts = LAT_PARAM / mf.constants.c * ts / Γ_0
+transformed_ts = LAT_PARAM / mf.constants.C_LIGHT * ts / Γ_0
 
 # Small check before computing the time evolution
 assert H_1.shape == H_2.shape, "Unexpected different shapes for the Hamiltonians!"
@@ -626,7 +626,7 @@ new_ω_0 = ωs_1[idx]
 # so we are going to cut the simulations at previous times
 new_t_f = 200
 new_ts = np.linspace(T_0, new_t_f, T_STEPS, endpoint=True)
-new_transformed_ts = LAT_PARAM / mf.constants.c * new_ts / Γ_0
+new_transformed_ts = LAT_PARAM / mf.constants.C_LIGHT * new_ts / Γ_0
 new_snap_idx = 45
 # NOTE: the previous snapshot is take around the time the bath excitation hits
 #       the new emitter. If a different position is chosen, this value might change.

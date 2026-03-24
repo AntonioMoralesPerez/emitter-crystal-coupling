@@ -5,7 +5,7 @@ import h5py
 import meep as mp
 import meep.mpb as mpb
 
-from .constants import e, c, H_BAR, ε_0
+from .constants import E_CHARGE, c, H_BAR, EPSILON_0
 
 from typing import Any, Dict, List, Union
 from matplotlib.axes import Axes
@@ -700,7 +700,7 @@ def unit_dip(a: float) -> float:
     p_a : float
         Dipolar unit corresponding to the lattice parameter in Debyes.
     """
-    p_a = cm2debye(e * a)
+    p_a = cm2debye(E_CHARGE * a)
     return p_a
 
 
@@ -765,7 +765,7 @@ def mpb2hz(ω_in: Union[float, np.ndarray], a: float) -> np.ndarray:
     ω_out: np.ndarray
         Frequencies in SI units of Hz.
     """
-    ω_out = ω_in * c / a
+    ω_out = ω_in * C_LIGHT / a
     return ω_out
 
 
@@ -799,5 +799,5 @@ def free_spontaneous_emission(ω_0: float, dip_strength: float, a: float) -> flo
     ω_0_si = mpb2hz(ω_0, a)
     dip_strength_si = debye2cm(dip_strength)
 
-    Γ_0 = ω_0_si**3 * dip_strength_si**2 / (3 * np.pi * ε_0 * H_BAR * c**3)
+    Γ_0 = ω_0_si**3 * dip_strength_si**2 / (3 * np.pi * EPSILON_0 * H_BAR * C_LIGHT**3)
     return Γ_0

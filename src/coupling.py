@@ -1,6 +1,6 @@
 import numpy as np
 
-from .constants import K_CONST, LORENTIAN_BROADENING
+from .constants import K_CONST, LORENTZIAN_BROADENING
 
 
 # --- Helper: pad arrays to 3D ---
