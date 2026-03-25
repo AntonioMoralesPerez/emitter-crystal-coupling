@@ -1,5 +1,5 @@
 """
-    Docstring for kimble.py
+    Docstring for time_evolution.py
 
 This file uses our formalism to compute the coupling between a quantum emitter
 and a photonic crystal. We made use of a tight-binding model to simulate the
@@ -173,22 +173,10 @@ finiteModel = temporalModel.cut_piece(
 
 # %% Compute g(r0,rj) on the finite grid
 
-if N_CELLS % 2 == 0:
-    xjg = np.arange(-N_CELLS / 2, N_CELLS / 2, 1)
-    yjg = np.arange(-N_CELLS / 2, N_CELLS / 2 + 1, 1)
-else:
-    xjg = np.arange(-(N_CELLS // 2), N_CELLS // 2 + 1, 1)
-    yjg = np.arange(-(N_CELLS // 2), N_CELLS // 2 + 1, 1)
-rjpts = mf.meshgrid_points(xjg, yjg, indexing="xy")
+xjg, yjg, rjpts = mf.build_finite_grid(N_CELLS)
 
 gr0rjs = [
-    mf.compute_gr0r(
-        E_k_r0=E_k_r0,
-        dipole_moment=dipole,
-        omega_k=omegas,
-        kpts=kpts,
-        rpts=rjpts,
-    )
+    mf.compute_real_space_coupling(E_k_r0, dipole, omegas, kpts, rjpts)
     for dipole in dipoles
 ]
 
@@ -259,7 +247,9 @@ new_omegas = np.asarray(add_data["freqs"])  # (Nk, Nb)
 E_k_R = np.asarray(add_data["Eks"])[0, :, :, :]  # (Nb, Nk, 3)
 new_kpts = np.asarray(add_data["kpts"])
 
-gRrjs_norm = mf.compute_gr0r(E_k_R, new_dipole, new_omegas, new_kpts, rjpts) / np.sqrt(
+gRrjs_norm = mf.compute_real_space_coupling(
+    E_k_R, new_dipole, new_omegas, new_kpts, rjpts
+) / np.sqrt(
     np.abs(TAU_1)
 )  # (Nb, Nr)
 
@@ -301,12 +291,6 @@ zs = [mod_Cr_squared.reshape(N_CELLS, N_CELLS) for mod_Cr_squared in mod_Cr_squa
 # get all the emitters dynamics
 new_mod_Ces = [np.abs(new_psit_1[:, 0]) ** 2, np.abs(new_psit_2[:, 0]) ** 2]
 new_mod_Ce_probes = [np.abs(new_psit_1[:, 1]) ** 2, np.abs(new_psit_2[:, 1]) ** 2]
-
-# compute the concurrence
-concurrences = [
-    2 * np.abs(new_mod_Ces[0] * np.conj(new_mod_Ce_probes[0])),
-    2 * np.abs(new_mod_Ces[1] * np.conj(new_mod_Ce_probes[1])),
-]
 
 # ------------------------------------------------------------------------------
 # let us plot the time evolution of the emitter for both polarizations

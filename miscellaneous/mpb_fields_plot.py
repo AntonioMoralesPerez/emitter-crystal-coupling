@@ -1,5 +1,5 @@
 """
-    Docstring for coupling_plot.py
+    Docstring for mpb_fields_plot.py
 
 This file is used for plotting the coupling in real space for the already computed
 fields at such position. The main purpose is to see where the maximum coupling
@@ -188,7 +188,7 @@ rjpts = pad_to_3d(rjpts)
 # ---------------------------------------------------------------------------- #
 # Compute E_r(r0), shape (Nr, 3)
 # ---------------------------------------------------------------------------- #
-E_rjs_r0 = mf.compute_ERr0(E_ks_r0, kpts, rjpts)
+E_rjs_r0 = mf.compute_fr0rs(E_ks_r0, kpts, rjpts)
 
 if not np.allclose(E_rjs_r0[:, :, 2], 0):
     raise ValueError(

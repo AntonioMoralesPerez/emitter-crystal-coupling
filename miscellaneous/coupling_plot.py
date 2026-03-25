@@ -10,14 +10,10 @@ executing this file.
 """
 
 import numpy as np
-import meep as mp  # needed for the numerical simulation of the photonic crystal
-from meep import mpb  # same case as the previous package
-import pythtb as tb  # for easy simulation of the tight-binding model
 
 # some imports for plotting utilities
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
 
 import src as mf  # our package functions to work with
 
@@ -103,7 +99,9 @@ rjpts = mf.meshgrid_points(xjg, yjg, indexing="xy")
 # ---------------------------------------------------------------------------- #
 # Compute g_r(r0) for each dipole moment, shape (Nr)
 # ---------------------------------------------------------------------------- #
-gr0rjs = mf.compute_gr0r(E_k_r0, dipole, omega_k, kpts, rjpts)[BAND_INDEX, :]
+gr0rjs = mf.compute_real_space_coupling(E_k_r0, dipole, omega_k, kpts, rjpts)[
+    BAND_INDEX, :
+]
 
 # ------------------------------------------------------------------------------
 # plot the different couplings for the different dipole moments
