@@ -1017,12 +1017,12 @@ def compute_probe_emitter_evolution(
 
     new_H_1, _ = mf.make_light_matter_Hamiltonian(
         tb_model=finite_model,
-        ω_0s=[omega_0, new_omega_0],
+        omega_0s=[omega_0, new_omega_0],
         gr0s_rs=new_interaction_1,
     )
     new_H_2, _ = mf.make_light_matter_Hamiltonian(
         tb_model=finite_model,
-        ω_0s=[omega_0, new_omega_0],
+        omega_0s=[omega_0, new_omega_0],
         gr0s_rs=new_interaction_2,
     )
 
