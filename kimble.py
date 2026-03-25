@@ -757,10 +757,10 @@ def compute_time_evolution(
     interaction_2 = [[list(couplings[1]), list(idxs)]]
 
     H_1, omega_sites_1 = mf.make_light_matter_Hamiltonian(
-        tb_model=finite_model, ω_0s=omega_0, gr0s_rs=interaction_1
+        tb_model=finite_model, omega_0s=omega_0, gr0s_rs=interaction_1
     )
     H_2, omega_sites_2 = mf.make_light_matter_Hamiltonian(
-        tb_model=finite_model, ω_0s=omega_0, gr0s_rs=interaction_2
+        tb_model=finite_model, omega_0s=omega_0, gr0s_rs=interaction_2
     )
 
     if H_1.shape != H_2.shape:

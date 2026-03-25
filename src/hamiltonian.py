@@ -1,118 +1,127 @@
 import numpy as np
 from scipy.sparse import csr_matrix, diags, bmat
 from scipy.linalg import eigh
+from collections.abc import Sequence
 
-from typing import Union, Sequence
-import warnings
+import pythtb as tb
 
 
 def make_light_matter_Hamiltonian(
-    tb_model,
-    ω_0s: Union[float, Sequence[float]] = (0.0,),
+    tb_model: tb.tb_model,
+    omega_0s: float | Sequence[float] = (0.0,),
     gr0s_rs: Sequence[tuple] = (((0.5,), (0,)),),
     check_hermitian: bool = True,
     atol: float = 1e-10,
-):
+) -> tuple[csr_matrix, np.ndarray]:
     """
     Construct the total light-matter Hamiltonian for the system, in units of c/a.
 
     Parameters
     ----------
-    tb_model : tb_model
-        Tight-binding model of the photonic crystal in units of (c/a)²
-        It is assume to be constructed using PythTB.
-    ω_0s : float or Sequence of float
-        Detuning frequencies of the emitters, in units of c/a. If a single value
+    tb_model : tb.tb_model
+        Tight-binding model of the photonic crystal in units of (c/a)².
+        Assumed to be a finite PythTB model with no periodic boundary conditions.
+    omega_0s : float or Sequence of float
+        Detuning frequencies of the emitters in units of c/a. If a single value
         is provided, it is broadcast to all emitters detected in `gr0s_rs`.
     gr0s_rs : Sequence of tuple
-        Coupling data for each emitter in units of c/a.
-        It is provided as `(g_vals, bath_idx)` pairs where `g_vals[i]` is the
-        coupling strength to the orbital at `bath_idx[i]`.
-    check_hermitian : bool
-        If True, explicitly checks hermiticity of the light-matter Hamiltonian.
-        Default `True`.
-    atol : float
-        Absolute tolerance used for numerical precision and hermiticity checks.
-        Default `1e-10`.
+        Coupling data for each emitter in units of c/a, provided as
+        ``(g_vals, bath_idx)`` pairs where ``g_vals[i]`` is the coupling
+        strength to the orbital at ``bath_idx[i]``.
+    check_hermitian : bool, optional
+        If True, explicitly checks hermiticity of the final Hamiltonian.
+        Default is True.
+    atol : float, optional
+        Absolute tolerance for numerical precision and hermiticity checks.
+        Default is 1e-10.
 
     Returns
     -------
     H : scipy.sparse.csr_matrix
         Full light-matter Hamiltonian in units of c/a.
-    ωs : numpy.ndarray
-        Bath mode frequencies, defined as `ωs = sqrt(clip(tb_evals, 0, None))`,
-        where `tb_evals` are the eigenvalues of `Θ`.
+    omegas : np.ndarray
+        Bath mode frequencies, defined as
+        ``omegas = sqrt(clip(tb_evals, 0, None))``,
+        where ``tb_evals`` are the eigenvalues of the TB Hamiltonian.
 
+    Raises
+    ------
+    ValueError
+        If ``omega_0s`` length does not match the number of emitters.
+        If ``g_vals`` and ``bath_idx`` shapes do not match for any emitter.
+        If ``bath_idx`` contains out-of-range indices for any emitter.
+        If the final Hamiltonian has an unexpected shape.
+        If the final Hamiltonian is not Hermitian (when ``check_hermitian=True``).
 
     Notes
     -----
     The Hamiltonian is structured as:
 
-    `H = [  [ H_e,      H_int   ],
-            [ H_int†,   H_b     ]]`
+        H = [ H_e,     H_int  ]
+            [ H_int†,  H_b    ]
+
     where:
 
-    - `H_e` is a diagonal matrix of the emitter detuning frequencies `ω_0s`,
-    in units of c/a.
-    - `H_b = sqrt(Θ)`, with `Θ` the tight-binding Hamiltonian defined by `tb_model`.
-    The square root is taken in the eigenbasis: `Θ = U diag(tb_evals) U†`, so
-    `H_b = U diag(sqrt(tb_evals)) U†`.
-    - `H_int` is the coupling block, constructed from `gr0s_rs`, that connects each
-    emitter to the orbitals of the photonic crystal bath.
+    - ``H_e`` is a diagonal matrix of emitter detuning frequencies ``omega_0s``.
+    - ``H_b = sqrt(Theta)``, with ``Theta`` the tight-binding Hamiltonian. The
+      square root is taken in the eigenbasis: ``Theta = U diag(tb_evals) U†``,
+      so ``H_b = U diag(sqrt(tb_evals)) U†``.
+    - ``H_int`` is the coupling block connecting each emitter to the bath orbitals.
     """
-
     # --------------------------------------------------------------------------
     # Dimensions
     # --------------------------------------------------------------------------
-    N_o = int(tb_model.get_num_orbitals())
-    N_e = len(gr0s_rs)
-    dim_H = N_o + N_e
+    n_orbitals = int(tb_model.get_num_orbitals())
+    n_emitters = len(gr0s_rs)
+    dim_h = n_orbitals + n_emitters
 
     # Broadcast emitter detunings if needed
-    if np.isscalar(ω_0s):
-        ω_0s = [ω_0s] * N_e
-    elif len(ω_0s) == 1 and N_e > 1:
-        ω_0s = list(ω_0s) * N_e
+    if np.isscalar(omega_0s):
+        omega_0s = [omega_0s] * n_emitters
+    elif len(omega_0s) == 1 and n_emitters > 1:
+        omega_0s = list(omega_0s) * n_emitters
 
-    if len(ω_0s) != N_e:
-        raise ValueError("Length of emitter_detunings must match number of emitters")
+    if len(omega_0s) != n_emitters:
+        raise ValueError(
+            f"`omega_0s` length ({len(omega_0s)}) must match the number of "
+            f"emitters ({n_emitters})."
+        )
 
     # --------------------------------------------------------------------------
-    # 1. Construct Θ in real space (dense)
+    # 1. Construct TB Hamiltonian Theta in real space (dense)
     # --------------------------------------------------------------------------
-    Θ = np.zeros((N_o, N_o), dtype=complex)
+    # NOTE: assumes a finite model with no periodic boundary conditions.
+    theta = np.zeros((n_orbitals, n_orbitals), dtype=complex)
 
     for i, val in enumerate(tb_model._site_energies):
-        Θ[i, i] += val
+        theta[i, i] += val
 
     for val, i, j in tb_model._hoppings:
-        Θ[i, j] += val
-        Θ[j, i] += np.conjugate(val)
-    # NOTE: here it is implicit that the TB model is finite, with no PBC in any
-    #       direction
+        theta[i, j] += val
+        theta[j, i] += np.conjugate(val)
 
     # --------------------------------------------------------------------------
-    # 2. Diagonalize Θ and form H_b = sqrt(Θ)
+    # 2. Diagonalize Theta and form H_b = sqrt(Theta)
     # --------------------------------------------------------------------------
-    tb_evals, U = eigh(Θ)
-    ωs = np.sqrt(np.clip(tb_evals, 0.0, None))
+    tb_evals, u_mat = eigh(theta)
+    omegas = np.sqrt(np.clip(tb_evals, 0.0, None))
 
-    H_b = U @ np.diag(ωs) @ U.conj().T
-    H_b[np.abs(H_b) < atol] = 0.0
-    H_b_csr = csr_matrix(H_b)  # we make it a `csr_matrix` for faster operations
+    h_bath = u_mat @ np.diag(omegas) @ u_mat.conj().T
+    h_bath[np.abs(h_bath) < atol] = 0.0
+    h_bath_csr = csr_matrix(h_bath)
 
     # --------------------------------------------------------------------------
-    # 3. Emitters
+    # 3. Emitter block H_e
     # --------------------------------------------------------------------------
-    H_e = diags(
-        np.asarray(ω_0s, dtype=complex),
+    h_emitter = diags(
+        np.asarray(omega_0s, dtype=complex),
         offsets=0,
-        shape=(N_e, N_e),
+        shape=(n_emitters, n_emitters),
         format="csr",
     )
 
     # --------------------------------------------------------------------------
-    # 4. Coupling block H_int (emitters × bath)
+    # 4. Coupling block H_int, shape (n_emitters, n_orbitals)
     # --------------------------------------------------------------------------
     coupling_vals = []
     i_coupling = []
@@ -124,12 +133,12 @@ def make_light_matter_Hamiltonian(
 
         if g_vals.shape != bath_idx.shape:
             raise ValueError(
-                f"Emitter {emitter_idx}: `g_vals` and `bath_idx` must have same shape"
+                f"Emitter {emitter_idx}: `g_vals` and `bath_idx` must have the same shape, "
+                f"got {g_vals.shape} and {bath_idx.shape}."
             )
-
-        if bath_idx.min(initial=0) < 0 or bath_idx.max(initial=-1) >= N_o:
+        if bath_idx.min(initial=0) < 0 or bath_idx.max(initial=-1) >= n_orbitals:
             raise ValueError(
-                f"Emitter {emitter_idx}: `bath_idx` out of range [0, {N_o-1}]"
+                f"Emitter {emitter_idx}: `bath_idx` out of range [0, {n_orbitals - 1}]."
             )
 
         i_coupling.append(np.full_like(bath_idx, emitter_idx))
@@ -145,32 +154,34 @@ def make_light_matter_Hamiltonian(
         j_coupling = np.array([], dtype=int)
         coupling_vals = np.array([], dtype=complex)
 
-    H_int = csr_matrix(
+    h_int = csr_matrix(
         (coupling_vals, (i_coupling, j_coupling)),
-        shape=(N_e, N_o),
+        shape=(n_emitters, n_orbitals),
         dtype=complex,
     )
 
-    # ------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     # 5. Full Hamiltonian
-    # ------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     H = bmat(
-        [[H_e, H_int], [H_int.getH(), H_b_csr]],
+        [[h_emitter, h_int], [h_int.getH(), h_bath_csr]],
         format="csr",
     )
 
-    # ------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     # 6. Consistency checks
-    # ------------------------------------------------------------------
-    if H.shape != (dim_H, dim_H):
+    # --------------------------------------------------------------------------
+    if H.shape != (dim_h, dim_h):
         raise ValueError(
-            f"Incorrect Hamiltonian shape {H.shape}, expected {(dim_H, dim_H)}"
+            f"Incorrect Hamiltonian shape {H.shape}, expected ({dim_h}, {dim_h})."
         )
 
     if check_hermitian:
         diff = H - H.getH()
         max_dev = np.max(np.abs(diff.data)) if diff.nnz else 0.0
         if max_dev > atol:
-            raise ValueError(f"`H` is not Hermitian (max deviation {max_dev})")
+            raise ValueError(
+                f"`H` is not Hermitian (max deviation {max_dev:.2e}, tolerance {atol:.2e})."
+            )
 
-    return H, ωs
+    return H, omegas
