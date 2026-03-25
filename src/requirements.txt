@@ -1,6 +1,0 @@
-pymeep==1.30
-numpy==2.3
-scipy==1.15
-h5py==3.14
-pythtb==1.8
-matplotlib==3.10

@@ -93,6 +93,8 @@ def make_light_matter_Hamiltonian(
     # NOTE: assumes a finite model with no periodic boundary conditions.
     theta = np.zeros((n_orbitals, n_orbitals), dtype=complex)
 
+    # NOTE: _site_energies and _hoppings are private PythTB attributes with no
+    # public equivalent. Pin the PythTB version if this breaks across upgrades.
     for i, val in enumerate(tb_model._site_energies):
         theta[i, i] += val
 

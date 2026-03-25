@@ -251,7 +251,9 @@ def read_epsilon_file(epsilon_input_file: str) -> dict[str, any]:
     while len(resolution) < 3:
         resolution.append(1)
 
-    # Placeholder lattice size — TODO: adjust for specific lattice conventions
+    # Lattice size for mp.Lattice: 1 along each periodic direction, 0 for
+    # non-periodic (z). A 2D array gives [1, 1] → padded to [1, 1, 0], which
+    # is the correct MPB convention for a 2D unit cell.
     lattice_size = [1] * len(epsilon_data.shape)  # type: ignore
     while len(lattice_size) < 3:
         lattice_size.append(0)
@@ -842,3 +844,51 @@ def free_spontaneous_emission(omega_0: float, dip_strength: float, a: float) -> 
         * dip_strength_si**2
         / (3 * np.pi * EPSILON_0 * H_BAR * C_LIGHT**3)
     )
+
+
+def safe_sqrt(arr: np.ndarray) -> np.ndarray:
+    """
+    Compute the square root of an array, clipping negative values to zero.
+
+    Negative values can arise from numerical noise in the tight-binding
+    eigenvalues and are set to zero before taking the square root.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input array, possibly complex due to numerical noise.
+
+    Returns
+    -------
+    np.ndarray
+        Element-wise square root of the real part, with negatives clipped.
+    """
+    return np.sqrt(np.clip(np.real(arr), 0, None))
+
+
+def build_finite_grid(n_cells: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Build the real-space grid of a finite 2D square-lattice crystal.
+
+    Parameters
+    ----------
+    n_cells : int
+        Number of unit cells per direction.
+
+    Returns
+    -------
+    xs : np.ndarray
+        x-coordinates of the grid.
+    ys : np.ndarray
+        y-coordinates of the grid.
+    rs : np.ndarray, shape (Nr, 2)
+        Flattened grid points.
+    """
+    if n_cells % 2 == 0:
+        xs = np.arange(-n_cells / 2, n_cells / 2, 1)
+        ys = np.arange(-n_cells / 2, n_cells / 2 + 1, 1)
+    else:
+        xs = np.arange(-(n_cells // 2), n_cells // 2 + 1, 1)
+        ys = np.arange(-(n_cells // 2), n_cells // 2 + 1, 1)
+    rs = meshgrid_points(xs, ys, indexing="xy")
+    return xs, ys, rs
