@@ -226,26 +226,6 @@ plot_dielectric_function(R_0)
 # ------------------------------------------------------------------------------
 
 
-def safe_sqrt(arr: np.ndarray) -> np.ndarray:
-    """
-    Compute the square root of an array, clipping negative values to zero.
-
-    Negative values can arise from numerical noise in the tight-binding
-    eigenvalues and are set to zero before taking the square root.
-
-    Parameters
-    ----------
-    arr : np.ndarray
-        Input array, possibly complex due to numerical noise.
-
-    Returns
-    -------
-    np.ndarray
-        Element-wise square root of the real part, with negatives clipped.
-    """
-    return np.sqrt(np.clip(np.real(arr), 0, None))
-
-
 def build_tight_binding_model() -> tb.tb_model:
     """
     Build the infinite tight-binding model for the photonic crystal.
@@ -303,7 +283,7 @@ def compute_detuning_frequency(
     x_point_mask = np.isclose(k_dist, k_node[1])
     if not np.any(x_point_mask):
         raise ValueError("X point not found in k_dist — check K_PATH and N_K_PATH.")
-    return safe_sqrt(tb_evals[BAND_IDX][x_point_mask]).item()
+    return mf.safe_sqrt(tb_evals[BAND_IDX][x_point_mask]).item()
 
 
 def compute_mpb_bands(k_vec: np.ndarray) -> np.ndarray:
@@ -361,7 +341,7 @@ def plot_band_structure(
     fig, ax = plt.subplots()
 
     for tb_eval in tb_evals:
-        ax.plot(k_dist, safe_sqrt(tb_eval), color="r", linestyle="--")
+        ax.plot(k_dist, mf.safe_sqrt(tb_eval), color="r", linestyle="--")
 
     ax.plot(k_dist, mpb_freqs, color="k")
     ax.hlines(
@@ -611,7 +591,7 @@ def compute_and_plot_isofrequency(model: tb.tb_model, omega_0: float) -> None:
     tb_evals_grid = np.array(
         [model.solve_one(k)[BAND_IDX] for k in ks_grid_flat]
     )
-    omega_grid = safe_sqrt(tb_evals_grid).reshape(N_K_PATH, N_K_PATH)
+    omega_grid = mf.safe_sqrt(tb_evals_grid).reshape(N_K_PATH, N_K_PATH)
 
     fig, ax = plt.subplots()
     c = ax.contourf(k_x_grid, k_y_grid, omega_grid, levels=12)
@@ -651,34 +631,6 @@ def build_finite_model(infinite_model: tb.tb_model) -> tb.tb_model:
     """
     temporal_model = infinite_model.cut_piece(N_CELLS, fin_dir=0, glue_edgs=False)
     return temporal_model.cut_piece(N_CELLS, fin_dir=1, glue_edgs=False)
-
-
-def build_finite_grid(n_cells: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Build the real-space grid of the finite crystal.
-
-    Parameters
-    ----------
-    n_cells : int
-        Number of unit cells per direction.
-
-    Returns
-    -------
-    xs : np.ndarray
-        x-coordinates of the grid.
-    ys : np.ndarray
-        y-coordinates of the grid.
-    rs : np.ndarray, shape (Nr, 2)
-        Flattened grid points.
-    """
-    if n_cells % 2 == 0:
-        xs = np.arange(-n_cells / 2, n_cells / 2, 1)
-        ys = np.arange(-n_cells / 2, n_cells / 2 + 1, 1)
-    else:
-        xs = np.arange(-(n_cells // 2), n_cells // 2 + 1, 1)
-        ys = np.arange(-(n_cells // 2), n_cells // 2 + 1, 1)
-    rs = mf.meshgrid_points(xs, ys, indexing="xy")
-    return xs, ys, rs
 
 
 def compute_time_evolution(
@@ -925,7 +877,7 @@ def plot_bath_snapshot(
 
 # Build finite model and its grid
 finite_model = build_finite_model(infinite_model)
-xs_finite, ys_finite, rs_finite = build_finite_grid(N_CELLS)
+xs_finite, ys_finite, rs_finite = mf.build_finite_grid(N_CELLS)
 
 # Compute time evolution
 ts = np.linspace(T_0, T_F, T_STEPS, endpoint=True)

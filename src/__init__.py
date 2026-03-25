@@ -26,6 +26,8 @@ __all__ = [
     "binary_entropy",
     "quadrant_entropy",
     "compute_fr0rs",
+    "safe_sqrt",
+    "build_finite_grid",
 ]
 
 # I/O and data utilities
@@ -41,6 +43,9 @@ from .utils import (
 
 # Visualization helpers
 from .utils import marker_size, draw_arrow, unit_dip
+
+# Numerical utilities
+from .utils import safe_sqrt, build_finite_grid
 
 # Physics / optical utilities
 from .utils import free_spontaneous_emission
