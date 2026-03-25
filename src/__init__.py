@@ -25,7 +25,7 @@ __all__ = [
     "make_light_matter_Hamiltonian",
     "binary_entropy",
     "quadrant_entropy",
-    "compute_ERr0",
+    "compute_fr0rs",
 ]
 
 # I/O and data utilities

@@ -839,7 +839,7 @@ def plot_emitter_time_evolution(
     )
     (l4,) = ax2.plot(
         ts,
-        S_t_1,
+        S_t_2,
         ls="--",
         color=DIP_COLORS[1],
         alpha=0.9,
