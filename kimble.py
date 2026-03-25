@@ -965,8 +965,8 @@ S_2, p_2 = mf.quadrant_entropy(rs_finite[:, 0], rs_finite[:, 1], Cr_t_2)
 check_1 = np.allclose(S_1[1:], np.log(4), atol=1e-3)
 check_2 = np.allclose(S_2[1:], np.log(2), atol=1e-3)
 
-print(f"Is S_dir equal to log(4) for theta = {np.rad2deg(THETA_1):.0f}deg? {check_1}")
-print(f"Is S_dir equal to log(2) for theta = {np.rad2deg(THETA_2):.0f}deg? {check_2}")
+print(f"Is S_dir equal to log(4) for theta = {np.rad2deg(THETA_1):.0f}º? {check_1}")
+print(f"Is S_dir equal to log(2) for theta = {np.rad2deg(THETA_2):.0f}º? {check_2}")
 
 # ------------------------------------------------------------------------------
 # Probe emitter: directional emission and concurrence
