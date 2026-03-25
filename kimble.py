@@ -898,6 +898,7 @@ psi_t_1, psi_t_2, omega_sites_1, omega_sites_2, couplings = compute_time_evoluti
 S_t_1, S_t_2 = plot_emitter_time_evolution(ts, psi_t_1, psi_t_2, R_0)
 
 # Get crystal positions and plot bath snapshot
+# NOTE: _orb and _lat are private PythTB attributes with no public equivalent.
 positions = mf.find_positions(finite_model._orb, finite_model._lat)
 pos_x = np.unique(positions[:, 0]) - N_CELLS // 2
 pos_y = np.unique(positions[:, 1]) - N_CELLS // 2

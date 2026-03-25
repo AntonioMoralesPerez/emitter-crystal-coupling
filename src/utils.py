@@ -251,7 +251,9 @@ def read_epsilon_file(epsilon_input_file: str) -> dict[str, any]:
     while len(resolution) < 3:
         resolution.append(1)
 
-    # Placeholder lattice size — TODO: adjust for specific lattice conventions
+    # Lattice size for mp.Lattice: 1 along each periodic direction, 0 for
+    # non-periodic (z). A 2D array gives [1, 1] → padded to [1, 1, 0], which
+    # is the correct MPB convention for a 2D unit cell.
     lattice_size = [1] * len(epsilon_data.shape)  # type: ignore
     while len(lattice_size) < 3:
         lattice_size.append(0)
