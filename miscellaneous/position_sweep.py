@@ -1,21 +1,18 @@
 """
-    Docstring for parameter_sweep.py
+    Docstring for position_sweep.py
 
-This is a script for internal check on how polarization affects the emitter
-dynamics. An emitter position is fixed and a sweep for different polarizations is
-perform.
+This is a script for internal check on how the emitter position affects the
+emitter dynamics. A dipole polarization is fixed and a sweep over different
+emitter positions is performed.
 """
 
 # %% Import necessary packages
 import numpy as np
-import meep as mp  # needed for the numerical simulation of the photonic crystal
-from meep import mpb  # same case as the previous package
 import pythtb as tb  # for easy simulation of the tight-binding model
 
 # some imports for plotting utilities
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
 
 import src as mf  # our package functions to work with
 
@@ -124,7 +121,9 @@ rpts = mf.meshgrid_points(xg, yg)
 # Compute g_r(r0) for each dipole moment, shape (len(THETAS), Nr)
 # ---------------------------------------------------------------------------- #
 gr0rs = [
-    mf.compute_gr0r(E_k_r0s[i], dipole, omegas[i], kpts[i], rpts)[BAND_INDEX, :]
+    mf.compute_real_space_coupling(E_k_r0s[i], dipole, omegas[i], kpts[i], rpts)[
+        BAND_INDEX, :
+    ]
     for i in range(len(R0_LIST))
 ]
 
@@ -202,22 +201,12 @@ finiteModel = temporalModel.cut_piece(
 
 # %% Compute g(r0,rj) on the finite grid
 
-if N_CELLS % 2 == 0:
-    xjg = np.arange(-N_CELLS / 2, N_CELLS / 2, 1)
-    yjg = np.arange(-N_CELLS / 2, N_CELLS / 2 + 1, 1)
-else:
-    xjg = np.arange(-(N_CELLS // 2), N_CELLS // 2 + 1, 1)
-    yjg = np.arange(-(N_CELLS // 2), N_CELLS // 2 + 1, 1)
-rjpts = mf.meshgrid_points(xjg, yjg, indexing="xy")
+xjg, yjg, rjpts = mf.build_finite_grid(N_CELLS)
 
 gr0rjs = [
-    mf.compute_gr0r(
-        E_k_r0=E_k_r0s[i],
-        dipole_moment=dipole,
-        omega_k=omegas[i],
-        kpts=kpts[i],
-        rpts=rjpts,
-    )[BAND_INDEX, :]
+    mf.compute_real_space_coupling(E_k_r0s[i], dipole, omegas[i], kpts[i], rjpts)[
+        BAND_INDEX, :
+    ]
     for i in range(len(R0_LIST))
 ]
 
