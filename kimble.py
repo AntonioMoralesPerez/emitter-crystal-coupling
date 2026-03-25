@@ -592,12 +592,14 @@ compute_and_plot_ldos(omega_ks_n, fr0_n_ks, omega_0, R_0)
 # ------------------------------------------------------------------------------
 
 
-def compute_and_plot_isofrequency(omega_0: float) -> None:
+def compute_and_plot_isofrequency(model: tb.tb_model, omega_0: float) -> None:
     """
     Compute and plot the isofrequency contour of the tight-binding band.
 
     Parameters
     ----------
+    model : tb.tb_model
+        Infinite periodic tight-binding model.
     omega_0 : float
         Detuning frequency to highlight as an isofrequency contour [c/a].
     """
@@ -607,7 +609,7 @@ def compute_and_plot_isofrequency(omega_0: float) -> None:
 
     ks_grid_flat = np.column_stack((k_x_grid.ravel(), k_y_grid.ravel()))
     tb_evals_grid = np.array(
-        [infinite_model.solve_one(k)[BAND_IDX] for k in ks_grid_flat]
+        [model.solve_one(k)[BAND_IDX] for k in ks_grid_flat]
     )
     omega_grid = safe_sqrt(tb_evals_grid).reshape(N_K_PATH, N_K_PATH)
 
@@ -626,7 +628,7 @@ def compute_and_plot_isofrequency(omega_0: float) -> None:
     fig.savefig("./figures/kimble/tb_isofrequency_contour.svg")
 
 
-compute_and_plot_isofrequency(omega_0)
+compute_and_plot_isofrequency(infinite_model, omega_0)
 
 # ------------------------------------------------------------------------------
 # Finite tight-binding model and time evolution
