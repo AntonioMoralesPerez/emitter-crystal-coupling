@@ -1,10 +1,10 @@
 import numpy as np
 
 
-def compute_ERr0(
-    E_k_r0: np.ndarray,
-    kpts: np.ndarray,
-    Rpts: np.ndarray,
+def compute_fr0rs(
+    fr0_n_ks: np.ndarray,
+    k_pts: np.ndarray,
+    r_pts: np.ndarray,
 ) -> np.ndarray:
     """
     Discrete inverse Bloch transform of MPB fields.
@@ -15,46 +15,59 @@ def compute_ERr0(
 
     Parameters
     ----------
-    E_k_r0 : complex ndarray (Nb, Nk, 3)
-        Electric field evaluated at a fixed intracell position r0
+    fr0_n_ks : np.ndarray, shape (Nb, Nk, 3), complex
+        Electric field profile evaluated at a fixed intracell position r0
         for each band and k-point.
+    k_pts : np.ndarray, shape (Nk, dim), float
+        k-points in Cartesian reciprocal coordinates (units: 1/length).
 
-    kpts : float ndarray (Nk, dim)
-        k-points in *Cartesian reciprocal coordinates* (units: 1/length).
-        IMPORTANT: If your k-points are fractional (MPB default),
-        you MUST convert them using the reciprocal lattice matrix.
+        .. note::
+            If your k-points are fractional (MPB default), convert them
+            using the reciprocal lattice matrix before passing them here.
 
-    Rpts : float ndarray (NR, dim)
+    r_pts : np.ndarray, shape (NR, dim), float
         Bravais lattice vectors in Cartesian real-space coordinates
-        (units: length). These represent which unit cells you want
-        to sample the Wannier function in.
+        (units: length), representing the unit cells to sample.
 
     Returns
     -------
-    E_Rr0 : complex ndarray (Nb, NR, 3)
+    fr0_n_rs : np.ndarray, shape (Nb, NR, 3), complex
         Field amplitude of the Wannier-like function at position r0
         inside each lattice cell R.
 
+    Raises
+    ------
+    ValueError
+        If the last dimension of `fr0_n_ks` is not 3.
+        If `k_pts` does not have Nk rows.
+        If `k_pts` and `r_pts` do not share the same spatial dimension.
+
     Notes
     -----
-    - This does NOT reconstruct the full spatial field; it reconstructs
-      the lattice dependence at a fixed intracell coordinate r0.
+    This does not reconstruct the full spatial field — it reconstructs
+    the lattice dependence at a fixed intracell coordinate r0.
     """
+    n_bands, n_kpoints, n_components = fr0_n_ks.shape
 
-    Nb, Nk, comp = E_k_r0.shape
-    if comp != 3:
-        raise ValueError("Last dimension of E_k_r0 must be 3 (vector components)")
+    if n_components != 3:
+        raise ValueError(
+            f"Last dimension of `fr0_n_ks` must be 3 (vector components), "
+            f"got {n_components}."
+        )
+    if k_pts.shape[0] != n_kpoints:
+        raise ValueError(
+            f"`k_pts` must have {n_kpoints} rows to match Nk, " f"got {k_pts.shape[0]}."
+        )
+    if k_pts.shape[1] != r_pts.shape[1]:
+        raise ValueError(
+            f"`k_pts` and `r_pts` must share the same spatial dimension, "
+            f"got {k_pts.shape[1]} and {r_pts.shape[1]}."
+        )
 
-    if kpts.shape[0] != Nk:
-        raise ValueError("kpts must have Nk rows")
+    # Compute phase factors, shape: (Nk, NR)
+    phase = np.exp(-1j * k_pts @ r_pts.T)
 
-    if kpts.shape[1] != Rpts.shape[1]:
-        raise ValueError("kpts and Rpts must have same spatial dimension")
+    # Inverse Bloch sum over k-points, shape: (Nb, NR, 3)
+    fr0_n_rs = np.einsum("nkc,kr->nrc", fr0_n_ks, phase) / n_kpoints
 
-    # phase factor: exp(-i k·R)
-    phase = np.exp(-1j * (kpts @ Rpts.T))  # Nk x NR
-
-    # inverse Bloch sum
-    E_Rr0 = np.einsum("nkc,kr->nrc", E_k_r0, phase) / Nk
-
-    return E_Rr0
+    return fr0_n_rs
