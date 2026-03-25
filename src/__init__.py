@@ -44,7 +44,7 @@ from .utils import marker_size, draw_arrow, unit_dip
 
 # Physics / optical utilities
 from .utils import free_spontaneous_emission
-from .mpb_fields import compute_ERr0
+from .mpb_fields import compute_fr0rs
 
 # Sampling
 from .monkhorst_pack import monkhorst_pack_sampling
