@@ -89,7 +89,7 @@ def compute_real_space_coupling(
 
     The real-space coupling is then computed as:
 
-        g_{n,r}(r_0) = 1/sqrt(N_k) Σ_k g_{n,k}(r_0) * exp(-i k·r)
+        g_{n,r}(r_0) = 1/sqrt(N_k) Σ_k g_{n,k}(r_0) * exp(i k·r)
     """
     ks = pad_to_3d(ks)  # (Nk, 3)
     rs = pad_to_3d(rs)  # (Nr, 3)
@@ -123,8 +123,8 @@ def compute_real_space_coupling(
     # Compute reciprocal-space coupling g_{n,k}(r_0), shape: (Nb, Nk)
     gr0_n_ks = prefactor * dipole_times_field
 
-    # Fourier factor: 1/sqrt(Nk) * exp(-i k·r), shape: (Nk, Nr)
-    exponential_factor = np.exp(-1j * np.dot(ks, rs.T)) / np.sqrt(n_kpoints)
+    # Fourier factor: 1/sqrt(Nk) * exp(i k·r), shape: (Nk, Nr)
+    exponential_factor = np.exp(1j * np.dot(ks, rs.T)) / np.sqrt(n_kpoints)
 
     # Sum over k-points via matrix multiplication, shape: (Nb, Nr)
     gr0_n_rs = np.dot(gr0_n_ks, exponential_factor)
