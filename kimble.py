@@ -778,7 +778,7 @@ def plot_emitter_time_evolution(
         alpha=0.9,
         label=r"$|C_e(t)|^2$, $\theta_2 = 135$°",
     )
-    ax.set(xlabel=r"$t \, [a/c]$", ylabel=r"$|C_e(t)|^2$", yscale="log")
+    ax.set(xlabel=r"$t\Gamma_0$", ylabel=r"$|C_e(t)|^2$", yscale="log")
 
     ax2 = ax.twinx()
     (l3,) = ax2.plot(
@@ -879,6 +879,10 @@ xs_finite, ys_finite, rs_finite = mf.build_finite_grid(N_CELLS)
 
 # Compute time evolution
 ts = np.linspace(T_0, T_F, T_STEPS, endpoint=True)
+gamma_0 = mf.free_spontaneous_emission(
+    omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
+)
+ts_norm = LAT_PARAM / mf.constants.C_LIGHT * gamma_0 * ts
 
 psi_t_1, psi_t_2, omega_sites_1, omega_sites_2, couplings = compute_time_evolution(
     finite_model=finite_model,
@@ -893,7 +897,7 @@ psi_t_1, psi_t_2, omega_sites_1, omega_sites_2, couplings = compute_time_evoluti
 )
 
 # Plot emitter time evolution
-S_t_1, S_t_2 = plot_emitter_time_evolution(ts, psi_t_1, psi_t_2, R_0)
+S_t_1, S_t_2 = plot_emitter_time_evolution(ts_norm, psi_t_1, psi_t_2, R_0)
 
 # Get crystal positions and plot bath snapshot
 # NOTE: _orb and _lat are private PythTB attributes with no public equivalent.
@@ -1135,7 +1139,7 @@ def plot_probe_time_evolution(
 
         ax.set(
             title=rf"$\theta_p = {np.rad2deg(NEW_THETA):.0f}$°",
-            xlabel=r"$t [a/c]$",
+            xlabel=r"$t\Gamma_0$",
             ylabel=r"$|C_e(t)|^2$",
             yscale="log",
         )
@@ -1167,6 +1171,7 @@ new_psi_t_1, new_psi_t_2, new_omega_0 = compute_probe_emitter_evolution(
 )
 
 new_ts = np.linspace(T_0, NEW_T_F, T_STEPS, endpoint=True)
+new_ts_norm = LAT_PARAM / mf.constants.C_LIGHT * gamma_0 * new_ts
 
 plot_probe_bath_snapshot(pos_x, pos_y, new_psi_t_1, new_psi_t_2, R_0)
-plot_probe_time_evolution(new_ts, new_psi_t_1, new_psi_t_2, R_0)
+plot_probe_time_evolution(new_ts_norm, new_psi_t_1, new_psi_t_2, R_0)
