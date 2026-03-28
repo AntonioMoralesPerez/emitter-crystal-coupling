@@ -10,6 +10,7 @@ def make_light_matter_Hamiltonian(
     tb_model: tb.tb_model,
     omega_0s: float | Sequence[float] = (0.0,),
     gr0s_rs: Sequence[tuple] = (((0.5,), (0,)),),
+    pml_dampings: np.ndarray | None = None,
     check_hermitian: bool = True,
     atol: float = 1e-10,
 ) -> tuple[csr_matrix, np.ndarray]:
@@ -28,8 +29,14 @@ def make_light_matter_Hamiltonian(
         Coupling data for each emitter in units of c/a, provided as
         ``(g_vals, bath_idx)`` pairs where ``g_vals[i]`` is the coupling
         strength to the orbital at ``bath_idx[i]``.
+    pml_dampings : np.ndarray of shape (n_orbitals,) or None, optional
+        Per-orbital damping rates γ_j ≥ 0 for the absorbing boundary layer
+        [units: c/a]. When provided, adds ``-i * diag(γ)`` to the bath block,
+        making H non-Hermitian. ``check_hermitian`` is automatically disabled.
+        Default is None (no absorbing layer).
     check_hermitian : bool, optional
         If True, explicitly checks hermiticity of the final Hamiltonian.
+        Automatically set to False when ``pml_dampings`` is provided.
         Default is True.
     atol : float, optional
         Absolute tolerance for numerical precision and hermiticity checks.
@@ -111,6 +118,22 @@ def make_light_matter_Hamiltonian(
     h_bath = u_mat @ np.diag(omegas) @ u_mat.conj().T
     h_bath[np.abs(h_bath) < atol] = 0.0
     h_bath_csr = csr_matrix(h_bath)
+
+    # --------------------------------------------------------------------------
+    # 2b. Absorbing boundary layer (PML)
+    # --------------------------------------------------------------------------
+    if pml_dampings is not None:
+        pml_dampings = np.asarray(pml_dampings, dtype=float)
+        if pml_dampings.shape != (n_orbitals,):
+            raise ValueError(
+                f"`pml_dampings` must have shape ({n_orbitals},), "
+                f"got {pml_dampings.shape}."
+            )
+        pml_diag = diags(
+            pml_dampings, offsets=0, shape=(n_orbitals, n_orbitals), format="csr"
+        )
+        h_bath_csr = h_bath_csr - 1j * pml_diag
+        check_hermitian = False
 
     # --------------------------------------------------------------------------
     # 3. Emitter block H_e

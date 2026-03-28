@@ -87,7 +87,7 @@ configure_matplotlib()
 # ------------------------------------------------------------------------------
 
 # MPB simulation
-LAT_PARAM: float = 30e-9  # lattice parameter [m]
+LAT_PARAM: float = 300e-9  # lattice parameter [m]
 N_BANDS: int = 2
 BAND_IDX: int = 0  # band index (0-based)
 N_K: int = 64  # k-points per direction in Monkhorst-Pack grid
@@ -97,7 +97,7 @@ EPSILON_INPUT_FILE: str = "data/kimble/epsilon.h5"
 # Emitter parameters
 THETA_1: float = 90 * np.pi / 180  # emitter 1 orientation [rad]
 THETA_2: float = 135 * np.pi / 180  # emitter 2 orientation [rad]
-DIP_STRENGTH: float = 1100  # dipole moment strength [Debye]
+DIP_STRENGTH: float = 50  # dipole moment strength [Debye]
 P_A: float = mf.unit_dip(a=LAT_PARAM)
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 N_EMITTERS: int = 1  # emitters per simulation
@@ -116,6 +116,8 @@ DIP_COLORS: list = ["#1f77b4", "#ff7f0e"]  # one color per dipole orientation
 LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]  # orbital position in lattice units
 N_CELLS: int = 61  # unit cells per direction
+N_PML: int = 5  # absorbing layer thickness [unit cells per edge]
+GAMMA_MAX: float = 0.05  # maximum damping rate at the hard wall [c/a]
 # Hopping coefficients up to 3rd nearest neighbours [units: (c/a)²]
 J_0: float = 0.07755639
 J_1: float = -0.01993698
@@ -142,7 +144,7 @@ NEW_THETA: float = np.deg2rad(45)
 NEW_DIPOLE: np.ndarray = 1e-1 * np.array([np.cos(NEW_THETA), np.sin(NEW_THETA), 0])
 NEW_DIP_COLOR: str = "#2ca02c"
 NEW_T_F: int = 200
-NEW_SNAP_IDX: int = 45
+NEW_SNAP_IDX: int = 55
 # NOTE: NEW_SNAP_IDX is taken around the time the bath excitation hits
 #       the probe emitter. If a different position is chosen, this value
 #       may need to be adjusted.
@@ -613,6 +615,46 @@ compute_and_plot_isofrequency(infinite_model, omega_0)
 # ------------------------------------------------------------------------------
 
 
+def compute_pml_dampings(
+    rs: np.ndarray, n_cells: int, n_pml: int, gamma_max: float
+) -> np.ndarray:
+    """
+    Compute per-orbital damping rates for the absorbing boundary layer.
+
+    Uses a quadratic ramp from zero at the crystal-PML interface to
+    ``gamma_max`` at the hard wall.  The profile is:
+
+        γ_j = gamma_max * ((n_pml - dist_j) / n_pml)²   if dist_j < n_pml
+        γ_j = 0                                           otherwise
+
+    where ``dist_j`` is the distance (in unit cells) of orbital j from the
+    nearest edge of the crystal.
+
+    Parameters
+    ----------
+    rs : np.ndarray, shape (n_orbitals, 2)
+        Real-space grid points in lattice units, centered at the origin.
+        Must be the same array used for the emitter-bath coupling computation
+        so that orbital indices match.
+    n_cells : int
+        Number of unit cells per direction.
+    n_pml : int
+        Thickness of the absorbing layer in unit cells.
+    gamma_max : float
+        Maximum damping rate at the outermost cell [c/a].
+
+    Returns
+    -------
+    np.ndarray, shape (n_orbitals,)
+        Per-orbital damping rates γ_j ≥ 0.
+    """
+    half = n_cells // 2
+    dist_x = half - np.abs(rs[:, 0])
+    dist_y = half - np.abs(rs[:, 1])
+    dist = np.minimum(dist_x, dist_y)
+    return np.where(dist < n_pml, gamma_max * ((n_pml - dist) / n_pml) ** 2, 0.0)
+
+
 def build_finite_model(infinite_model: tb.tb_model) -> tb.tb_model:
     """
     Cut the infinite tight-binding model into a finite 2D crystal.
@@ -641,6 +683,7 @@ def compute_time_evolution(
     t_0: float,
     t_f: float,
     t_steps: int,
+    pml_dampings: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list]:
     """
     Build the light-matter Hamiltonians and compute the time evolution.
@@ -665,6 +708,9 @@ def compute_time_evolution(
         End time [a/c].
     t_steps : int
         Number of time steps.
+    pml_dampings : np.ndarray of shape (n_orbitals,) or None, optional
+        Per-orbital damping rates for the absorbing boundary layer [c/a].
+        Passed directly to ``make_light_matter_Hamiltonian``.
 
     Returns
     -------
@@ -709,10 +755,16 @@ def compute_time_evolution(
     interaction_2 = [[list(couplings[1]), list(idxs)]]
 
     H_1, omega_sites_1 = mf.make_light_matter_Hamiltonian(
-        tb_model=finite_model, omega_0s=omega_0, gr0s_rs=interaction_1
+        tb_model=finite_model,
+        omega_0s=omega_0,
+        gr0s_rs=interaction_1,
+        pml_dampings=pml_dampings,
     )
     H_2, omega_sites_2 = mf.make_light_matter_Hamiltonian(
-        tb_model=finite_model, omega_0s=omega_0, gr0s_rs=interaction_2
+        tb_model=finite_model,
+        omega_0s=omega_0,
+        gr0s_rs=interaction_2,
+        pml_dampings=pml_dampings,
     )
 
     if H_1.shape != H_2.shape:
@@ -876,6 +928,7 @@ def plot_bath_snapshot(
 # Build finite model and its grid
 finite_model = build_finite_model(infinite_model)
 xs_finite, ys_finite, rs_finite = mf.build_finite_grid(N_CELLS)
+pml_dampings = compute_pml_dampings(rs_finite, N_CELLS, N_PML, GAMMA_MAX)
 
 # Compute time evolution
 ts = np.linspace(T_0, T_F, T_STEPS, endpoint=True)
@@ -894,6 +947,7 @@ psi_t_1, psi_t_2, omega_sites_1, omega_sites_2, couplings = compute_time_evoluti
     t_0=T_0,
     t_f=T_F,
     t_steps=T_STEPS,
+    pml_dampings=pml_dampings,
 )
 
 # Plot emitter time evolution
@@ -940,6 +994,7 @@ def compute_probe_emitter_evolution(
     omega_sites_1: np.ndarray,
     omega_sites_2: np.ndarray,
     omega_0: float,
+    pml_dampings: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray, float]:
     """
     Compute the time evolution for the two-emitter system with a probe emitter.
@@ -1023,11 +1078,13 @@ def compute_probe_emitter_evolution(
         tb_model=finite_model,
         omega_0s=[omega_0, new_omega_0],
         gr0s_rs=new_interaction_1,
+        pml_dampings=pml_dampings,
     )
     new_H_2, _ = mf.make_light_matter_Hamiltonian(
         tb_model=finite_model,
         omega_0s=[omega_0, new_omega_0],
         gr0s_rs=new_interaction_2,
+        pml_dampings=pml_dampings,
     )
 
     new_psi_0 = np.zeros(new_H_1.shape[0])
@@ -1168,6 +1225,7 @@ new_psi_t_1, new_psi_t_2, new_omega_0 = compute_probe_emitter_evolution(
     omega_sites_1=omega_sites_1,
     omega_sites_2=omega_sites_2,
     omega_0=omega_0,
+    pml_dampings=pml_dampings,
 )
 
 new_ts = np.linspace(T_0, NEW_T_F, T_STEPS, endpoint=True)
