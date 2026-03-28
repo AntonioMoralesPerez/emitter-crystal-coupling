@@ -97,7 +97,7 @@ EPSILON_INPUT_FILE: str = "data/kimble/epsilon.h5"
 # Emitter parameters
 THETA_1: float = 90 * np.pi / 180  # emitter 1 orientation [rad]
 THETA_2: float = 135 * np.pi / 180  # emitter 2 orientation [rad]
-DIP_STRENGTH: float = 1100  # dipole moment strength [Debye]
+DIP_STRENGTH: float = 1000  # dipole moment strength [Debye]
 P_A: float = mf.unit_dip(a=LAT_PARAM)
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 N_EMITTERS: int = 1  # emitters per simulation
