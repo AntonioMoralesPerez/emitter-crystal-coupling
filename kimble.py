@@ -58,21 +58,21 @@ def configure_matplotlib() -> None:
             "figure.dpi": 300,
             # Font
             "font.family": "serif",
-            "font.size": 11,
+            "font.size": 13,
             "mathtext.fontset": "stix",
             # Axes
-            "axes.labelsize": 11,
-            "axes.titlesize": 12,
+            "axes.labelsize": 13,
+            "axes.titlesize": 14,
             "axes.linewidth": 1,
             # Ticks
             "xtick.direction": "in",
             "ytick.direction": "in",
             "xtick.top": True,
             "ytick.right": True,
-            "xtick.labelsize": 10,
-            "ytick.labelsize": 10,
+            "xtick.labelsize": 11,
+            "ytick.labelsize": 11,
             # Legend
-            "legend.fontsize": 10,
+            "legend.fontsize": 11,
             "legend.frameon": False,
             # Save
             "savefig.bbox": "tight",
@@ -115,8 +115,8 @@ DIP_COLORS: list = ["#1f77b4", "#ff7f0e"]  # one color per dipole orientation
 # Tight-binding model
 LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]  # orbital position in lattice units
-N_CELLS: int = 61  # unit cells per direction
-N_PML: int = 5  # absorbing layer thickness [unit cells per edge]
+N_CELLS: int = 11  # unit cells per direction
+N_PML: int = 2  # absorbing layer thickness [unit cells per edge]
 GAMMA_MAX: float = 0.05  # maximum damping rate at the hard wall [c/a]
 # Hopping coefficients up to 3rd nearest neighbours [units: (c/a)²]
 J_0: float = 0.07755639
@@ -131,10 +131,10 @@ N_K_PATH: int = 100  # number of k-points along the high-symmetry path
 # Real-space grid
 N_R: int = 13  # number of grid points per direction
 
-# Time evolution [units: a/c]
-T_0: int = 0  # start time
-T_F: int = 500  # end time
-T_STEPS: int = 100  # number of time steps
+# Time evolution [units: 1/Γ₀]
+T_0: float = 0  # start time
+T_F: float = 1e-1  # end time
+T_STEPS: int = 50  # number of time steps
 SNAP_IDX: int = 50  # snapshot index for field plots (0 to T_STEPS)
 
 # Probe emitter
@@ -143,7 +143,7 @@ NEW_R: list = [-4.5, 4.5]
 NEW_THETA: float = np.deg2rad(45)
 NEW_DIPOLE: np.ndarray = 1e-1 * np.array([np.cos(NEW_THETA), np.sin(NEW_THETA), 0])
 NEW_DIP_COLOR: str = "#2ca02c"
-NEW_T_F: int = 200
+NEW_T_F: float = 2e-5  # [1/Γ₀]
 NEW_SNAP_IDX: int = 55
 # NOTE: NEW_SNAP_IDX is taken around the time the bath excitation hits
 #       the probe emitter. If a different position is chosen, this value
@@ -595,14 +595,14 @@ def compute_and_plot_isofrequency(model: tb.tb_model, omega_0: float) -> None:
 
     fig, ax = plt.subplots()
     c = ax.contourf(k_x_grid, k_y_grid, omega_grid, levels=12)
-    cbar = fig.colorbar(c, ax=ax, label=r"$\omega_\mathbf{k} \, [c/a]$")
+    cbar = fig.colorbar(c, ax=ax, label=r"$\omega_\mathbf{k} a/c$")
     cbar.formatter.set_powerlimits((0, 0))
     ax.contour(
         k_x_grid, k_y_grid, omega_grid, levels=[omega_0], colors="k", linewidths=2
     )
     ax.set(
-        xlabel=r"$k_x \, [2\pi/a]$",
-        ylabel=r"$k_y \, [2\pi/a]$",
+        xlabel=r"$k_x a/2\pi$",
+        ylabel=r"$k_y a/2\pi$",
         aspect="equal",
     )
     fig.savefig("./figures/kimble/tb_isofrequency_contour.svg")
@@ -830,7 +830,7 @@ def plot_emitter_time_evolution(
         alpha=0.9,
         label=r"$|C_e(t)|^2$, $\theta_2 = 135$°",
     )
-    ax.set(xlabel=r"$t\Gamma_0$", ylabel=r"$|C_e(t)|^2$", yscale="log")
+    ax.set(xlabel=r"$t \Gamma_0$", ylabel=r"$|C_e(t)|^2$", yscale="log")
 
     ax2 = ax.twinx()
     (l3,) = ax2.plot(
@@ -931,11 +931,16 @@ xs_finite, ys_finite, rs_finite = mf.build_finite_grid(N_CELLS)
 pml_dampings = compute_pml_dampings(rs_finite, N_CELLS, N_PML, GAMMA_MAX)
 
 # Compute time evolution
-ts = np.linspace(T_0, T_F, T_STEPS, endpoint=True)
 gamma_0 = mf.free_spontaneous_emission(
     omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
 )
-ts_norm = LAT_PARAM / mf.constants.C_LIGHT * gamma_0 * ts
+# Convert input times from 1/Γ₀ to a/c for internal use
+_t_conv = LAT_PARAM / mf.constants.C_LIGHT * gamma_0
+T_0 /= _t_conv
+T_F /= _t_conv
+NEW_T_F /= _t_conv
+ts = np.linspace(T_0, T_F, T_STEPS, endpoint=True)
+ts_norm = _t_conv * ts
 
 psi_t_1, psi_t_2, omega_sites_1, omega_sites_2, couplings = compute_time_evolution(
     finite_model=finite_model,
@@ -1229,7 +1234,7 @@ new_psi_t_1, new_psi_t_2, new_omega_0 = compute_probe_emitter_evolution(
 )
 
 new_ts = np.linspace(T_0, NEW_T_F, T_STEPS, endpoint=True)
-new_ts_norm = LAT_PARAM / mf.constants.C_LIGHT * gamma_0 * new_ts
+new_ts_norm = _t_conv * new_ts
 
 plot_probe_bath_snapshot(pos_x, pos_y, new_psi_t_1, new_psi_t_2, R_0)
 plot_probe_time_evolution(new_ts_norm, new_psi_t_1, new_psi_t_2, R_0)
