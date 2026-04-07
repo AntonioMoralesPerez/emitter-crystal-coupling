@@ -133,9 +133,9 @@ N_R: int = 13  # number of grid points per direction
 
 # Time evolution [units: 1/Γ₀]
 T_0: float = 0  # start time
-T_F: float = 1e-1  # end time
+T_F: float = 1e-2  # end time
 T_STEPS: int = 50  # number of time steps
-SNAP_IDX: int = 50  # snapshot index for field plots (0 to T_STEPS)
+SNAP_IDX: int = 25  # snapshot index for field plots (0 to T_STEPS)
 
 # Probe emitter
 NEW_N_EMITTERS: int = 2
@@ -143,8 +143,8 @@ NEW_R: list = [-4.5, 4.5]
 NEW_THETA: float = np.deg2rad(45)
 NEW_DIPOLE: np.ndarray = 1e-1 * np.array([np.cos(NEW_THETA), np.sin(NEW_THETA), 0])
 NEW_DIP_COLOR: str = "#2ca02c"
-NEW_T_F: float = 2e-5  # [1/Γ₀]
-NEW_SNAP_IDX: int = 55
+NEW_T_F: float = 1e-4  # [1/Γ₀]
+NEW_SNAP_IDX: int = 25
 # NOTE: NEW_SNAP_IDX is taken around the time the bath excitation hits
 #       the probe emitter. If a different position is chosen, this value
 #       may need to be adjusted.
