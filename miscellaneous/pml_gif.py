@@ -166,7 +166,6 @@ vmin_log = min(
     for p in pol_pops
     if p[p > 0].size > 0
 )
-norm = mcolors.LogNorm(vmin=vmin_log, vmax=vmax)
 
 # ------------------------------------------------------------------------------
 # Static plot: emitter population |C_e(t)|² — look for revivals in no-PML case
@@ -192,54 +191,63 @@ fig_ce.savefig(f"./figures/miscellaneous/pml_emitter_population_{R_0}.png", dpi=
 print("Saved emitter population plot.")
 
 # ------------------------------------------------------------------------------
-# GIF: 2 rows (PML / no PML) × 2 columns (90° / 135°)
+# GIF: 2 rows (PML / no PML) × 2 columns (90° / 135°) — linear and log scale
 # ------------------------------------------------------------------------------
-fig, axs = plt.subplots(2, 2, figsize=(8, 8))
+gif_norms = [
+    (mcolors.Normalize(vmin=0, vmax=vmax), "linear"),
+    (mcolors.LogNorm(vmin=vmin_log, vmax=vmax), "log"),
+]
 
-meshes = []
-titles = []
-for row, (pops, row_label) in enumerate(zip(all_pops, ROW_LABELS)):
-    for col, (ax, theta) in enumerate(zip(axs[row], THETAS)):
-        sc = ax.pcolormesh(xs_f, ys_f, pops[col][0], norm=norm)
-        fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{R}(t)|^2$")
-        mf.draw_arrow(
-            ax, R_0, theta, color=DIP_COLORS[col], length=14, arrow_offset=1.4
-        )
-        pml_boundary = N_CELLS // 2 - N_PML + 0.5
-        ax.add_patch(
-            matplotlib.patches.Rectangle(
-                (-pml_boundary, -pml_boundary),
-                2 * pml_boundary,
-                2 * pml_boundary,
-                fill=False,
-                edgecolor="white",
-                linewidth=1.5,
-                linestyle="--",
+for norm, scale_label in gif_norms:
+    fig, axs = plt.subplots(2, 2, figsize=(8, 8))
+
+    meshes = []
+    titles = []
+    for row, (pops, row_label) in enumerate(zip(all_pops, ROW_LABELS)):
+        for col, (ax, theta) in enumerate(zip(axs[row], THETAS)):
+            sc = ax.pcolormesh(xs_f, ys_f, pops[col][0], norm=norm)
+            fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{R}(t)|^2$")
+            mf.draw_arrow(
+                ax, R_0, theta, color=DIP_COLORS[col], length=14, arrow_offset=1.4
             )
-        )
-        ax.set(xlabel=r"$x/a$", ylabel=r"$y/a$", aspect="equal")
-        title = ax.set_title(
-            rf"{row_label} — $\theta = {np.rad2deg(theta):.0f}°$, "
-            rf"$t\,\Gamma_0 = {ts_norm[0]:.2e}$"
-        )
-        title.set_color(DIP_COLORS[col])
-        meshes.append(sc)
-        titles.append(title)
+            pml_boundary = N_CELLS // 2 - N_PML + 0.5
+            ax.add_patch(
+                matplotlib.patches.Rectangle(
+                    (-pml_boundary, -pml_boundary),
+                    2 * pml_boundary,
+                    2 * pml_boundary,
+                    fill=False,
+                    edgecolor="white",
+                    linewidth=1.5,
+                    linestyle="--",
+                )
+            )
+            ax.set(xlabel=r"$x/a$", ylabel=r"$y/a$", aspect="equal")
+            title = ax.set_title(
+                rf"{row_label} — $\theta = {np.rad2deg(theta):.0f}°$, "
+                rf"$t\,\Gamma_0 = {ts_norm[0]:.2e}$"
+            )
+            title.set_color(DIP_COLORS[col])
+            meshes.append(sc)
+            titles.append(title)
 
-fig.tight_layout()
+    fig.tight_layout()
 
+    def make_update(meshes, titles):
+        def update(frame):
+            for idx, (row, col) in enumerate([(r, c) for r in range(2) for c in range(2)]):
+                meshes[idx].set_array(all_pops[row][col][frame].ravel())
+                titles[idx].set_text(
+                    rf"{ROW_LABELS[row]} — $\theta = {np.rad2deg(THETAS[col]):.0f}°$, "
+                    rf"$t\,\Gamma_0 = {ts_norm[frame]:.2e}$"
+                )
+            return meshes + titles
+        return update
 
-def update(frame):
-    for idx, (row, col) in enumerate([(r, c) for r in range(2) for c in range(2)]):
-        meshes[idx].set_array(all_pops[row][col][frame].ravel())
-        titles[idx].set_text(
-            rf"{ROW_LABELS[row]} — $\theta = {np.rad2deg(THETAS[col]):.0f}°$, "
-            rf"$t\,\Gamma_0 = {ts_norm[frame]:.2e}$"
-        )
-    return meshes + titles
-
-
-anim = animation.FuncAnimation(fig, update, frames=T_STEPS, interval=80, blit=True)
-gif_path = f"./figures/miscellaneous/pml_bath_evolution_{R_0}.gif"
-anim.save(gif_path, writer="pillow", dpi=100)
-print(f"Saved GIF to {gif_path}")
+    anim = animation.FuncAnimation(
+        fig, make_update(meshes, titles), frames=T_STEPS, interval=80, blit=True
+    )
+    gif_path = f"./figures/miscellaneous/pml_bath_evolution_{R_0}_{scale_label}.gif"
+    anim.save(gif_path, writer="pillow", dpi=100)
+    plt.close(fig)
+    print(f"Saved GIF to {gif_path}")

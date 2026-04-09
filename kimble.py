@@ -115,9 +115,9 @@ DIP_COLORS: list = ["#1f77b4", "#ff7f0e"]  # one color per dipole orientation
 # Tight-binding model
 LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]  # orbital position in lattice units
-N_CELLS: int = 11  # unit cells per direction
-N_PML: int = 2  # absorbing layer thickness [unit cells per edge]
-GAMMA_MAX: float = 0.05  # maximum damping rate at the hard wall [c/a]
+N_CELLS: int = 51  # unit cells per direction
+N_PML: int = 8  # absorbing layer thickness [unit cells per edge]
+GAMMA_MAX: float = 0.1  # maximum damping rate at the hard wall [c/a]
 # Hopping coefficients up to 3rd nearest neighbours [units: (c/a)²]
 J_0: float = 0.07755639
 J_1: float = -0.01993698
@@ -133,7 +133,7 @@ N_R: int = 13  # number of grid points per direction
 
 # Time evolution [units: 1/Γ₀]
 T_0: float = 0  # start time
-T_F: float = 1e-2  # end time
+T_F: float = 1e-5  # end time
 T_STEPS: int = 50  # number of time steps
 SNAP_IDX: int = 25  # snapshot index for field plots (0 to T_STEPS)
 
@@ -143,7 +143,7 @@ NEW_R: list = [-4.5, 4.5]
 NEW_THETA: float = np.deg2rad(45)
 NEW_DIPOLE: np.ndarray = 1e-1 * np.array([np.cos(NEW_THETA), np.sin(NEW_THETA), 0])
 NEW_DIP_COLOR: str = "#2ca02c"
-NEW_T_F: float = 1e-2  # [1/Γ₀]
+NEW_T_F: float = 1e-5  # [1/Γ₀]
 NEW_SNAP_IDX: int = 25
 # NOTE: NEW_SNAP_IDX is taken around the time the bath excitation hits
 #       the probe emitter. If a different position is chosen, this value
@@ -905,11 +905,12 @@ def plot_bath_snapshot(
     z1 = mod_Cr_sq_1.reshape(len(pos_x), len(pos_y))
     z2 = mod_Cr_sq_2.reshape(len(pos_x), len(pos_y))
     cbar_max = max(z1.max(), z2.max())
+    exp = int(np.floor(np.log10(cbar_max))) if cbar_max > 0 else 0
 
     for i, (theta, z) in enumerate(zip(THETAS, [z1, z2])):
         fig, ax = plt.subplots()
         sc = ax.pcolormesh(pos_x, pos_y, z, vmin=0, vmax=cbar_max)
-        mf.draw_arrow(ax, r_0, theta, color=DIP_COLORS[i], length=4, arrow_offset=0.4)
+        mf.draw_arrow(ax, r_0, theta, color=DIP_COLORS[i], length=17.5, arrow_offset=1.75)
         pml_boundary = N_CELLS // 2 - N_PML + 0.5
         ax.add_patch(
             mpl.patches.Rectangle(
@@ -922,8 +923,13 @@ def plot_bath_snapshot(
                 linestyle="--",
             )
         )
-        cbar = fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{R}(t)|^2$", pad=0.1)
-        cbar.formatter.set_powerlimits((0, 0))
+        cbar = fig.colorbar(
+            sc, ax=ax,
+            label=rf"$|C_\mathbf{{R}}(t)|^2 \; [\times 10^{{{exp}}}]$",
+            pad=0.1,
+        )
+        cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+        cbar.update_ticks()
         ax.set(
             xlabel=r"$x/a$",
             ylabel=r"$y/a$",
@@ -1151,6 +1157,7 @@ def plot_probe_bath_snapshot(
     new_z1 = new_mod_Cr_sq_1.reshape(len(pos_x), len(pos_y))
     new_z2 = new_mod_Cr_sq_2.reshape(len(pos_x), len(pos_y))
     cbar_max = max(new_z1.max(), new_z2.max())
+    exp = int(np.floor(np.log10(cbar_max))) if cbar_max > 0 else 0
 
     for i, (theta, z) in enumerate(zip(THETAS, [new_z1, new_z2]), start=1):
         fig, ax = plt.subplots()
@@ -1169,8 +1176,12 @@ def plot_probe_bath_snapshot(
                 linestyle="--",
             )
         )
-        cbar = fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{r}(t)|^2$")
-        cbar.formatter.set_powerlimits((0, 0))
+        cbar = fig.colorbar(
+            sc, ax=ax,
+            label=rf"$|C_\mathbf{{r}}(t)|^2 \; [\times 10^{{{exp}}}]$",
+        )
+        cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+        cbar.update_ticks()
         ax.set(
             xlabel=r"$x/a$",
             ylabel=r"$y/a$",
