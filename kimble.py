@@ -143,7 +143,7 @@ NEW_R: list = [-4.5, 4.5]
 NEW_THETA: float = np.deg2rad(45)
 NEW_DIPOLE: np.ndarray = 1e-1 * np.array([np.cos(NEW_THETA), np.sin(NEW_THETA), 0])
 NEW_DIP_COLOR: str = "#2ca02c"
-NEW_T_F: float = 1e-4  # [1/Γ₀]
+NEW_T_F: float = 1e-2  # [1/Γ₀]
 NEW_SNAP_IDX: int = 25
 # NOTE: NEW_SNAP_IDX is taken around the time the bath excitation hits
 #       the probe emitter. If a different position is chosen, this value
@@ -486,7 +486,7 @@ def plot_real_space_coupling(
         )
         fig.colorbar(sc, ax=ax, label=r"$|g_\mathbf{R}(\mathbf{r}_0)| \, [c/a]$")
         mf.draw_arrow(
-            ax, r_0, theta, color=DIP_COLORS[i - 1], length=4, arrow_offset=0.3
+            ax, r_0, theta, color=DIP_COLORS[i - 1], length=4, arrow_offset=0.4
         )
         ax.set(
             title=rf"$\theta_{i} = {np.rad2deg(theta):.0f}$°",
@@ -909,7 +909,19 @@ def plot_bath_snapshot(
     for i, (theta, z) in enumerate(zip(THETAS, [z1, z2])):
         fig, ax = plt.subplots()
         sc = ax.pcolormesh(pos_x, pos_y, z, vmin=0, vmax=cbar_max)
-        mf.draw_arrow(ax, r_0, theta, color=DIP_COLORS[i], length=16, arrow_offset=2)
+        mf.draw_arrow(ax, r_0, theta, color=DIP_COLORS[i], length=4, arrow_offset=0.4)
+        pml_boundary = N_CELLS // 2 - N_PML + 0.5
+        ax.add_patch(
+            mpl.patches.Rectangle(
+                (-pml_boundary, -pml_boundary),
+                2 * pml_boundary,
+                2 * pml_boundary,
+                fill=False,
+                edgecolor="white",
+                linewidth=1.5,
+                linestyle="--",
+            )
+        )
         cbar = fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{R}(t)|^2$", pad=0.1)
         cbar.formatter.set_powerlimits((0, 0))
         ax.set(
@@ -981,8 +993,12 @@ S_2, p_2 = mf.quadrant_entropy(rs_finite[:, 0], rs_finite[:, 1], Cr_t_2)
 check_1 = np.allclose(S_1[1:], np.log(4), atol=1e-3)
 check_2 = np.allclose(S_2[1:], np.log(2), atol=1e-3)
 
-print(f"Is S_dir equal to log(4) for theta = {np.rad2deg(THETA_1):.0f}º? {check_1}")
-print(f"Is S_dir equal to log(2) for theta = {np.rad2deg(THETA_2):.0f}º? {check_2}")
+print(
+    rf"Is $S_{{dir}}$ equal to $\log(4)$ for $\theta = {np.rad2deg(THETA_1):.0f}º$? {check_1}, $S_1 = {S_1}$."
+)
+print(
+    rf"Is $S_{{dir}}$ equal to $\log(2)$ for $\theta = {np.rad2deg(THETA_2):.0f}º$? {check_2}, $S_2 = {S_2}$."
+)
 
 # ------------------------------------------------------------------------------
 # Probe emitter: directional emission and concurrence
@@ -1139,8 +1155,20 @@ def plot_probe_bath_snapshot(
     for i, (theta, z) in enumerate(zip(THETAS, [new_z1, new_z2]), start=1):
         fig, ax = plt.subplots()
         sc = ax.pcolormesh(pos_x, pos_y, z, vmin=0, vmax=cbar_max)
-        mf.draw_arrow(ax, NEW_R, NEW_THETA, NEW_DIP_COLOR, length=4, arrow_offset=0.2)
-        mf.draw_arrow(ax, r_0, theta, DIP_COLORS[i - 1], length=4, arrow_offset=0.2)
+        mf.draw_arrow(ax, NEW_R, NEW_THETA, NEW_DIP_COLOR, length=5, arrow_offset=0.5)
+        mf.draw_arrow(ax, r_0, theta, DIP_COLORS[i - 1], length=5, arrow_offset=0.5)
+        pml_boundary = N_CELLS // 2 - N_PML + 0.5
+        ax.add_patch(
+            mpl.patches.Rectangle(
+                (-pml_boundary, -pml_boundary),
+                2 * pml_boundary,
+                2 * pml_boundary,
+                fill=False,
+                edgecolor="white",
+                linewidth=1.5,
+                linestyle="--",
+            )
+        )
         cbar = fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{r}(t)|^2$")
         cbar.formatter.set_powerlimits((0, 0))
         ax.set(
