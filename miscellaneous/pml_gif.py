@@ -7,6 +7,7 @@ Also saves a static plot of |C_e(t)|² for both cases to check for revivals.
 """
 
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import pythtb as tb
@@ -35,8 +36,8 @@ ROW_LABELS: list = ["PML", "no PML"]
 
 LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
-N_CELLS: int = 11
-N_PML: int = 2
+N_CELLS: int = 41
+N_PML: int = 5
 GAMMA_MAX: float = 0.05  # [c/a]
 J_0: float = 0.07755639
 J_1: float = -0.01993698
@@ -193,6 +194,18 @@ for row, (pops, row_label) in enumerate(zip(all_pops, ROW_LABELS)):
         sc = ax.pcolormesh(xs_f, ys_f, pops[col][0], vmin=0, vmax=vmax)
         fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{R}(t)|^2$")
         mf.draw_arrow(ax, R_0, theta, color=DIP_COLORS[col], length=2, arrow_offset=0.2)
+        pml_boundary = N_CELLS // 2 - N_PML + 0.5
+        ax.add_patch(
+            matplotlib.patches.Rectangle(
+                (-pml_boundary, -pml_boundary),
+                2 * pml_boundary,
+                2 * pml_boundary,
+                fill=False,
+                edgecolor="white",
+                linewidth=1.5,
+                linestyle="--",
+            )
+        )
         ax.set(xlabel=r"$x/a$", ylabel=r"$y/a$", aspect="equal")
         title = ax.set_title(
             rf"{row_label} — $\theta = {np.rad2deg(theta):.0f}°$, "
