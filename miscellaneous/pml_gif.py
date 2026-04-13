@@ -39,13 +39,13 @@ LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
 N_CELLS: int = 41
 N_PML: int = 8
-GAMMA_MAX: float = 0.1  # [c/a]
+GAMMA_MAX: float = 3e-2  # [c/a]
 J_0: float = 0.07755639
 J_1: float = -0.01993698
 J_2: float = 0.00053966
 
 T_0: float = 0.0
-T_F: float = 1e-5  # [1/Γ₀]
+T_F: float = 1e-4  # [1/Γ₀]
 T_STEPS: int = 100
 N_EMITTERS: int = 1
 
@@ -235,13 +235,16 @@ for norm, scale_label in gif_norms:
 
     def make_update(meshes, titles):
         def update(frame):
-            for idx, (row, col) in enumerate([(r, c) for r in range(2) for c in range(2)]):
+            for idx, (row, col) in enumerate(
+                [(r, c) for r in range(2) for c in range(2)]
+            ):
                 meshes[idx].set_array(all_pops[row][col][frame].ravel())
                 titles[idx].set_text(
                     rf"{ROW_LABELS[row]} — $\theta = {np.rad2deg(THETAS[col]):.0f}°$, "
                     rf"$t\,\Gamma_0 = {ts_norm[frame]:.2e}$"
                 )
             return meshes + titles
+
         return update
 
     anim = animation.FuncAnimation(

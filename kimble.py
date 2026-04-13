@@ -115,9 +115,9 @@ DIP_COLORS: list = ["#1f77b4", "#ff7f0e"]  # one color per dipole orientation
 # Tight-binding model
 LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]  # orbital position in lattice units
-N_CELLS: int = 51  # unit cells per direction
+N_CELLS: int = 41  # unit cells per direction
 N_PML: int = 8  # absorbing layer thickness [unit cells per edge]
-GAMMA_MAX: float = 0.1  # maximum damping rate at the hard wall [c/a]
+GAMMA_MAX: float = 3e-2  # maximum damping rate at the hard wall [c/a]
 # Hopping coefficients up to 3rd nearest neighbours [units: (c/a)²]
 J_0: float = 0.07755639
 J_1: float = -0.01993698
@@ -133,17 +133,19 @@ N_R: int = 13  # number of grid points per direction
 
 # Time evolution [units: 1/Γ₀]
 T_0: float = 0  # start time
-T_F: float = 1e-5  # end time
-T_STEPS: int = 50  # number of time steps
-SNAP_IDX: int = 25  # snapshot index for field plots (0 to T_STEPS)
+T_F: float = 5e-5  # end time
+T_STEPS: int = 100  # number of time steps
+SNAP_IDX: int = 50  # snapshot index for field plots (0 to T_STEPS)
 
 # Probe emitter
 NEW_N_EMITTERS: int = 2
 NEW_R: list = [-4.5, 4.5]
 NEW_THETA: float = np.deg2rad(45)
-NEW_DIPOLE: np.ndarray = 1e-1 * np.array([np.cos(NEW_THETA), np.sin(NEW_THETA), 0])
+NEW_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
+    [np.cos(NEW_THETA), np.sin(NEW_THETA), 0]
+)
 NEW_DIP_COLOR: str = "#2ca02c"
-NEW_T_F: float = 1e-5  # [1/Γ₀]
+NEW_T_F: float = 5e-5  # [1/Γ₀]
 NEW_SNAP_IDX: int = 25
 # NOTE: NEW_SNAP_IDX is taken around the time the bath excitation hits
 #       the probe emitter. If a different position is chosen, this value
@@ -219,6 +221,7 @@ def plot_dielectric_function(r_0: list) -> None:
         )
 
     fig.savefig(f"./figures/kimble/dielectric_function_dipoles_at_{r_0}.svg")
+    plt.close(fig)
 
 
 plot_dielectric_function(R_0)
@@ -363,6 +366,7 @@ def plot_band_structure(
     )
     ax.grid(axis="x")
     fig.savefig("./figures/kimble/MPBvTB_bandstructure.svg")
+    plt.close(fig)
 
 
 # Run band structure computation
@@ -498,6 +502,7 @@ def plot_real_space_coupling(
         fig.savefig(
             f"./figures/kimble/g_r({r_0})_for_theta_{np.rad2deg(theta):.0f}deg.svg"
         )
+        plt.close(fig)
 
 
 # Run real-space coupling computation
@@ -565,6 +570,7 @@ def compute_and_plot_ldos(
         fig.savefig(
             f"./figures/kimble/ldos_at_{r_0}_theta_{np.rad2deg(THETAS[i - 1]):.0f}.svg"
         )
+        plt.close(fig)
 
 
 compute_and_plot_ldos(omega_ks_n, fr0_n_ks, omega_0, R_0)
@@ -606,6 +612,7 @@ def compute_and_plot_isofrequency(model: tb.tb_model, omega_0: float) -> None:
         aspect="equal",
     )
     fig.savefig("./figures/kimble/tb_isofrequency_contour.svg")
+    plt.close(fig)
 
 
 compute_and_plot_isofrequency(infinite_model, omega_0)
@@ -856,6 +863,7 @@ def plot_emitter_time_evolution(
     ax.legend(lines, [line.get_label() for line in lines])
 
     fig.savefig(f"./figures/kimble/emitter_timeevolution_entropy_at_{r_0}.svg")
+    plt.close(fig)
     return S_t_1, S_t_2
 
 
@@ -910,7 +918,9 @@ def plot_bath_snapshot(
     for i, (theta, z) in enumerate(zip(THETAS, [z1, z2])):
         fig, ax = plt.subplots()
         sc = ax.pcolormesh(pos_x, pos_y, z, vmin=0, vmax=cbar_max)
-        mf.draw_arrow(ax, r_0, theta, color=DIP_COLORS[i], length=17.5, arrow_offset=1.75)
+        mf.draw_arrow(
+            ax, r_0, theta, color=DIP_COLORS[i], length=17.5, arrow_offset=1.75
+        )
         pml_boundary = N_CELLS // 2 - N_PML + 0.5
         ax.add_patch(
             mpl.patches.Rectangle(
@@ -924,7 +934,8 @@ def plot_bath_snapshot(
             )
         )
         cbar = fig.colorbar(
-            sc, ax=ax,
+            sc,
+            ax=ax,
             label=rf"$|C_\mathbf{{R}}(t)|^2 \; [\times 10^{{{exp}}}]$",
             pad=0.1,
         )
@@ -939,6 +950,7 @@ def plot_bath_snapshot(
         fig.savefig(
             f"./figures/kimble/bath_snapshot_at_{r_0}_theta_{np.rad2deg(theta):.0f}deg.svg"
         )
+        plt.close(fig)
 
     return z1, z2, pos_x, pos_y
 
@@ -1177,7 +1189,8 @@ def plot_probe_bath_snapshot(
             )
         )
         cbar = fig.colorbar(
-            sc, ax=ax,
+            sc,
+            ax=ax,
             label=rf"$|C_\mathbf{{r}}(t)|^2 \; [\times 10^{{{exp}}}]$",
         )
         cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
@@ -1194,6 +1207,7 @@ def plot_probe_bath_snapshot(
         fig.savefig(
             f"./figures/kimble/bath_snapshot_at_{r_0}_theta_{np.rad2deg(theta):.0f}deg_with_probe.svg"
         )
+        plt.close(fig)
 
 
 def plot_probe_time_evolution(
@@ -1256,6 +1270,7 @@ def plot_probe_time_evolution(
             f"./figures/kimble/emitter_timeevolution_concurrence_at_{r_0}"
             f"_theta_{np.rad2deg(theta):.0f}deg_and_{NEW_R}.svg"
         )
+        plt.close(fig)
 
 
 # Run probe emitter computation
