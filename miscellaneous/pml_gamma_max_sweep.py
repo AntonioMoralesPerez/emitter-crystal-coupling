@@ -13,7 +13,6 @@ from scipy.sparse.linalg import expm_multiply
 
 # Third-party
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pythtb as tb
 
@@ -22,37 +21,10 @@ import src as mf
 
 
 # ------------------------------------------------------------------------------
-# Matplotlib configuration
-# ------------------------------------------------------------------------------
-
-mm_to_inches = 1 / 25.4
-mpl.rcParams.update(
-    {
-        "figure.figsize": (170 * mm_to_inches, 85 * mm_to_inches),
-        "figure.dpi": 300,
-        "font.family": "serif",
-        "font.size": 13,
-        "mathtext.fontset": "stix",
-        "axes.labelsize": 13,
-        "axes.titlesize": 14,
-        "axes.linewidth": 1,
-        "xtick.direction": "in",
-        "ytick.direction": "in",
-        "xtick.top": True,
-        "ytick.right": True,
-        "xtick.labelsize": 11,
-        "ytick.labelsize": 11,
-        "legend.fontsize": 9,
-        "legend.frameon": False,
-        "savefig.bbox": "tight",
-    }
-)
-
-# ------------------------------------------------------------------------------
 # Fixed simulation parameters (matching kimble.py)
 # ------------------------------------------------------------------------------
 
-LAT_PARAM: float = 30e-9          # lattice parameter [m]
+LAT_PARAM: float = 30e-9  # lattice parameter [m]
 N_BANDS: int = 2
 BAND_IDX: int = 0
 N_K: int = 64
@@ -60,7 +32,7 @@ R_0: list = [0.0, 0.0]
 
 THETA_1: float = 90 * np.pi / 180
 THETA_2: float = 135 * np.pi / 180
-DIP_STRENGTH: float = 1000        # [Debye]
+DIP_STRENGTH: float = 1000  # [Debye]
 P_A: float = mf.unit_dip(a=LAT_PARAM)
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 
@@ -75,8 +47,8 @@ J_2: float = 0.00053966
 K_PATH: list = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 N_K_PATH: int = 100
 
-T_0: float = 0       # [1/Γ₀]
-T_F: float = 5e-2    # [1/Γ₀]
+T_0: float = 0  # [1/Γ₀]
+T_F: float = 5e-2  # [1/Γ₀]
 T_STEPS: int = 100
 
 # --- Sweep parameters ---
@@ -85,8 +57,7 @@ GAMMA_MAX_VALUES: list = [1e-3, 3e-3, 5e-3, 1e-2, 3e-2, 5e-2, 1e-1]
 
 THETAS: list = [THETA_1, THETA_2]
 DIPOLES: list = [
-    DIP_STRENGTH_NORM * np.array([np.cos(theta), np.sin(theta), 0])
-    for theta in THETAS
+    DIP_STRENGTH_NORM * np.array([np.cos(theta), np.sin(theta), 0]) for theta in THETAS
 ]
 DIP_COLORS: list = ["#1f77b4", "#ff7f0e"]
 
@@ -188,7 +159,9 @@ for gamma_max in GAMMA_MAX_VALUES:
 # ------------------------------------------------------------------------------
 
 cmap = plt.get_cmap("plasma")
-sweep_colors = [cmap(i / (len(GAMMA_MAX_VALUES) - 1)) for i in range(len(GAMMA_MAX_VALUES))]
+sweep_colors = [
+    cmap(i / (len(GAMMA_MAX_VALUES) - 1)) for i in range(len(GAMMA_MAX_VALUES))
+]
 
 fig, axs = plt.subplots(1, 2, sharey=True)
 
@@ -210,6 +183,6 @@ for j, (theta, ax, dip_color) in enumerate(zip(THETAS, axs, DIP_COLORS)):
     ax.legend()
 
 fig.suptitle(rf"$\Gamma_\mathrm{{max}}$ sweep, $N_\mathrm{{PML}} = {N_PML}$")
-fig.savefig(f"./figures/miscellaneous/pml_gamma_max_sweep_N_PML_{N_PML}.svg")
+fig.savefig(f"./figures/miscellaneous/pml_gamma_max_sweep_N_PML_{N_PML}.png")
 plt.close(fig)
-print(f"Saved ./figures/miscellaneous/pml_gamma_max_sweep_N_PML_{N_PML}.svg")
+print(f"Saved ./figures/miscellaneous/pml_gamma_max_sweep_N_PML_{N_PML}.png")

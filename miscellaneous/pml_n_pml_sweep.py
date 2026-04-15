@@ -17,40 +17,12 @@ from scipy.sparse.linalg import expm_multiply
 
 # Third-party
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pythtb as tb
 
 # Local
 import src as mf
 
-
-# ------------------------------------------------------------------------------
-# Matplotlib configuration
-# ------------------------------------------------------------------------------
-
-mm_to_inches = 1 / 25.4
-mpl.rcParams.update(
-    {
-        "figure.figsize": (170 * mm_to_inches, 85 * mm_to_inches),
-        "figure.dpi": 300,
-        "font.family": "serif",
-        "font.size": 13,
-        "mathtext.fontset": "stix",
-        "axes.labelsize": 13,
-        "axes.titlesize": 14,
-        "axes.linewidth": 1,
-        "xtick.direction": "in",
-        "ytick.direction": "in",
-        "xtick.top": True,
-        "ytick.right": True,
-        "xtick.labelsize": 11,
-        "ytick.labelsize": 11,
-        "legend.fontsize": 9,
-        "legend.frameon": False,
-        "savefig.bbox": "tight",
-    }
-)
 
 # ------------------------------------------------------------------------------
 # Fixed simulation parameters (matching kimble.py)
@@ -216,6 +188,6 @@ for j, (theta, ax, dip_color) in enumerate(zip(THETAS, axs, DIP_COLORS)):
 fig.suptitle(
     rf"$N_\mathrm{{PML}}$ sweep, $\Gamma_\mathrm{{max}} = {GAMMA_MAX:.0e}$ $c/a$"
 )
-fig.savefig(f"./figures/miscellaneous/pml_n_pml_sweep_gamma_max_{GAMMA_MAX:.0e}.svg")
+fig.savefig(f"./figures/miscellaneous/pml_n_pml_sweep_gamma_max_{GAMMA_MAX:.0e}.png")
 plt.close(fig)
-print(f"Saved ./figures/miscellaneous/pml_n_pml_sweep_gamma_max_{GAMMA_MAX:.0e}.svg")
+print(f"Saved ./figures/miscellaneous/pml_n_pml_sweep_gamma_max_{GAMMA_MAX:.0e}.png")

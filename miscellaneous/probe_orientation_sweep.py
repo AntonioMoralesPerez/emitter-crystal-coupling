@@ -14,37 +14,11 @@ both R0=[0,0] and new_R=[-4.5, 4.5]. If not, run `mpb_field_computation.py`.
 
 # %% Imports
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pythtb as tb
 from scipy.sparse.linalg import expm_multiply
 
 import src as mf
-
-# %% Matplotlib configuration
-mpl.rcParams.update(
-    {
-        "figure.dpi": 300,
-        "font.family": "serif",
-        "font.size": 11,
-        "mathtext.fontset": "stix",
-        "axes.labelsize": 11,
-        "axes.titlesize": 12,
-        "axes.linewidth": 1,
-        "xtick.direction": "in",
-        "ytick.direction": "in",
-        "xtick.top": True,
-        "ytick.right": True,
-        "xtick.labelsize": 10,
-        "ytick.labelsize": 10,
-        "xtick.major.size": 4,
-        "xtick.major.width": 1,
-        "ytick.major.size": 4,
-        "ytick.major.width": 1,
-        "legend.fontsize": 10,
-        "legend.frameon": False,
-    }
-)
 
 # %% Parameters
 
