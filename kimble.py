@@ -140,7 +140,7 @@ SNAP_IDX: int = 50  # snapshot index for field plots (0 to T_STEPS)
 # Probe emitter
 NEW_N_EMITTERS: int = 2
 NEW_R: list = [-4.5, 4.5]
-NEW_THETA: float = np.deg2rad(45)
+NEW_THETA: float = np.deg2rad(55)
 NEW_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
     [np.cos(NEW_THETA), np.sin(NEW_THETA), 0]
 )

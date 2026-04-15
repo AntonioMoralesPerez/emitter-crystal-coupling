@@ -171,6 +171,17 @@ fig, ax = plt.subplots()
 
 ax.plot(np.rad2deg(PROBE_THETAS), max_probe_pops, "o-", color="k", lw=1.5, ms=4)
 ax.axvline(45, color="r", ls="--", lw=1, label=r"$\theta_{\rm probe} = 45°$")
+
+max_idx = np.argmax(max_probe_pops)
+ax.plot(
+    np.rad2deg(PROBE_THETAS[max_idx]),
+    max_probe_pops[max_idx],
+    "*",
+    color="r",
+    ms=10,
+    label=rf"max $= {max_probe_pops[max_idx]:.3f}$ at $\theta = {np.rad2deg(PROBE_THETAS[max_idx]):.1f}$°",
+)
+
 ax.set(
     xlabel=r"$\theta_{\rm probe}$ [deg]",
     ylabel=r"$\max_t \, |C_{\rm probe}(t)|^2$",

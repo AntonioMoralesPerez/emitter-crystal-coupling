@@ -80,7 +80,7 @@ T_F: float = 5e-2    # [1/Γ₀]
 T_STEPS: int = 100
 
 # --- Sweep parameters ---
-N_PML: int = 5  # fixed PML thickness [unit cells]
+N_PML: int = 8  # fixed PML thickness [unit cells]
 GAMMA_MAX_VALUES: list = [1e-3, 3e-3, 5e-3, 1e-2, 3e-2, 5e-2, 1e-1]
 
 THETAS: list = [THETA_1, THETA_2]
