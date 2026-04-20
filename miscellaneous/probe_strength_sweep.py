@@ -107,18 +107,7 @@ excited_coupling = mf.compute_real_space_coupling(
     rs=rs_finite,
 )[BAND_IDX, :]
 
-# %% Probe detuning (site energy at the lattice point nearest to PROBE_R)
-
-_, omega_sites = mf.make_light_matter_Hamiltonian(
-    tb_model=finite_model,
-    omega_0s=omega_0,
-    gr0s_rs=[[list(excited_coupling), list(indexes)]],
-    pml_dampings=pml_dampings,
-)
-target = [-5, 5]
-probe_site_idx = np.where(np.all(np.isclose(rs_finite, target), axis=1))[0][0]
-probe_detuning = omega_sites[probe_site_idx]
-print(f"probe_detuning = {probe_detuning:.6f} c/a")
+probe_detuning = omega_0
 
 # %% Load probe fields and compute direction-only base coupling
 # Coupling scales linearly with dipole moment, so compute once with the unit

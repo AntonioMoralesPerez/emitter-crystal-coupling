@@ -1030,8 +1030,6 @@ def compute_probe_emitter_evolution(
     ks: np.ndarray,
     rs: np.ndarray,
     couplings: list,
-    omega_sites_1: np.ndarray,
-    omega_sites_2: np.ndarray,
     omega_0: float,
     pml_dampings: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray, float]:
@@ -1056,12 +1054,8 @@ def compute_probe_emitter_evolution(
         Real-space grid points.
     couplings : list of np.ndarray
         Real-space couplings for the excited emitter.
-    omega_sites_1 : np.ndarray
-        Site energies from Hamiltonian 1 (used to find probe detuning).
-    omega_sites_2 : np.ndarray
-        Site energies from Hamiltonian 2 (used to verify consistency).
     omega_0 : float
-        Excited emitter detuning frequency [c/a].
+        Excited emitter detuning frequency [c/a]. The probe uses the same value.
 
     Returns
     -------
@@ -1071,22 +1065,8 @@ def compute_probe_emitter_evolution(
         Time-evolved wave function for system 2 (excited + probe).
     new_omega_0 : float
         Probe emitter detuning frequency [c/a].
-
-    Raises
-    ------
-    ValueError
-        If probe detuning frequencies from the two Hamiltonians do not match.
     """
-    # Find the probe emitter detuning at the target lattice site
-    target = [-5, 5]
-    idx = np.where(np.all(np.isclose(rs, target), axis=1))[0][0]
-
-    if not np.isclose(omega_sites_1[idx], omega_sites_2[idx]):
-        raise ValueError(
-            f"Probe detuning frequencies differ between Hamiltonians: "
-            f"{omega_sites_1[idx]} vs {omega_sites_2[idx]}."
-        )
-    new_omega_0 = omega_sites_1[idx]
+    new_omega_0 = omega_0
 
     # Load fields at the probe position and compute coupling
     probe_fields_data = load_field_data(N_K, NEW_R)
@@ -1200,8 +1180,8 @@ def plot_probe_bath_snapshot(
             ylabel=r"$y/a$",
             aspect="equal",
             title=rf"$\theta_{i} = {np.rad2deg(theta):.0f}$°",
-            xlim=(-7, 7),
-            ylim=(-7, 7),
+            xlim=(-8, 8),
+            ylim=(-8, 8),
         )
         ax.title.set_color(DIP_COLORS[i - 1])
         fig.savefig(
@@ -1281,8 +1261,6 @@ new_psi_t_1, new_psi_t_2, new_omega_0 = compute_probe_emitter_evolution(
     ks=ks,
     rs=rs_finite,
     couplings=couplings,
-    omega_sites_1=omega_sites_1,
-    omega_sites_2=omega_sites_2,
     omega_0=omega_0,
     pml_dampings=pml_dampings,
 )

@@ -168,10 +168,7 @@ probe_Eks = np.asarray(probe_data["Eks"])
 probe_kpts = np.asarray(probe_data["kpts"])
 E_k_probe = probe_Eks[0, :, :, :]  # (Nb, Nk, 3)
 
-# Probe detuning at the nearest site to PROBE_R=[0, 0]
-target = [0, 0]
-idx = np.where(np.all(np.isclose(rjpts, target), axis=1))[0][0]
-probe_detuning = omega_sites[idx]
+probe_detuning = omega_0
 
 # Compute couplings for the probe dipoles (two orientations)
 probe_values = [
