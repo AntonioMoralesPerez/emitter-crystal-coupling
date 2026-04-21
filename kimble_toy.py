@@ -85,7 +85,7 @@ LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]  # orbital position in lattice units
 N_CELLS: int = 41  # unit cells per direction
 N_PML: int = 8  # absorbing layer thickness [unit cells per edge]
-GAMMA_MAX: float = 1  # maximum damping rate at the hard wall [|J_1|]
+GAMMA_MAX: float = 2  # maximum damping rate at the hard wall [|J_1|]
 # Hopping parameters normalized to |J_1| = 1, rotating frame at J_0
 J_1: float = -1.0  # NN hopping [|J_1|]
 J_0: float = 0.0  # on-site energy set to zero (rotating frame)
@@ -104,8 +104,8 @@ G: float = 0.1
 
 # Time evolution [|J_1|⁻¹]
 T_0: float = 0.0
-T_F: float = 100
-T_STEPS: int = 100
+T_F: float = 200
+T_STEPS: int = 200
 SNAP_IDX: int = 50
 
 # Probe emitter
@@ -224,7 +224,7 @@ def plot_band_structure(
         title="TB band structure (NN)",
     )
     ax.grid(axis="x")
-    fig.savefig("./figures/kimble_nn/TB_bandstructure.svg")
+    fig.savefig("./figures/kimble_toy/TB_bandstructure.svg")
     plt.close(fig)
 
 
@@ -275,7 +275,7 @@ def compute_and_plot_isofrequency(model: tb.tb_model, omega_0: float) -> None:
         ylabel=r"$k_y a/2\pi$",
         aspect="equal",
     )
-    fig.savefig("./figures/kimble_nn/tb_isofrequency_contour.svg")
+    fig.savefig("./figures/kimble_toy/tb_isofrequency_contour.svg")
     plt.close(fig)
 
 
@@ -549,7 +549,7 @@ def plot_emitter_time_evolution(
 
     ax.legend([l1, l2], [l1.get_label(), l2.get_label()])
 
-    fig.savefig(f"./figures/kimble_nn/emitter_timeevolution_entropy_at_{r_0}.svg")
+    fig.savefig(f"./figures/kimble_toy/emitter_timeevolution_entropy_at_{r_0}.svg")
     plt.close(fig)
     return S_t
 
@@ -618,7 +618,7 @@ def plot_bath_snapshot(
         title=rf"$\mathbf{{r}}_0/a = {r_0}$, $G = {G}\,|J_1|$",
         aspect="equal",
     )
-    fig.savefig(f"./figures/kimble_nn/bath_snapshot_at_{r_0}.svg")
+    fig.savefig(f"./figures/kimble_toy/bath_snapshot_at_{r_0}.svg")
     plt.close(fig)
     return z
 
@@ -773,7 +773,7 @@ def plot_probe_bath_snapshot(
         xlim=(-8, 8),
         ylim=(-8, 8),
     )
-    fig.savefig(f"./figures/kimble_nn/bath_snapshot_at_{r_0}_with_probe.svg")
+    fig.savefig(f"./figures/kimble_toy/bath_snapshot_at_{r_0}_with_probe.svg")
     plt.close(fig)
 
 
@@ -820,7 +820,7 @@ def plot_probe_time_evolution(
     ax2.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
 
     fig.savefig(
-        f"./figures/kimble_nn/emitter_timeevolution_concurrence_at_{r_0}_and_{NEW_R}.svg"
+        f"./figures/kimble_toy/emitter_timeevolution_concurrence_at_{r_0}_and_{NEW_R}.svg"
     )
     plt.close(fig)
 
