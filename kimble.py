@@ -19,7 +19,7 @@ References
 ----------
 .. [1] Coome, L. A., et al. & Kimble, H. J. "Two-dimensional photonic crystals
        for engineering atom-light interactions." Proc. Natl. Acad. Sci. U.S.A.
-       116(26), 12743–12751 (2019). https://doi.org/10.1073/pnas.1822110116
+       116(26), 12743-12751 (2019). https://doi.org/10.1073/pnas.1822110116
 
 Notes
 -----
