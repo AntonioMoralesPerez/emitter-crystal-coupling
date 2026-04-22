@@ -102,13 +102,13 @@ N_R: int = 13
 T_0: float = 0
 T_F: float = 3e-2
 T_STEPS: int = 200
-SNAP_IDX: int = 50
+SNAP_IDX: int = 100
 
 # Probe emitter — on-lattice site nearest to kimble.py's [-4.5, 4.5]
 NEW_N_EMITTERS: int = 2
 NEW_R: list = [-5, 5]
 NEW_T_F: float = T_F  # [1/Γ₀]
-NEW_SNAP_IDX: int = SNAP_IDX
+NEW_SNAP_IDX: int = 50
 
 # Colors
 MY_BLUE: str = "#1f77b4"
@@ -389,16 +389,14 @@ def plot_bath_snapshot(
     n_emitters: int,
     r_0: list,
 ) -> np.ndarray:
-    """Plot bath population snapshot at snap_idx with log colorbar."""
+    """Plot bath population snapshot at snap_idx."""
     mod_Cr_sq = np.abs(psi_t[snap_idx, n_emitters:]) ** 2
     z = mod_Cr_sq.reshape(len(pos_x), len(pos_y))
     cbar_max = z.max()
-    cbar_min = z[z > 0].min() if np.any(z > 0) else cbar_max * 1e-6
+    exp = int(np.floor(np.log10(cbar_max))) if cbar_max > 0 else 0
 
     fig, ax = plt.subplots()
-    sc = ax.pcolormesh(
-        pos_x, pos_y, z, norm=colors.LogNorm(vmin=cbar_min, vmax=cbar_max)
-    )
+    sc = ax.pcolormesh(pos_x, pos_y, z, vmin=0, vmax=cbar_max)
     ax.plot(
         *r_0,
         "o",
@@ -419,7 +417,11 @@ def plot_bath_snapshot(
             linestyle="--",
         )
     )
-    fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{R}(t)|^2$", pad=0.1)
+    cbar = fig.colorbar(
+        sc, ax=ax, label=rf"$|C_\mathbf{{R}}(t)|^2 \; [\times 10^{{{exp}}}]$", pad=0.1
+    )
+    cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+    cbar.update_ticks()
     ax.set(
         xlabel=r"$x/a$",
         ylabel=r"$y/a$",
@@ -503,12 +505,10 @@ def plot_probe_bath_snapshot(
     new_mod_Cr_sq = np.abs(new_psi_t[NEW_SNAP_IDX, NEW_N_EMITTERS:]) ** 2
     new_z = new_mod_Cr_sq.reshape(len(pos_x), len(pos_y))
     cbar_max = new_z.max()
-    cbar_min = new_z[new_z > 0].min() if np.any(new_z > 0) else cbar_max * 1e-6
+    exp = int(np.floor(np.log10(cbar_max))) if cbar_max > 0 else 0
 
     fig, ax = plt.subplots()
-    sc = ax.pcolormesh(
-        pos_x, pos_y, new_z, norm=colors.LogNorm(vmin=cbar_min, vmax=cbar_max)
-    )
+    sc = ax.pcolormesh(pos_x, pos_y, new_z, vmin=0, vmax=cbar_max)
     ax.plot(
         *r_0,
         "o",
@@ -537,7 +537,11 @@ def plot_probe_bath_snapshot(
             linestyle="--",
         )
     )
-    fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{r}(t)|^2$")
+    cbar = fig.colorbar(
+        sc, ax=ax, label=rf"$|C_\mathbf{{r}}(t)|^2 \; [\times 10^{{{exp}}}]$"
+    )
+    cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+    cbar.update_ticks()
     ax.set(
         xlabel=r"$x/a$",
         ylabel=r"$y/a$",

@@ -589,10 +589,10 @@ def plot_bath_snapshot(
     mod_Cr_sq = np.abs(psi_t[snap_idx, n_emitters:]) ** 2
     z = mod_Cr_sq.reshape(len(pos_x), len(pos_y))
     cbar_max = z.max()
-    cbar_min = z[z > 0].min() if np.any(z > 0) else cbar_max * 1e-6
+    exp = int(np.floor(np.log10(cbar_max))) if cbar_max > 0 else 0
 
     fig, ax = plt.subplots()
-    sc = ax.pcolormesh(pos_x, pos_y, z, norm=colors.LogNorm(vmin=cbar_min, vmax=cbar_max))
+    sc = ax.pcolormesh(pos_x, pos_y, z, vmin=0, vmax=cbar_max)
     ax.plot(*r_0, "o", color=MY_BLUE, markersize=5, markeredgecolor="white", markeredgewidth=0.8)
     pml_boundary = N_CELLS // 2 - N_PML + 0.5
     ax.add_patch(
@@ -609,9 +609,11 @@ def plot_bath_snapshot(
     cbar = fig.colorbar(
         sc,
         ax=ax,
-        label=r"$|C_\mathbf{R}(t)|^2$",
+        label=rf"$|C_\mathbf{{R}}(t)|^2 \; [\times 10^{{{exp}}}]$",
         pad=0.1,
     )
+    cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+    cbar.update_ticks()
     ax.set(
         xlabel=r"$x/a$",
         ylabel=r"$y/a$",
@@ -742,10 +744,10 @@ def plot_probe_bath_snapshot(
     new_mod_Cr_sq = np.abs(new_psi_t[NEW_SNAP_IDX, NEW_N_EMITTERS:]) ** 2
     new_z = new_mod_Cr_sq.reshape(len(pos_x), len(pos_y))
     cbar_max = new_z.max()
-    cbar_min = new_z[new_z > 0].min() if np.any(new_z > 0) else cbar_max * 1e-6
+    exp = int(np.floor(np.log10(cbar_max))) if cbar_max > 0 else 0
 
     fig, ax = plt.subplots()
-    sc = ax.pcolormesh(pos_x, pos_y, new_z, norm=colors.LogNorm(vmin=cbar_min, vmax=cbar_max))
+    sc = ax.pcolormesh(pos_x, pos_y, new_z, vmin=0, vmax=cbar_max)
     ax.plot(*r_0, "o", color=MY_BLUE, markersize=5, markeredgecolor="white", markeredgewidth=0.8)
     ax.plot(*NEW_R, "o", color=MY_GREEN, markersize=5, markeredgecolor="white", markeredgewidth=0.8)
     pml_boundary = N_CELLS // 2 - N_PML + 0.5
@@ -763,8 +765,10 @@ def plot_probe_bath_snapshot(
     cbar = fig.colorbar(
         sc,
         ax=ax,
-        label=r"$|C_\mathbf{r}(t)|^2$",
+        label=rf"$|C_\mathbf{{r}}(t)|^2 \; [\times 10^{{{exp}}}]$",
     )
+    cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+    cbar.update_ticks()
     ax.set(
         xlabel=r"$x/a$",
         ylabel=r"$y/a$",
