@@ -12,7 +12,7 @@ kimble_toy.py  →  Step A (this)  →  Step B  →  kimble.py
   Θ bath          √Θ bath           √Θ bath     √Θ bath
   local G         local G           MPB g_R     MPB g_R
   no Γ_0 norm     Γ_0 norm          Γ_0 norm    Γ_0 norm
-  NN hops         NN hops           NN hops     3rd-NN hops
+  NN hops         NN hops           NN hops     2nd-NN hops
 """
 
 # Standard library

@@ -593,7 +593,14 @@ def plot_bath_snapshot(
 
     fig, ax = plt.subplots()
     sc = ax.pcolormesh(pos_x, pos_y, z, vmin=0, vmax=cbar_max)
-    ax.plot(*r_0, "o", color=MY_BLUE, markersize=5, markeredgecolor="white", markeredgewidth=0.8)
+    ax.plot(
+        *r_0,
+        "o",
+        color=MY_BLUE,
+        markersize=5,
+        markeredgecolor="white",
+        markeredgewidth=0.8,
+    )
     pml_boundary = N_CELLS // 2 - N_PML + 0.5
     ax.add_patch(
         mpl.patches.Rectangle(
@@ -748,8 +755,22 @@ def plot_probe_bath_snapshot(
 
     fig, ax = plt.subplots()
     sc = ax.pcolormesh(pos_x, pos_y, new_z, vmin=0, vmax=cbar_max)
-    ax.plot(*r_0, "o", color=MY_BLUE, markersize=5, markeredgecolor="white", markeredgewidth=0.8)
-    ax.plot(*NEW_R, "o", color=MY_GREEN, markersize=5, markeredgecolor="white", markeredgewidth=0.8)
+    ax.plot(
+        *r_0,
+        "o",
+        color=MY_BLUE,
+        markersize=5,
+        markeredgecolor="white",
+        markeredgewidth=0.8,
+    )
+    ax.plot(
+        *NEW_R,
+        "o",
+        color=MY_GREEN,
+        markersize=5,
+        markeredgecolor="white",
+        markeredgewidth=0.8,
+    )
     pml_boundary = N_CELLS // 2 - N_PML + 0.5
     ax.add_patch(
         mpl.patches.Rectangle(

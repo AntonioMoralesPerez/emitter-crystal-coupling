@@ -118,7 +118,7 @@ ORB: list = [[0, 0]]  # orbital position in lattice units
 N_CELLS: int = 41  # unit cells per direction
 N_PML: int = 8  # absorbing layer thickness [unit cells per edge]
 GAMMA_MAX: float = 3e-2  # maximum damping rate at the hard wall [c/a]
-# Hopping coefficients up to 3rd nearest neighbours [units: (c/a)²]
+# Hopping coefficients up to 2nd nearest neighbours [units: (c/a)²]
 J_0: float = 0.07755639
 J_1: float = -0.01993698
 J_2: float = 0.00053966
@@ -238,7 +238,7 @@ def build_tight_binding_model() -> tb.tb_model:
     Returns
     -------
     tb.tb_model
-        Tight-binding model with on-site and hopping terms up to 3rd
+        Tight-binding model with on-site and hopping terms up to 2nd
         nearest neighbours.
     """
     model = tb.tb_model(dim_k=2, dim_r=2, lat=LAT, orb=ORB)
@@ -537,15 +537,19 @@ for _i, (_theta, _g_rs) in enumerate(zip(THETAS, gr0_rs_list), start=1):
     # Use the peak coupling as the scale: in the toy model G is both on-site
     # and the maximum, so |g|_max is the fair comparison when the real-space
     # coupling has its peak away from r_0.
-    _ratio_J1 = _g_max / abs(J_1)          # units: a/c
-    _ratio_sqrtJ1 = _g_max / _sqrt_J1      # dimensionless — comparable to toy
+    _ratio_J1 = _g_max / abs(J_1)  # units: a/c
+    _ratio_sqrtJ1 = _g_max / _sqrt_J1  # dimensionless — comparable to toy
     _dip_needed = DIP_STRENGTH * _TOY_G_OVER_J1 / _ratio_sqrtJ1
-    print(f"\n  θ_{_i} = {np.rad2deg(_theta):.0f}°  (DIP_STRENGTH = {DIP_STRENGTH} Debye)")
+    print(
+        f"\n  θ_{_i} = {np.rad2deg(_theta):.0f}°  (DIP_STRENGTH = {DIP_STRENGTH} Debye)"
+    )
     print(f"    |g(r_0, r_0)|        = {_g0:.6e} c/a  (on-site)")
     print(f"    |g|_max              = {_g_max:.6e} c/a  (peak, used for estimate)")
     print(f"    g_max / |J_1|        = {_ratio_J1:.6e} a/c")
     print(f"    g_max / √|J_1|       = {_ratio_sqrtJ1:.6e}  (dimensionless)")
-    print(f"    DIP_STRENGTH needed  = {_dip_needed:.1f} Debye  (for g_max/√|J_1| = {_TOY_G_OVER_J1})")
+    print(
+        f"    DIP_STRENGTH needed  = {_dip_needed:.1f} Debye  (for g_max/√|J_1| = {_TOY_G_OVER_J1})"
+    )
 
 print("-" * 50)
 
@@ -1012,9 +1016,9 @@ ts_norm = _t_conv * ts
 # T_F is now in a/c (divided by _t_conv above).
 # Bridge to toy units: 1 toy time unit (|J_1_toy|^{-1}) ↔ 1/√|J_1_real| a/c,
 # because the toy bath uses ε_k while the real bath uses ω_k = √ε_k.
-_toy_T_F_ac = 200.0 / np.sqrt(abs(J_1))   # toy T_F=200 converted to a/c
+_toy_T_F_ac = 200.0 / np.sqrt(abs(J_1))  # toy T_F=200 converted to a/c
 _dist_probe = np.linalg.norm(np.array(NEW_R) - np.array(R_0))
-_v_g_char = abs(J_1) / omega_0             # characteristic group velocity [c]: |J₁|/ω₀
+_v_g_char = abs(J_1) / omega_0  # characteristic group velocity [c]: |J₁|/ω₀
 
 print("\n--- Timescale diagnostics ---")
 print(f"  Γ₀                          = {gamma_0:.4e} s⁻¹")
