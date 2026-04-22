@@ -516,6 +516,40 @@ gr0_rs_list, xs_small, ys_small = compute_coupling_grid(fr0_n_ks, omega_ks_n, ks
 plot_real_space_coupling(gr0_rs_list, xs_small, ys_small, R_0)
 
 # ------------------------------------------------------------------------------
+# Coupling diagnostics: effective g(R=r_0, r_0) vs toy-model G/|J_1| ratio
+# ------------------------------------------------------------------------------
+
+# In kimble_toy.py: bath is Θ directly, so G/|J_1_toy| is dimensionless (= 0.1).
+# Here: bath energies are ω_k = √ε_k [c/a], so the analogous dimensionless ratio
+# is g_R(r_0) / √|J_1| — both numerator and denominator are in c/a.
+_TOY_G_OVER_J1: float = 0.1
+
+_sqrt_J1 = np.sqrt(abs(J_1))
+print("\n--- Coupling diagnostics (R = r_0) ---")
+print(f"  |J_1|             = {abs(J_1):.6e} (c/a)²")
+print(f"  √|J_1|            = {_sqrt_J1:.6e} c/a  ← bath frequency scale")
+print(f"  toy G/|J_1_toy|   = {_TOY_G_OVER_J1}")
+
+for _i, (_theta, _g_rs) in enumerate(zip(THETAS, gr0_rs_list), start=1):
+    _g_abs = np.abs(_g_rs)
+    _g0 = _g_abs[N_R // 2, N_R // 2]
+    _g_max = _g_abs.max()
+    # Use the peak coupling as the scale: in the toy model G is both on-site
+    # and the maximum, so |g|_max is the fair comparison when the real-space
+    # coupling has its peak away from r_0.
+    _ratio_J1 = _g_max / abs(J_1)          # units: a/c
+    _ratio_sqrtJ1 = _g_max / _sqrt_J1      # dimensionless — comparable to toy
+    _dip_needed = DIP_STRENGTH * _TOY_G_OVER_J1 / _ratio_sqrtJ1
+    print(f"\n  θ_{_i} = {np.rad2deg(_theta):.0f}°  (DIP_STRENGTH = {DIP_STRENGTH} Debye)")
+    print(f"    |g(r_0, r_0)|        = {_g0:.6e} c/a  (on-site)")
+    print(f"    |g|_max              = {_g_max:.6e} c/a  (peak, used for estimate)")
+    print(f"    g_max / |J_1|        = {_ratio_J1:.6e} a/c")
+    print(f"    g_max / √|J_1|       = {_ratio_sqrtJ1:.6e}  (dimensionless)")
+    print(f"    DIP_STRENGTH needed  = {_dip_needed:.1f} Debye  (for g_max/√|J_1| = {_TOY_G_OVER_J1})")
+
+print("-" * 50)
+
+# ------------------------------------------------------------------------------
 # LDOS at the emitter position
 # ------------------------------------------------------------------------------
 
@@ -971,6 +1005,26 @@ T_F /= _t_conv
 NEW_T_F /= _t_conv
 ts = np.linspace(T_0, T_F, T_STEPS, endpoint=True)
 ts_norm = _t_conv * ts
+
+# ------------------------------------------------------------------------------
+# Timescale diagnostics: compare kimble.py vs toy-model equivalent
+# ------------------------------------------------------------------------------
+# T_F is now in a/c (divided by _t_conv above).
+# Bridge to toy units: 1 toy time unit (|J_1_toy|^{-1}) ↔ 1/√|J_1_real| a/c,
+# because the toy bath uses ε_k while the real bath uses ω_k = √ε_k.
+_toy_T_F_ac = 200.0 / np.sqrt(abs(J_1))   # toy T_F=200 converted to a/c
+_dist_probe = np.linalg.norm(np.array(NEW_R) - np.array(R_0))
+_v_g_char = abs(J_1) / omega_0             # characteristic group velocity [c]: |J₁|/ω₀
+
+print("\n--- Timescale diagnostics ---")
+print(f"  Γ₀                          = {gamma_0:.4e} s⁻¹")
+print(f"  T_F (kimble.py)             = {T_F:.1f} a/c  ({T_F * _t_conv:.2e} × Γ₀⁻¹)")
+print(f"  T_F (toy, equiv. in a/c)    ≈ {_toy_T_F_ac:.1f} a/c  (= 200 / √|J₁|)")
+print(f"  Ratio T_F_kimble / T_F_toy  ≈ {T_F / _toy_T_F_ac:.1f}×")
+print(f"  |r_probe − r₀|              = {_dist_probe:.2f} a")
+print(f"  v_g ~ |J₁| / ω₀            = {_v_g_char:.4f} c")
+print(f"  Estimated travel time       ≈ {_dist_probe / _v_g_char:.1f} a/c")
+print("-" * 50)
 
 psi_t_1, psi_t_2, omega_sites_1, omega_sites_2, couplings = compute_time_evolution(
     finite_model=finite_model,
