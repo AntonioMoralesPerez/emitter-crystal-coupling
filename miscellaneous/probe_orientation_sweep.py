@@ -25,9 +25,9 @@ P_A: float = mf.unit_dip(a=LAT_PARAM)
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 
 BAND_IDX: int = 0
-N_K: int = 64
+N_K: int = 91
 
-EXCITED_R: list = [0.0, 0.0]
+EXCITED_R: list = [0, 0]
 EXCITED_THETA: float = 90 * np.pi / 180
 EXCITED_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
     [np.cos(EXCITED_THETA), np.sin(EXCITED_THETA), 0]
@@ -36,7 +36,7 @@ EXCITED_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
 PROBE_R: list = [-5, 5]
 PROBE_DIP_STRENGTH: float = DIP_STRENGTH  # [Debye]
 N_THETAS: int = 13
-PROBE_THETAS: np.ndarray = np.linspace(0, 180, N_THETAS) * np.pi / 180
+PROBE_THETAS: np.ndarray = np.linspace(45, 60, N_THETAS) * np.pi / 180
 
 # Current kimble.py probe orientation — shown as reference on the plot
 KIMBLE_PROBE_THETA: float = np.deg2rad(55)
@@ -113,19 +113,6 @@ excited_coupling = mf.compute_real_space_coupling(
     rs=rs_finite,
 )[BAND_IDX, :]
 
-# %% Probe detuning (site energy at the lattice point nearest to PROBE_R)
-
-_, omega_sites = mf.make_light_matter_Hamiltonian(
-    tb_model=finite_model,
-    omega_0s=omega_0,
-    gr0s_rs=[[list(excited_coupling), list(indexes)]],
-    pml_dampings=pml_dampings,
-)
-target = [-5, 5]
-probe_site_idx = np.where(np.all(np.isclose(rs_finite, target), axis=1))[0][0]
-probe_detuning = omega_sites[probe_site_idx]
-print(f"probe_detuning = {probe_detuning:.6f} c/a")
-
 # %% Load probe fields (orientation-independent, reused for every angle)
 
 data_probe = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{PROBE_R}.pkl")
@@ -134,90 +121,76 @@ fr0_probe = np.asarray(data_probe["Eks"])[0]
 ks_probe = np.asarray(data_probe["kpts"])
 
 # %% Orientation sweep
-# Run for two probe frequencies: bath frequency at probe site and omega_0
 
-probe_freqs = {
-    "bath": probe_detuning,
-    "omega_0": omega_0,
-}
-max_probe_pops = {key: np.zeros(N_THETAS) for key in probe_freqs}
+max_probe_pops = np.zeros(N_THETAS)
 
-for freq_label, probe_freq in probe_freqs.items():
-    print(f"\n--- probe frequency: {freq_label} = {probe_freq:.6f} c/a ---")
-    for i, probe_theta in enumerate(PROBE_THETAS):
-        probe_dipole = (PROBE_DIP_STRENGTH / P_A) * np.array(
-            [np.cos(probe_theta), np.sin(probe_theta), 0]
-        )
-        probe_coupling = mf.compute_real_space_coupling(
-            fr0_n_ks=fr0_probe,
-            dipole_moment=probe_dipole,
-            omega_ks_n=omega_ks_probe,
-            ks=ks_probe,
-            rs=rs_finite,
-        )[BAND_IDX, :]
+print(f"\n--- probe frequency: omega_0 = {omega_0:.6f} c/a ---")
+for i, probe_theta in enumerate(PROBE_THETAS):
+    probe_dipole = (PROBE_DIP_STRENGTH / P_A) * np.array(
+        [np.cos(probe_theta), np.sin(probe_theta), 0]
+    )
+    probe_coupling = mf.compute_real_space_coupling(
+        fr0_n_ks=fr0_probe,
+        dipole_moment=probe_dipole,
+        omega_ks_n=omega_ks_probe,
+        ks=ks_probe,
+        rs=rs_finite,
+    )[BAND_IDX, :]
 
-        H, _ = mf.make_light_matter_Hamiltonian(
-            tb_model=finite_model,
-            omega_0s=[omega_0, probe_freq],
-            gr0s_rs=[
-                [list(excited_coupling), list(indexes)],
-                [list(probe_coupling), list(indexes)],
-            ],
-            pml_dampings=pml_dampings,
-        )
+    H, _ = mf.make_light_matter_Hamiltonian(
+        tb_model=finite_model,
+        omega_0s=[omega_0, omega_0],
+        gr0s_rs=[
+            [list(excited_coupling), list(indexes)],
+            [list(probe_coupling), list(indexes)],
+        ],
+        pml_dampings=pml_dampings,
+    )
 
-        psi0 = np.zeros(H.shape[0])
-        psi0[0] = 1
-        psit = expm_multiply(-1j * H, psi0, 0.0, t_f_internal, T_STEPS, endpoint=True)
-        max_probe_pops[freq_label][i] = np.max(np.abs(psit[:, 1]) ** 2)
+    psi0 = np.zeros(H.shape[0])
+    psi0[0] = 1
+    psit = expm_multiply(-1j * H, psi0, 0.0, t_f_internal, T_STEPS, endpoint=True)
+    max_probe_pops[i] = np.max(np.abs(psit[:, 1]) ** 2)
 
-        print(
-            f"θ_probe={np.rad2deg(probe_theta):.1f}° → "
-            f"max probe pop = {max_probe_pops[freq_label][i]:.4e}"
-        )
+    print(
+        f"θ_probe={np.rad2deg(probe_theta):.1f}° → "
+        f"max probe pop = {max_probe_pops[i]:.4e}"
+    )
 
 # %% Plot
 
-row_configs = [
-    ("bath", rf"probe $\omega$ = bath site freq ({probe_detuning:.4f} $c/a$)"),
-    ("omega_0", rf"probe $\omega$ = $\omega_0$ ({omega_0:.4f} $c/a$)"),
-]
+fig, ax = plt.subplots(figsize=(6, 4))
 
-fig, axes = plt.subplots(2, 1, figsize=(6, 8), sharex=True)
+ax.plot(np.rad2deg(PROBE_THETAS), max_probe_pops, "o-", color="k", lw=1.5, ms=4)
 
-for ax, (freq_label, row_title) in zip(axes, row_configs):
-    pops = max_probe_pops[freq_label]
-
-    ax.plot(np.rad2deg(PROBE_THETAS), pops, "o-", color="k", lw=1.5, ms=4)
-
-    max_idx = np.argmax(pops)
-    ax.plot(
-        np.rad2deg(PROBE_THETAS[max_idx]),
-        pops[max_idx],
-        "*",
-        color="r",
-        ms=10,
-        label=(
-            rf"max $= {pops[max_idx]:e}$"
-            rf" at $\theta = {np.rad2deg(PROBE_THETAS[max_idx]):.1f}$°"
-        ),
-    )
-    ax.axvline(
-        np.rad2deg(KIMBLE_PROBE_THETA),
-        color="gray",
-        ls="--",
-        lw=1,
-        label=rf"kimble.py: $\theta = {np.rad2deg(KIMBLE_PROBE_THETA):.0f}$°",
-    )
-    ax.set(
-        ylabel=r"$\max_t \, |C_{\rm probe}(t)|^2$",
-        xticks=np.arange(0, 181, 45),
-        title=row_title,
-    )
-    ax.legend()
-
-axes[-1].set_xlabel(r"$\theta_{\rm probe}$ [deg]")
-fig.suptitle(rf"$\theta_{{\rm exc}} = {np.rad2deg(EXCITED_THETA):.0f}$°", y=1.01)
+max_idx = np.argmax(max_probe_pops)
+ax.plot(
+    np.rad2deg(PROBE_THETAS[max_idx]),
+    max_probe_pops[max_idx],
+    "*",
+    color="r",
+    ms=10,
+    label=(
+        rf"max $= {max_probe_pops[max_idx]:e}$"
+        rf" at $\theta = {np.rad2deg(PROBE_THETAS[max_idx]):.1f}$°"
+    ),
+)
+ax.axvline(
+    np.rad2deg(KIMBLE_PROBE_THETA),
+    color="gray",
+    ls="--",
+    lw=1,
+    label=rf"kimble.py: $\theta = {np.rad2deg(KIMBLE_PROBE_THETA):.0f}$°",
+)
+ax.set(
+    xlabel=r"$\theta_{\rm probe}$ [deg]",
+    ylabel=r"$\max_t \, |C_{\rm probe}(t)|^2$",
+    title=(
+        rf"probe $\omega = \omega_0$ ({omega_0:.4f} $c/a$), "
+        rf"$\theta_{{\rm exc}} = {np.rad2deg(EXCITED_THETA):.0f}$°"
+    ),
+)
+ax.legend()
 
 fig.tight_layout()
 fig.savefig(
