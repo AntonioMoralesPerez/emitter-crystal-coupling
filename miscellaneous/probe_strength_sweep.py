@@ -32,7 +32,7 @@ EXCITED_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
     [np.cos(EXCITED_THETA), np.sin(EXCITED_THETA), 0]
 )
 
-PROBE_R: list = [-4.5, 4.5]
+PROBE_R: list = [-5, 5]
 PROBE_THETA: float = np.deg2rad(60)
 PROBE_DIP_VALUES: list = [10, 25, 50, 75, 100, 150, 200]  # [Debye]
 

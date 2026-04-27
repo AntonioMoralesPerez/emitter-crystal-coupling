@@ -33,7 +33,7 @@ EXCITED_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
     [np.cos(EXCITED_THETA), np.sin(EXCITED_THETA), 0]
 )
 
-PROBE_R: list = [-4.5, 4.5]
+PROBE_R: list = [-5, 5]
 PROBE_DIP_STRENGTH: float = DIP_STRENGTH  # [Debye]
 N_THETAS: int = 13
 PROBE_THETAS: np.ndarray = np.linspace(0, 180, N_THETAS) * np.pi / 180
