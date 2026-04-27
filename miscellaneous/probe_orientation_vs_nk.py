@@ -32,10 +32,10 @@ EXCITED_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
 PROBE_R: list = [-5, 5]
 PROBE_DIP_STRENGTH: float = DIP_STRENGTH
 
-PROBE_THETAS: np.ndarray = np.linspace(45, 60, 13) * np.pi / 180
+PROBE_THETAS: np.ndarray = np.linspace(40, 60, 13) * np.pi / 180
 
 FIELDS_DIR: str = "./data/kimble/fields/"
-NK_VALUES: list = [61, 62, 71, 72, 81, 82, 91, 92]
+NK_VALUES: list = [61, 71, 81, 91]
 
 LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
@@ -55,6 +55,7 @@ T_STEPS: int = 50
 
 
 # %% Helper
+
 
 def compute_pml_dampings(
     rs: np.ndarray, n_cells: int, n_pml: int, gamma_max: float
@@ -95,6 +96,7 @@ def build_tb_variant(j2):
     t_f_internal = T_F / (LAT_PARAM / mf.constants.C_LIGHT * gamma_0)
 
     return finite, omega_0, t_f_internal
+
 
 # %% Main sweep over TB variants and N_K
 
@@ -149,7 +151,9 @@ for label, j2 in TB_VARIANTS.items():
 
             psi0 = np.zeros(H.shape[0])
             psi0[0] = 1
-            psit = expm_multiply(-1j * H, psi0, 0.0, t_f_internal, T_STEPS, endpoint=True)
+            psit = expm_multiply(
+                -1j * H, psi0, 0.0, t_f_internal, T_STEPS, endpoint=True
+            )
             pops[i] = np.max(np.abs(psit[:, 1]) ** 2)
 
             print(f"    θ={np.rad2deg(probe_theta):.1f}° → max pop = {pops[i]:.4e}")
@@ -182,9 +186,18 @@ for col, tb_label in enumerate(col_labels):
     for row, vals in enumerate([thetas, pops_arr]):
         ax = axes[row, col]
         if odd_mask.any():
-            ax.plot(nks[odd_mask], vals[odd_mask], "o", color="C0", label="odd $N_K$", ms=7)
+            ax.plot(
+                nks[odd_mask], vals[odd_mask], "o", color="C0", label="odd $N_K$", ms=7
+            )
         if even_mask.any():
-            ax.plot(nks[even_mask], vals[even_mask], "s", color="C1", label="even $N_K$", ms=7)
+            ax.plot(
+                nks[even_mask],
+                vals[even_mask],
+                "s",
+                color="C1",
+                label="even $N_K$",
+                ms=7,
+            )
         if col == 0:
             ax.set_ylabel(row_labels[row])
         if row == 0:

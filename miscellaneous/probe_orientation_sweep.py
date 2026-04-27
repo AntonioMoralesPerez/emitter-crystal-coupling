@@ -25,7 +25,7 @@ P_A: float = mf.unit_dip(a=LAT_PARAM)
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 
 BAND_IDX: int = 0
-N_K: int = 91
+N_K: int = 92
 
 EXCITED_R: list = [0, 0]
 EXCITED_THETA: float = 90 * np.pi / 180
@@ -36,10 +36,10 @@ EXCITED_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
 PROBE_R: list = [-5, 5]
 PROBE_DIP_STRENGTH: float = DIP_STRENGTH  # [Debye]
 N_THETAS: int = 13
-PROBE_THETAS: np.ndarray = np.linspace(45, 60, N_THETAS) * np.pi / 180
+PROBE_THETAS: np.ndarray = np.linspace(40, 60, N_THETAS) * np.pi / 180
 
 # Current kimble.py probe orientation — shown as reference on the plot
-KIMBLE_PROBE_THETA: float = np.deg2rad(55)
+KIMBLE_PROBE_THETA: float = np.deg2rad(45)
 
 LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
