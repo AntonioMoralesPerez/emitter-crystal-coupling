@@ -23,9 +23,11 @@ DIRNAME_OUTPUT = "data/kimble/fields/"  # directory to save outputs
 
 NK = 92  # number of points per direction for the Monkhorst-Pack grid
 
-# Position of the quantum emitter in units of the lattice constant 'a'
-# list of positions are also allowed
-R0_LIST = [-5, 5]
+# Positions of the quantum emitters in units of the lattice constant 'a'.
+# Sample every emitter position within the SAME MPB run so all u_k(r) share a
+# consistent k-dependent global phase (gauge). One file per position is then
+# saved, sliced from this single run.
+R0_LIST = [[0, 0], [-5, 5]]
 
 # ------------------------------------------------------------------------------
 
@@ -134,19 +136,20 @@ kpts = arranged_data["kpts_cartesian"]
 r0pts = arranged_data["r0pts_cartesian"]
 
 # ------------------------------------------------------------------------------
-# Package results and save to disk
+# Package results and save one file per r0, all sliced from the same MPB run
+# so the relative gauge of u_k(r) across positions is preserved.
 # ------------------------------------------------------------------------------
-output = {
-    "freqs": freqs,
-    "Eks": Ek,
-    "kpts": kpts,
-    "r0pts": r0pts,
-}
-
-mf.save(
-    output,
-    filename=f"{NK}_meshgrid_at_{R0_LIST}.pkl",
-    dirname=DIRNAME_OUTPUT,
-)
+for i, R0 in enumerate(R0_LIST):
+    output = {
+        "freqs": freqs,
+        "Eks": Ek[i : i + 1],  # keep (Nr=1, Nb, Nk, 3) layout
+        "kpts": kpts,
+        "r0pts": r0pts[i : i + 1],
+    }
+    mf.save(
+        output,
+        filename=f"{NK}_meshgrid_at_{list(R0)}.pkl",
+        dirname=DIRNAME_OUTPUT,
+    )
 
 # ------------------------------------------------------------------------------
