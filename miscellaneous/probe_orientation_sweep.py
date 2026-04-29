@@ -20,12 +20,12 @@ import src as mf
 # %% Parameters (matching kimble.py)
 
 LAT_PARAM: float = 300e-9  # lattice parameter [m]
-DIP_STRENGTH: float = 50  # dipole moment [Debye] — same for both emitters
+DIP_STRENGTH: float = 7000  # dipole moment [Debye] — same for both emitters
 P_A: float = mf.unit_dip(a=LAT_PARAM)
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 
 BAND_IDX: int = 0
-N_K: int = 128
+N_K: int = 101
 
 EXCITED_R: list = [0, 0]
 EXCITED_THETA: float = 90 * np.pi / 180
@@ -35,8 +35,8 @@ EXCITED_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
 
 PROBE_R: list = [-5, 5]
 PROBE_DIP_STRENGTH: float = DIP_STRENGTH  # [Debye]
-N_THETAS: int = 13
-PROBE_THETAS: np.ndarray = np.linspace(40, 60, N_THETAS) * np.pi / 180
+N_THETAS: int = 21
+PROBE_THETAS: np.ndarray = np.linspace(40, 50, N_THETAS) * np.pi / 180
 
 # Current kimble.py probe orientation — shown as reference on the plot
 KIMBLE_PROBE_THETA: float = np.deg2rad(45)
@@ -54,7 +54,7 @@ J_2: float = 0.00053966
 K_PATH: list = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 N_K_PATH: int = 100
 
-T_F: float = 2e-5  # end time [1/Γ₀]
+T_F: float = 1e-2  # end time [1/Γ₀]
 T_STEPS: int = 50
 
 

@@ -17,16 +17,16 @@ import matplotlib.pyplot as plt
 import src as mf  # our package functions to work with
 
 # %% Define the main constants and parameters for the current simulation
-NK = 64  # number of points per direction for the Monkhorst-Pack grid
+NK = 101  # number of points per direction for the Monkhorst-Pack grid
 
 # angles for the dipole moments of the quantum emitters and its dimensionless value
 THETA = np.deg2rad(90)
 LAT_PARAM = 300e-9  # lattice parameter [m]
-DIP_STRENGTH = 50  # [D]
+DIP_STRENGTH = 7000  # [D]
 P_DIMLESS = DIP_STRENGTH / mf.unit_dip(a=LAT_PARAM)
 
 # Position of the quantum emitter in units of the lattice constant 'a'
-R0 = [0.0, 0.0]
+R0 = [0, 0]
 
 BAND_INDEX = 0  # index of the band to consider (0-based)
 

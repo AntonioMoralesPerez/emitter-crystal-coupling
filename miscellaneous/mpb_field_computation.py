@@ -21,7 +21,7 @@ NUM_BANDS = 1
 EPSILON_INPUT_FILE = "data/kimble/epsilon.h5"
 DIRNAME_OUTPUT = "data/kimble/fields/"  # directory to save outputs
 
-NK = 128  # number of points per direction for the Monkhorst-Pack grid
+NK = 101  # number of points per direction for the Monkhorst-Pack grid
 
 # Positions of the quantum emitters in units of the lattice constant 'a'.
 # Sample every emitter position within the SAME MPB run so all u_k(r) share a
