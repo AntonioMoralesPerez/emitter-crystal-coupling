@@ -12,45 +12,10 @@ executing this file.
 import numpy as np
 
 # some imports for plotting utilities
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
 import src as mf  # our package functions to work with
-
-# %% Some set-ups for the plotting of the figures
-mpl.rcParams.update(
-    {
-        # Figure
-        "figure.dpi": 300,  # higher resolution
-        # Font
-        "font.family": "serif",  # switch to serif (journal-style)
-        "font.size": 11,  # base font size
-        "mathtext.fontset": "stix",  # match math to Times-like font
-        # Axes
-        "axes.labelsize": 11,  # axis label font size
-        "axes.titlesize": 12,  # title font size
-        "axes.linewidth": 1,  # thickness of axes spines
-        # Ticks
-        "xtick.direction": "in",
-        "ytick.direction": "in",
-        "xtick.top": True,
-        "ytick.right": True,
-        "xtick.labelsize": 10,
-        "ytick.labelsize": 10,
-        # Tick length/width
-        "xtick.major.size": 4,
-        "xtick.major.width": 1,
-        "ytick.major.size": 4,
-        "ytick.major.width": 1,
-        # Grid (off by default, but can be enabled)
-        "grid.alpha": 0.3,
-        "grid.linestyle": "--",
-        # Legend
-        "legend.fontsize": 10,
-        "legend.frameon": False,
-    }
-)
 
 # %% Define the main constants and parameters for the current simulation
 NK = 64  # number of points per direction for the Monkhorst-Pack grid

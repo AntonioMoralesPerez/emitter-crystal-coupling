@@ -19,7 +19,7 @@ References
 ----------
 .. [1] Coome, L. A., et al. & Kimble, H. J. "Two-dimensional photonic crystals
        for engineering atom-light interactions." Proc. Natl. Acad. Sci. U.S.A.
-       116(26), 12743–12751 (2019). https://doi.org/10.1073/pnas.1822110116
+       116(26), 12743-12751 (2019). https://doi.org/10.1073/pnas.1822110116
 
 Notes
 -----
@@ -58,21 +58,21 @@ def configure_matplotlib() -> None:
             "figure.dpi": 300,
             # Font
             "font.family": "serif",
-            "font.size": 11,
+            "font.size": 13,
             "mathtext.fontset": "stix",
             # Axes
-            "axes.labelsize": 11,
-            "axes.titlesize": 12,
+            "axes.labelsize": 13,
+            "axes.titlesize": 14,
             "axes.linewidth": 1,
             # Ticks
             "xtick.direction": "in",
             "ytick.direction": "in",
             "xtick.top": True,
             "ytick.right": True,
-            "xtick.labelsize": 10,
-            "ytick.labelsize": 10,
+            "xtick.labelsize": 11,
+            "ytick.labelsize": 11,
             # Legend
-            "legend.fontsize": 10,
+            "legend.fontsize": 11,
             "legend.frameon": False,
             # Save
             "savefig.bbox": "tight",
@@ -87,7 +87,7 @@ configure_matplotlib()
 # ------------------------------------------------------------------------------
 
 # MPB simulation
-LAT_PARAM: float = 30e-9  # lattice parameter [m]
+LAT_PARAM: float = 300e-9  # lattice parameter [m]
 N_BANDS: int = 2
 BAND_IDX: int = 0  # band index (0-based)
 N_K: int = 64  # k-points per direction in Monkhorst-Pack grid
@@ -97,7 +97,7 @@ EPSILON_INPUT_FILE: str = "data/kimble/epsilon.h5"
 # Emitter parameters
 THETA_1: float = 90 * np.pi / 180  # emitter 1 orientation [rad]
 THETA_2: float = 135 * np.pi / 180  # emitter 2 orientation [rad]
-DIP_STRENGTH: float = 1000  # dipole moment strength [Debye]
+DIP_STRENGTH: float = 50  # dipole moment strength [Debye]
 P_A: float = mf.unit_dip(a=LAT_PARAM)
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 N_EMITTERS: int = 1  # emitters per simulation
@@ -115,8 +115,10 @@ DIP_COLORS: list = ["#1f77b4", "#ff7f0e"]  # one color per dipole orientation
 # Tight-binding model
 LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]  # orbital position in lattice units
-N_CELLS: int = 61  # unit cells per direction
-# Hopping coefficients up to 3rd nearest neighbours [units: (c/a)²]
+N_CELLS: int = 41  # unit cells per direction
+N_PML: int = 8  # absorbing layer thickness [unit cells per edge]
+GAMMA_MAX: float = 3e-2  # maximum damping rate at the hard wall [c/a]
+# Hopping coefficients up to 2nd nearest neighbours [units: (c/a)²]
 J_0: float = 0.07755639
 J_1: float = -0.01993698
 J_2: float = 0.00053966
@@ -129,20 +131,22 @@ N_K_PATH: int = 100  # number of k-points along the high-symmetry path
 # Real-space grid
 N_R: int = 13  # number of grid points per direction
 
-# Time evolution [units: a/c]
-T_0: int = 0  # start time
-T_F: int = 500  # end time
-T_STEPS: int = 100  # number of time steps
-SNAP_IDX: int = 50  # snapshot index for field plots (0 to T_STEPS)
+# Time evolution [units: 1/Γ₀]
+T_0: float = 0  # start time
+T_F: float = 5e-5  # end time
+T_STEPS: int = 200  # number of time steps
+SNAP_IDX: int = 100  # snapshot index for field plots (0 to T_STEPS)
 
 # Probe emitter
 NEW_N_EMITTERS: int = 2
-NEW_R: list = [-4.5, 4.5]
+NEW_R: list = [-5, 5]
 NEW_THETA: float = np.deg2rad(45)
-NEW_DIPOLE: np.ndarray = 1e-1 * np.array([np.cos(NEW_THETA), np.sin(NEW_THETA), 0])
+NEW_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
+    [np.cos(NEW_THETA), np.sin(NEW_THETA), 0]
+)
 NEW_DIP_COLOR: str = "#2ca02c"
-NEW_T_F: int = 200
-NEW_SNAP_IDX: int = 45
+NEW_T_F: float = T_F  # [1/Γ₀]
+NEW_SNAP_IDX: int = 50
 # NOTE: NEW_SNAP_IDX is taken around the time the bath excitation hits
 #       the probe emitter. If a different position is chosen, this value
 #       may need to be adjusted.
@@ -217,6 +221,7 @@ def plot_dielectric_function(r_0: list) -> None:
         )
 
     fig.savefig(f"./figures/kimble/dielectric_function_dipoles_at_{r_0}.svg")
+    plt.close(fig)
 
 
 plot_dielectric_function(R_0)
@@ -233,7 +238,7 @@ def build_tight_binding_model() -> tb.tb_model:
     Returns
     -------
     tb.tb_model
-        Tight-binding model with on-site and hopping terms up to 3rd
+        Tight-binding model with on-site and hopping terms up to 2nd
         nearest neighbours.
     """
     model = tb.tb_model(dim_k=2, dim_r=2, lat=LAT, orb=ORB)
@@ -361,6 +366,7 @@ def plot_band_structure(
     )
     ax.grid(axis="x")
     fig.savefig("./figures/kimble/MPBvTB_bandstructure.svg")
+    plt.close(fig)
 
 
 # Run band structure computation
@@ -484,7 +490,7 @@ def plot_real_space_coupling(
         )
         fig.colorbar(sc, ax=ax, label=r"$|g_\mathbf{R}(\mathbf{r}_0)| \, [c/a]$")
         mf.draw_arrow(
-            ax, r_0, theta, color=DIP_COLORS[i - 1], length=4, arrow_offset=0.3
+            ax, r_0, theta, color=DIP_COLORS[i - 1], length=4, arrow_offset=0.4
         )
         ax.set(
             title=rf"$\theta_{i} = {np.rad2deg(theta):.0f}$°",
@@ -496,6 +502,7 @@ def plot_real_space_coupling(
         fig.savefig(
             f"./figures/kimble/g_r({r_0})_for_theta_{np.rad2deg(theta):.0f}deg.svg"
         )
+        plt.close(fig)
 
 
 # Run real-space coupling computation
@@ -507,6 +514,44 @@ fr0_n_ks = np.asarray(fields_data["Eks"])[0]  # shape: (Nb, Nk, 3)
 
 gr0_rs_list, xs_small, ys_small = compute_coupling_grid(fr0_n_ks, omega_ks_n, ks, N_R)
 plot_real_space_coupling(gr0_rs_list, xs_small, ys_small, R_0)
+
+# ------------------------------------------------------------------------------
+# Coupling diagnostics: effective g(R=r_0, r_0) vs toy-model G/|J_1| ratio
+# ------------------------------------------------------------------------------
+
+# In kimble_toy.py: bath is Θ directly, so G/|J_1_toy| is dimensionless (= 0.1).
+# Here: bath energies are ω_k = √ε_k [c/a], so the analogous dimensionless ratio
+# is g_R(r_0) / √|J_1| — both numerator and denominator are in c/a.
+_TOY_G_OVER_J1: float = 0.1
+
+_sqrt_J1 = np.sqrt(abs(J_1))
+print("\n--- Coupling diagnostics (R = r_0) ---")
+print(f"  |J_1|             = {abs(J_1):.6e} (c/a)²")
+print(f"  √|J_1|            = {_sqrt_J1:.6e} c/a  ← bath frequency scale")
+print(f"  toy G/|J_1_toy|   = {_TOY_G_OVER_J1}")
+
+for _i, (_theta, _g_rs) in enumerate(zip(THETAS, gr0_rs_list), start=1):
+    _g_abs = np.abs(_g_rs)
+    _g0 = _g_abs[N_R // 2, N_R // 2]
+    _g_max = _g_abs.max()
+    # Use the peak coupling as the scale: in the toy model G is both on-site
+    # and the maximum, so |g|_max is the fair comparison when the real-space
+    # coupling has its peak away from r_0.
+    _ratio_J1 = _g_max / abs(J_1)  # units: a/c
+    _ratio_sqrtJ1 = _g_max / _sqrt_J1  # dimensionless — comparable to toy
+    _dip_needed = DIP_STRENGTH * _TOY_G_OVER_J1 / _ratio_sqrtJ1
+    print(
+        f"\n  θ_{_i} = {np.rad2deg(_theta):.0f}°  (DIP_STRENGTH = {DIP_STRENGTH} Debye)"
+    )
+    print(f"    |g(r_0, r_0)|        = {_g0:.6e} c/a  (on-site)")
+    print(f"    |g|_max              = {_g_max:.6e} c/a  (peak, used for estimate)")
+    print(f"    g_max / |J_1|        = {_ratio_J1:.6e} a/c")
+    print(f"    g_max / √|J_1|       = {_ratio_sqrtJ1:.6e}  (dimensionless)")
+    print(
+        f"    DIP_STRENGTH needed  = {_dip_needed:.1f} Debye  (for g_max/√|J_1| = {_TOY_G_OVER_J1})"
+    )
+
+print("-" * 50)
 
 # ------------------------------------------------------------------------------
 # LDOS at the emitter position
@@ -563,6 +608,7 @@ def compute_and_plot_ldos(
         fig.savefig(
             f"./figures/kimble/ldos_at_{r_0}_theta_{np.rad2deg(THETAS[i - 1]):.0f}.svg"
         )
+        plt.close(fig)
 
 
 compute_and_plot_ldos(omega_ks_n, fr0_n_ks, omega_0, R_0)
@@ -593,17 +639,18 @@ def compute_and_plot_isofrequency(model: tb.tb_model, omega_0: float) -> None:
 
     fig, ax = plt.subplots()
     c = ax.contourf(k_x_grid, k_y_grid, omega_grid, levels=12)
-    cbar = fig.colorbar(c, ax=ax, label=r"$\omega_\mathbf{k} \, [c/a]$")
+    cbar = fig.colorbar(c, ax=ax, label=r"$\omega_\mathbf{k} a/c$")
     cbar.formatter.set_powerlimits((0, 0))
     ax.contour(
         k_x_grid, k_y_grid, omega_grid, levels=[omega_0], colors="k", linewidths=2
     )
     ax.set(
-        xlabel=r"$k_x \, [2\pi/a]$",
-        ylabel=r"$k_y \, [2\pi/a]$",
+        xlabel=r"$k_x a/2\pi$",
+        ylabel=r"$k_y a/2\pi$",
         aspect="equal",
     )
     fig.savefig("./figures/kimble/tb_isofrequency_contour.svg")
+    plt.close(fig)
 
 
 compute_and_plot_isofrequency(infinite_model, omega_0)
@@ -611,6 +658,46 @@ compute_and_plot_isofrequency(infinite_model, omega_0)
 # ------------------------------------------------------------------------------
 # Finite tight-binding model and time evolution
 # ------------------------------------------------------------------------------
+
+
+def compute_pml_dampings(
+    rs: np.ndarray, n_cells: int, n_pml: int, gamma_max: float
+) -> np.ndarray:
+    """
+    Compute per-orbital damping rates for the absorbing boundary layer.
+
+    Uses a quadratic ramp from zero at the crystal-PML interface to
+    ``gamma_max`` at the hard wall.  The profile is:
+
+        γ_j = gamma_max * ((n_pml - dist_j) / n_pml)²   if dist_j < n_pml
+        γ_j = 0                                           otherwise
+
+    where ``dist_j`` is the distance (in unit cells) of orbital j from the
+    nearest edge of the crystal.
+
+    Parameters
+    ----------
+    rs : np.ndarray, shape (n_orbitals, 2)
+        Real-space grid points in lattice units, centered at the origin.
+        Must be the same array used for the emitter-bath coupling computation
+        so that orbital indices match.
+    n_cells : int
+        Number of unit cells per direction.
+    n_pml : int
+        Thickness of the absorbing layer in unit cells.
+    gamma_max : float
+        Maximum damping rate at the outermost cell [c/a].
+
+    Returns
+    -------
+    np.ndarray, shape (n_orbitals,)
+        Per-orbital damping rates γ_j ≥ 0.
+    """
+    half = n_cells // 2
+    dist_x = half - np.abs(rs[:, 0])
+    dist_y = half - np.abs(rs[:, 1])
+    dist = np.minimum(dist_x, dist_y)
+    return np.where(dist < n_pml, gamma_max * ((n_pml - dist) / n_pml) ** 2, 0.0)
 
 
 def build_finite_model(infinite_model: tb.tb_model) -> tb.tb_model:
@@ -641,6 +728,7 @@ def compute_time_evolution(
     t_0: float,
     t_f: float,
     t_steps: int,
+    pml_dampings: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list]:
     """
     Build the light-matter Hamiltonians and compute the time evolution.
@@ -665,6 +753,9 @@ def compute_time_evolution(
         End time [a/c].
     t_steps : int
         Number of time steps.
+    pml_dampings : np.ndarray of shape (n_orbitals,) or None, optional
+        Per-orbital damping rates for the absorbing boundary layer [c/a].
+        Passed directly to ``make_light_matter_Hamiltonian``.
 
     Returns
     -------
@@ -709,10 +800,16 @@ def compute_time_evolution(
     interaction_2 = [[list(couplings[1]), list(idxs)]]
 
     H_1, omega_sites_1 = mf.make_light_matter_Hamiltonian(
-        tb_model=finite_model, omega_0s=omega_0, gr0s_rs=interaction_1
+        tb_model=finite_model,
+        omega_0s=omega_0,
+        gr0s_rs=interaction_1,
+        pml_dampings=pml_dampings,
     )
     H_2, omega_sites_2 = mf.make_light_matter_Hamiltonian(
-        tb_model=finite_model, omega_0s=omega_0, gr0s_rs=interaction_2
+        tb_model=finite_model,
+        omega_0s=omega_0,
+        gr0s_rs=interaction_2,
+        pml_dampings=pml_dampings,
     )
 
     if H_1.shape != H_2.shape:
@@ -778,7 +875,7 @@ def plot_emitter_time_evolution(
         alpha=0.9,
         label=r"$|C_e(t)|^2$, $\theta_2 = 135$°",
     )
-    ax.set(xlabel=r"$t\Gamma_0$", ylabel=r"$|C_e(t)|^2$", yscale="log")
+    ax.set(xlabel=r"$t \Gamma_0$", ylabel=r"$|C_e(t)|^2$", yscale="log")
 
     ax2 = ax.twinx()
     (l3,) = ax2.plot(
@@ -804,6 +901,7 @@ def plot_emitter_time_evolution(
     ax.legend(lines, [line.get_label() for line in lines])
 
     fig.savefig(f"./figures/kimble/emitter_timeevolution_entropy_at_{r_0}.svg")
+    plt.close(fig)
     return S_t_1, S_t_2
 
 
@@ -853,13 +951,34 @@ def plot_bath_snapshot(
     z1 = mod_Cr_sq_1.reshape(len(pos_x), len(pos_y))
     z2 = mod_Cr_sq_2.reshape(len(pos_x), len(pos_y))
     cbar_max = max(z1.max(), z2.max())
+    exp = int(np.floor(np.log10(cbar_max))) if cbar_max > 0 else 0
 
     for i, (theta, z) in enumerate(zip(THETAS, [z1, z2])):
         fig, ax = plt.subplots()
         sc = ax.pcolormesh(pos_x, pos_y, z, vmin=0, vmax=cbar_max)
-        mf.draw_arrow(ax, r_0, theta, color=DIP_COLORS[i], length=16, arrow_offset=2)
-        cbar = fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{R}(t)|^2$", pad=0.1)
-        cbar.formatter.set_powerlimits((0, 0))
+        mf.draw_arrow(
+            ax, r_0, theta, color=DIP_COLORS[i], length=17.5, arrow_offset=1.75
+        )
+        pml_boundary = N_CELLS // 2 - N_PML + 0.5
+        ax.add_patch(
+            mpl.patches.Rectangle(
+                (-pml_boundary, -pml_boundary),
+                2 * pml_boundary,
+                2 * pml_boundary,
+                fill=False,
+                edgecolor="white",
+                linewidth=1.5,
+                linestyle="--",
+            )
+        )
+        cbar = fig.colorbar(
+            sc,
+            ax=ax,
+            label=rf"$|C_\mathbf{{R}}(t)|^2 \; [\times 10^{{{exp}}}]$",
+            pad=0.1,
+        )
+        cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+        cbar.update_ticks()
         ax.set(
             xlabel=r"$x/a$",
             ylabel=r"$y/a$",
@@ -869,6 +988,7 @@ def plot_bath_snapshot(
         fig.savefig(
             f"./figures/kimble/bath_snapshot_at_{r_0}_theta_{np.rad2deg(theta):.0f}deg.svg"
         )
+        plt.close(fig)
 
     return z1, z2, pos_x, pos_y
 
@@ -876,13 +996,39 @@ def plot_bath_snapshot(
 # Build finite model and its grid
 finite_model = build_finite_model(infinite_model)
 xs_finite, ys_finite, rs_finite = mf.build_finite_grid(N_CELLS)
+pml_dampings = compute_pml_dampings(rs_finite, N_CELLS, N_PML, GAMMA_MAX)
 
 # Compute time evolution
-ts = np.linspace(T_0, T_F, T_STEPS, endpoint=True)
 gamma_0 = mf.free_spontaneous_emission(
     omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
 )
-ts_norm = LAT_PARAM / mf.constants.C_LIGHT * gamma_0 * ts
+# Convert input times from 1/Γ₀ to a/c for internal use
+_t_conv = LAT_PARAM / mf.constants.C_LIGHT * gamma_0
+T_0 /= _t_conv
+T_F /= _t_conv
+NEW_T_F /= _t_conv
+ts = np.linspace(T_0, T_F, T_STEPS, endpoint=True)
+ts_norm = _t_conv * ts
+
+# ------------------------------------------------------------------------------
+# Timescale diagnostics: compare kimble.py vs toy-model equivalent
+# ------------------------------------------------------------------------------
+# T_F is now in a/c (divided by _t_conv above).
+# Bridge to toy units: 1 toy time unit (|J_1_toy|^{-1}) ↔ 1/√|J_1_real| a/c,
+# because the toy bath uses ε_k while the real bath uses ω_k = √ε_k.
+_toy_T_F_ac = 200.0 / np.sqrt(abs(J_1))  # toy T_F=200 converted to a/c
+_dist_probe = np.linalg.norm(np.array(NEW_R) - np.array(R_0))
+_v_g_char = abs(J_1) / omega_0  # characteristic group velocity [c]: |J₁|/ω₀
+
+print("\n--- Timescale diagnostics ---")
+print(f"  Γ₀                          = {gamma_0:.4e} s⁻¹")
+print(f"  T_F (kimble.py)             = {T_F:.1f} a/c  ({T_F * _t_conv:.2e} × Γ₀⁻¹)")
+print(f"  T_F (toy, equiv. in a/c)    ≈ {_toy_T_F_ac:.1f} a/c  (= 200 / √|J₁|)")
+print(f"  Ratio T_F_kimble / T_F_toy  ≈ {T_F / _toy_T_F_ac:.1f}×")
+print(f"  |r_probe − r₀|              = {_dist_probe:.2f} a")
+print(f"  v_g ~ |J₁| / ω₀            = {_v_g_char:.4f} c")
+print(f"  Estimated travel time       ≈ {_dist_probe / _v_g_char:.1f} a/c")
+print("-" * 50)
 
 psi_t_1, psi_t_2, omega_sites_1, omega_sites_2, couplings = compute_time_evolution(
     finite_model=finite_model,
@@ -894,6 +1040,7 @@ psi_t_1, psi_t_2, omega_sites_1, omega_sites_2, couplings = compute_time_evoluti
     t_0=T_0,
     t_f=T_F,
     t_steps=T_STEPS,
+    pml_dampings=pml_dampings,
 )
 
 # Plot emitter time evolution
@@ -922,8 +1069,12 @@ S_2, p_2 = mf.quadrant_entropy(rs_finite[:, 0], rs_finite[:, 1], Cr_t_2)
 check_1 = np.allclose(S_1[1:], np.log(4), atol=1e-3)
 check_2 = np.allclose(S_2[1:], np.log(2), atol=1e-3)
 
-print(f"Is S_dir equal to log(4) for theta = {np.rad2deg(THETA_1):.0f}º? {check_1}")
-print(f"Is S_dir equal to log(2) for theta = {np.rad2deg(THETA_2):.0f}º? {check_2}")
+print(
+    rf"Is $S_{{dir}}$ equal to $\log(4)$ for $\theta = {np.rad2deg(THETA_1):.0f}º$? {check_1}, $S_1 = {S_1}$."
+)
+print(
+    rf"Is $S_{{dir}}$ equal to $\log(2)$ for $\theta = {np.rad2deg(THETA_2):.0f}º$? {check_2}, $S_2 = {S_2}$."
+)
 
 # ------------------------------------------------------------------------------
 # Probe emitter: directional emission and concurrence
@@ -937,9 +1088,8 @@ def compute_probe_emitter_evolution(
     ks: np.ndarray,
     rs: np.ndarray,
     couplings: list,
-    omega_sites_1: np.ndarray,
-    omega_sites_2: np.ndarray,
     omega_0: float,
+    pml_dampings: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray, float]:
     """
     Compute the time evolution for the two-emitter system with a probe emitter.
@@ -962,12 +1112,8 @@ def compute_probe_emitter_evolution(
         Real-space grid points.
     couplings : list of np.ndarray
         Real-space couplings for the excited emitter.
-    omega_sites_1 : np.ndarray
-        Site energies from Hamiltonian 1 (used to find probe detuning).
-    omega_sites_2 : np.ndarray
-        Site energies from Hamiltonian 2 (used to verify consistency).
     omega_0 : float
-        Excited emitter detuning frequency [c/a].
+        Excited emitter detuning frequency [c/a]. The probe uses the same value.
 
     Returns
     -------
@@ -977,22 +1123,8 @@ def compute_probe_emitter_evolution(
         Time-evolved wave function for system 2 (excited + probe).
     new_omega_0 : float
         Probe emitter detuning frequency [c/a].
-
-    Raises
-    ------
-    ValueError
-        If probe detuning frequencies from the two Hamiltonians do not match.
     """
-    # Find the probe emitter detuning at the target lattice site
-    target = [-5, 5]
-    idx = np.where(np.all(np.isclose(rs, target), axis=1))[0][0]
-
-    if not np.isclose(omega_sites_1[idx], omega_sites_2[idx]):
-        raise ValueError(
-            f"Probe detuning frequencies differ between Hamiltonians: "
-            f"{omega_sites_1[idx]} vs {omega_sites_2[idx]}."
-        )
-    new_omega_0 = omega_sites_1[idx]
+    new_omega_0 = omega_0
 
     # Load fields at the probe position and compute coupling
     probe_fields_data = load_field_data(N_K, NEW_R)
@@ -1023,11 +1155,13 @@ def compute_probe_emitter_evolution(
         tb_model=finite_model,
         omega_0s=[omega_0, new_omega_0],
         gr0s_rs=new_interaction_1,
+        pml_dampings=pml_dampings,
     )
     new_H_2, _ = mf.make_light_matter_Hamiltonian(
         tb_model=finite_model,
         omega_0s=[omega_0, new_omega_0],
         gr0s_rs=new_interaction_2,
+        pml_dampings=pml_dampings,
     )
 
     new_psi_0 = np.zeros(new_H_1.shape[0])
@@ -1073,26 +1207,45 @@ def plot_probe_bath_snapshot(
     new_z1 = new_mod_Cr_sq_1.reshape(len(pos_x), len(pos_y))
     new_z2 = new_mod_Cr_sq_2.reshape(len(pos_x), len(pos_y))
     cbar_max = max(new_z1.max(), new_z2.max())
+    exp = int(np.floor(np.log10(cbar_max))) if cbar_max > 0 else 0
 
     for i, (theta, z) in enumerate(zip(THETAS, [new_z1, new_z2]), start=1):
         fig, ax = plt.subplots()
         sc = ax.pcolormesh(pos_x, pos_y, z, vmin=0, vmax=cbar_max)
-        mf.draw_arrow(ax, NEW_R, NEW_THETA, NEW_DIP_COLOR, length=4, arrow_offset=0.2)
-        mf.draw_arrow(ax, r_0, theta, DIP_COLORS[i - 1], length=4, arrow_offset=0.2)
-        cbar = fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{r}(t)|^2$")
-        cbar.formatter.set_powerlimits((0, 0))
+        mf.draw_arrow(ax, NEW_R, NEW_THETA, NEW_DIP_COLOR, length=5, arrow_offset=0.5)
+        mf.draw_arrow(ax, r_0, theta, DIP_COLORS[i - 1], length=5, arrow_offset=0.5)
+        pml_boundary = N_CELLS // 2 - N_PML + 0.5
+        ax.add_patch(
+            mpl.patches.Rectangle(
+                (-pml_boundary, -pml_boundary),
+                2 * pml_boundary,
+                2 * pml_boundary,
+                fill=False,
+                edgecolor="white",
+                linewidth=1.5,
+                linestyle="--",
+            )
+        )
+        cbar = fig.colorbar(
+            sc,
+            ax=ax,
+            label=rf"$|C_\mathbf{{r}}(t)|^2 \; [\times 10^{{{exp}}}]$",
+        )
+        cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+        cbar.update_ticks()
         ax.set(
             xlabel=r"$x/a$",
             ylabel=r"$y/a$",
             aspect="equal",
             title=rf"$\theta_{i} = {np.rad2deg(theta):.0f}$°",
-            xlim=(-7, 7),
-            ylim=(-7, 7),
+            xlim=(-8, 8),
+            ylim=(-8, 8),
         )
         ax.title.set_color(DIP_COLORS[i - 1])
         fig.savefig(
             f"./figures/kimble/bath_snapshot_at_{r_0}_theta_{np.rad2deg(theta):.0f}deg_with_probe.svg"
         )
+        plt.close(fig)
 
 
 def plot_probe_time_evolution(
@@ -1155,6 +1308,7 @@ def plot_probe_time_evolution(
             f"./figures/kimble/emitter_timeevolution_concurrence_at_{r_0}"
             f"_theta_{np.rad2deg(theta):.0f}deg_and_{NEW_R}.svg"
         )
+        plt.close(fig)
 
 
 # Run probe emitter computation
@@ -1165,13 +1319,12 @@ new_psi_t_1, new_psi_t_2, new_omega_0 = compute_probe_emitter_evolution(
     ks=ks,
     rs=rs_finite,
     couplings=couplings,
-    omega_sites_1=omega_sites_1,
-    omega_sites_2=omega_sites_2,
     omega_0=omega_0,
+    pml_dampings=pml_dampings,
 )
 
 new_ts = np.linspace(T_0, NEW_T_F, T_STEPS, endpoint=True)
-new_ts_norm = LAT_PARAM / mf.constants.C_LIGHT * gamma_0 * new_ts
+new_ts_norm = _t_conv * new_ts
 
 plot_probe_bath_snapshot(pos_x, pos_y, new_psi_t_1, new_psi_t_2, R_0)
 plot_probe_time_evolution(new_ts_norm, new_psi_t_1, new_psi_t_2, R_0)

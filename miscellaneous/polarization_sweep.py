@@ -7,262 +7,228 @@ performed.
 """
 
 # %% Import necessary packages
+from scipy.sparse.linalg import expm_multiply
+
 import numpy as np
-import pythtb as tb  # for easy simulation of the tight-binding model
-
-# some imports for plotting utilities
-import matplotlib as mpl
+import pythtb as tb
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 
-import src as mf  # our package functions to work with
-
-# %% Some set-ups for the plotting of the figures
-mpl.rcParams.update(
-    {
-        # Figure
-        "figure.dpi": 300,  # higher resolution
-        # Font
-        "font.family": "serif",  # switch to serif (journal-style)
-        "font.size": 11,  # base font size
-        "mathtext.fontset": "stix",  # match math to Times-like font
-        # Axes
-        "axes.labelsize": 11,  # axis label font size
-        "axes.titlesize": 12,  # title font size
-        "axes.linewidth": 1,  # thickness of axes spines
-        # Ticks
-        "xtick.direction": "in",
-        "ytick.direction": "in",
-        "xtick.top": True,
-        "ytick.right": True,
-        "xtick.labelsize": 10,
-        "ytick.labelsize": 10,
-        # Tick length/width
-        "xtick.major.size": 4,
-        "xtick.major.width": 1,
-        "ytick.major.size": 4,
-        "ytick.major.width": 1,
-        # Grid (off by default, but can be enabled)
-        "grid.alpha": 0.3,
-        "grid.linestyle": "--",
-        # Legend
-        "legend.fontsize": 10,
-        "legend.frameon": False,
-    }
-)
+import src as mf
 
 # %% Define the main constants and parameters for the current simulation
-NUM_BANDS = 2
+BAND_IDX = 0
 
 EPSILON_INPUT_FILE = "data/kimble/epsilon.h5"
-DIRNAME_OUTPUT = "data/miscellaneous/"  # directory to save outputs
+DIRNAME_OUTPUT = "data/miscellaneous/"
 
-TOLERANCE = 1e-12  # tolerance for the MPB calculations
+N_CELLS = 41
+N_PML: int = 8
+GAMMA_MAX: float = 3e-2
 
-N_CELLS = 41  # number of unit cells in each direction
-
-NK = 64  # number of points per direction for the Monkhorst-Pack grid
+N_K = 101
 
 # angles for the dipole moments of the quantum emitters and its dimensionless value
 THETAS = np.linspace(90, 140, 6) * np.pi / 180
-P_DIMLESS = 1e-2  # TODO: modify when you know which value should we put
+LAT_PARAM: float = 300e-9  # lattice parameter [m]
+DIP_STRENGTH: float = 7000  # dipole moment strength [Debye]
 DETUNING_FREQ = 0.274587  # [c/a]
 
-# Position of the quantum emitter in units of the lattice constant 'a'
-# list of positions are also allowed
 N_EMITTERS = 1
-R0 = [-10, 10]
+R_0 = [0, 0]
 
-# small inputs for the tight-binding model
 LAT = [[1, 0], [0, 1]]
 ORB = [[0, 0]]
 
-BAND_INDEX = 0  # index of the band to consider (0-based)
+# Hopping coefficients up to 2nd nearest neighbours [units: (c/a)²]
+J_0 = 0.07755639
+J_1 = -0.01993698
+J_2 = 0.00053966
 
-# coefficients for the tight-binding model
-TAU_0 = 0.07755639
-TAU_1 = -0.01993698
-TAU_2 = 0.00053966
+T_0 = 0
+T_F = 1e-2
+T_STEPS = 100
+SNAP_IDX = 30
 
-T0 = 0  # initial time for the field snapshots
-TF = 100  # final time for the field snapshots
-T_STEPS = 100  # number of time steps for the field snapshots
-TIME_INDEX = 30  # time index to consider for the field snapshots
+# Real-space grid
+N_R: int = 13  # number of grid points per direction
+
+DIP_STRENGTH_NORM = DIP_STRENGTH / mf.unit_dip(a=LAT_PARAM)
+DIPOLES = [
+    DIP_STRENGTH_NORM * np.array([np.cos(theta), np.sin(theta), 0]) for theta in THETAS
+]
 
 # ---------------------------------------------------------------------------- #
-
-# ---------------------------------------------------------------------------- #
-# Compute g_r(r0)
-# ---------------------------------------------------------------------------- #
-
 # Load the fields and k-points from the MPB calculation
-# This file was generated previously
-data = mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_{R0}.pkl")
+# ---------------------------------------------------------------------------- #
 
-# Extract relevant quantities
-omegas = np.asarray(data["freqs"])  # Frequencies (Nk, Nb)
-Eks = np.asarray(data["Eks"])  # Electric fields, shape: (Nr, Nb, Nk, 3)
-kpts = np.asarray(data["kpts"])  # k-points in cartesian coordinates, shape: (Nk, 3)
+data = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{R_0}.pkl")
 
-# Define the dipole moments for the emitters
-dipoles = [P_DIMLESS * np.array([np.cos(theta), np.sin(theta), 0]) for theta in THETAS]
-
-# take the field in the position r0 from the possible list. Here, only one point
-# was computed
-E_k_r0 = Eks[0, :, :, :]  # Shape: (Nb, Nk, 3)
-omega_k = omegas  # Shape: (Nk, Nb)
+omega_ks_n = np.asarray(data["freqs"])  # (Nk, Nb)
+ks = np.asarray(data["kpts"])  # (Nk, 3)
+fr0_n_ks = np.asarray(data["Eks"])[0]  # (Nb, Nk, 3)
 
 # ---------------------------------------------------------------------------- #
-# Define the real-space grid for interpolation
+# Define the real-space grid for the coupling visualization
 # ---------------------------------------------------------------------------- #
-xg = np.linspace(-5, 5, 101)
-yg = np.linspace(-5, 5, 101)
-rpts = mf.meshgrid_points(xg, yg)  # Shape: (Nx*Ny, 2)
+xg = np.arange(-(N_R // 2), N_R // 2 + 1)
+yg = np.arange(-(N_R // 2), N_R // 2 + 1)
+rpts = mf.meshgrid_points(xg, yg, indexing="xy")
 
 # ---------------------------------------------------------------------------- #
-# Compute g_r(r0) for each dipole moment, shape (len(THETAS), Nr)
+# Compute g_r(r_0) for each dipole, shape (len(THETAS), Nr)
 # ---------------------------------------------------------------------------- #
 gr0rs = [
-    mf.compute_real_space_coupling(E_k_r0, dipole, omega_k, kpts, rpts)[BAND_INDEX, :]
-    for dipole in dipoles
+    mf.compute_real_space_coupling(
+        fr0_n_ks=fr0_n_ks,
+        dipole_moment=dipole,
+        omega_ks_n=omega_ks_n,
+        ks=ks,
+        rs=rpts,
+    )[BAND_IDX, :]
+    for dipole in DIPOLES
 ]
 
 # ------------------------------------------------------------------------------
-# plot the different couplings for the different dipole moments
+# Plot the different couplings for the different dipole moments
 # ------------------------------------------------------------------------------
-fig, axs = plt.subplots(1, len(THETAS))
+theta_colors = [f"C{i}" for i in range(len(THETAS))]
+cbar_min = np.abs(gr0rs).min()
+cbar_max = np.abs(gr0rs).max()
 
-vmax = np.abs(gr0rs).max()
+n_cols = 3
+n_rows = int(np.ceil(len(THETAS) / n_cols))
+fig, axs = plt.subplots(n_rows, n_cols, squeeze=False)
 
 for i, theta in enumerate(THETAS):
-    sc = axs[i].scatter(
-        rpts[:, 0],
-        rpts[:, 1],
-        c=np.abs(gr0rs[i]),
-        s=mf.marker_size(len(rpts)),
-        marker="o",
-        cmap="inferno",
-        vmin=0,
-        vmax=vmax,
+    ax = axs[i // n_cols, i % n_cols]
+    sc = ax.pcolormesh(
+        xg,
+        yg,
+        np.abs(gr0rs[i]).reshape(len(yg), len(xg)),
+        norm=colors.LogNorm(vmin=cbar_min, vmax=cbar_max),
     )
-    axs[i].set(
-        title=rf"$\theta$ = {theta*180/np.pi:.0f}",
+    mf.draw_arrow(ax, R_0, theta, color=theta_colors[i], length=4, arrow_offset=0.4)
+    ax.set(
+        title=rf"$\theta = {np.rad2deg(theta):.0f}$°",
         xlabel=r"$x/a$",
         ylabel=r"$y/a$",
         aspect="equal",
     )
+    ax.title.set_color(theta_colors[i])
 
-fig.tight_layout()
-plt.show()
-fig.savefig(f"./figures/miscellaneous/{R0}_polarization_sweep_couplings.png")
+fig.colorbar(
+    sc, ax=axs.ravel().tolist(), label=r"$|g_\mathbf{R}(\mathbf{r}_0)| \, [c/a]$"
+)
+fig.savefig(f"./figures/miscellaneous/g_r({R_0})_polarization_sweep_couplings.png")
+plt.close(fig)
 
 # ------------------------------------------------------------------------------
-# Compute the time evolution of the emitter and the bath
+# Build the tight-binding model
 # ------------------------------------------------------------------------------
 
-# -------------------------------
-# Normalize parameters
-# -------------------------------
-alpha_norm = TAU_0 / np.abs(TAU_1)
-j1_norm = TAU_1 / np.abs(TAU_1)
-j2_norm = TAU_2 / np.abs(TAU_1)
-detuning_freq_norm = DETUNING_FREQ / np.sqrt(np.abs(TAU_1))
 
-# -------------------------------
-# Initialize tight-binding model
-# -------------------------------
-infiniteModel = tb.tb_model(dim_k=2, dim_r=2, lat=LAT, orb=ORB)
+def build_tight_binding_model() -> tb.tb_model:
+    model = tb.tb_model(dim_k=2, dim_r=2, lat=LAT, orb=ORB)
+    model.set_onsite([J_0])
+    for vec in np.array([[1, 0], [0, 1]]):
+        model.set_hop(J_1, 0, 0, vec)
+    for vec in np.array([[1, 1], [1, -1]]):
+        model.set_hop(J_2, 0, 0, vec)
+    return model
 
-# -------------------------------
-# Onsite term
-# -------------------------------
-infiniteModel.set_onsite([alpha_norm])
 
-# -------------------------------
-# First nearest neighbors (1st nn)
-# -------------------------------
-first_nn_vectors = np.array([[1, 0], [0, 1]])
-for vec in first_nn_vectors:
-    infiniteModel.set_hop(j1_norm, 0, 0, vec)
+def build_finite_model(infinite_model: tb.tb_model) -> tb.tb_model:
+    temporal_model = infinite_model.cut_piece(N_CELLS, fin_dir=0, glue_edgs=False)
+    return temporal_model.cut_piece(N_CELLS, fin_dir=1, glue_edgs=False)
 
-# -------------------------------
-# Second nearest neighbors (2nd nn)
-# -------------------------------
-second_nn_vectors = np.array([[1, 1], [1, -1]])
-for vec in second_nn_vectors:
-    infiniteModel.set_hop(j2_norm, 0, 0, vec)
 
-temporalModel = infiniteModel.cut_piece(
-    N_CELLS, fin_dir=0, glue_edgs=False
-)  # cutout along 1st direction
-finiteModel = temporalModel.cut_piece(
-    N_CELLS, fin_dir=1, glue_edgs=False
-)  # cutout along 2nd direction
+def compute_pml_dampings(
+    rs: np.ndarray, n_cells: int, n_pml: int, gamma_max: float
+) -> np.ndarray:
+    half = n_cells // 2
+    dist_x = half - np.abs(rs[:, 0])
+    dist_y = half - np.abs(rs[:, 1])
+    dist = np.minimum(dist_x, dist_y)
+    return np.where(dist < n_pml, gamma_max * ((n_pml - dist) / n_pml) ** 2, 0.0)
 
-# %% Compute g(r0,rj) on the finite grid
 
-xjg, yjg, rjpts = mf.build_finite_grid(N_CELLS)
+infinite_model = build_tight_binding_model()
+finite_model = build_finite_model(infinite_model)
+xs_finite, ys_finite, rs_finite = mf.build_finite_grid(N_CELLS)
+pml_dampings = compute_pml_dampings(rs_finite, N_CELLS, N_PML, GAMMA_MAX)
+
+# %% Compute g(r0, rj) on the finite grid
 
 gr0rjs = [
-    mf.compute_real_space_coupling(E_k_r0, dipole, omega_k, kpts, rjpts)[BAND_INDEX, :]
-    for dipole in dipoles
+    mf.compute_real_space_coupling(
+        fr0_n_ks=fr0_n_ks,
+        dipole_moment=dipole,
+        omega_ks_n=omega_ks_n,
+        ks=ks,
+        rs=rs_finite,
+    )[BAND_IDX, :]
+    for dipole in DIPOLES
 ]
-
-# we want to normalize the couplings by the 1-st nn coupling strength, since TAU_1 has units
-# of frequency² while g_rj(r0) has units of frequency, we need to divide by sqrt(|TAU_1|)
-gr0rjs_norm = [gr0rj / np.sqrt(np.abs(TAU_1)) for gr0rj in gr0rjs]
 
 # %% Build the light-matter Hamiltonian
 
-indexes = np.arange(0, len(gr0rjs_norm[0]), 1)
-couplings = [[[list(gr0rj_norm), list(indexes)]] for gr0rj_norm in gr0rjs_norm]
+idxs = np.arange(len(gr0rjs[0]))
+interactions = [[[list(gr0rj), list(idxs)]] for gr0rj in gr0rjs]
 
-# build the light matter Hamiltonian
 hamiltonians = [
-    mf.make_light_matter_Hamiltonian(finiteModel, detuning_freq_norm, coupling)[0]
-    for coupling in couplings
+    mf.make_light_matter_Hamiltonian(
+        tb_model=finite_model,
+        omega_0s=DETUNING_FREQ,
+        gr0s_rs=interaction,
+        pml_dampings=pml_dampings,
+    )[0]
+    for interaction in interactions
 ]
 
 # %% Compute time evolution
 
-from scipy.sparse.linalg import expm_multiply
+gamma_0 = mf.free_spontaneous_emission(
+    omega_0=DETUNING_FREQ, dip_strength=DIP_STRENGTH, a=LAT_PARAM
+)
+_t_conv = LAT_PARAM / mf.constants.C_LIGHT * gamma_0
+_T_0_ac = T_0 / _t_conv  # [a/c]
+_T_F_ac = T_F / _t_conv  # [a/c]
 
-tvals = np.linspace(T0, TF, T_STEPS)
+ts_norm = np.linspace(T_0, T_F, T_STEPS, endpoint=True)  # [1/Γ₀]
 
 psi0 = np.zeros(hamiltonians[0].shape[0])
 psi0[0] = 1
 
-# Compute time evolution
 psits = [
-    expm_multiply(-1j * hamiltonian, psi0, T0, TF, T_STEPS, endpoint=True)
+    expm_multiply(-1j * hamiltonian, psi0, _T_0_ac, _T_F_ac, T_STEPS, endpoint=True)
     for hamiltonian in hamiltonians
 ]
 
-# get emitter component of the overall wavefunction
 mod_Ce_squareds = [np.abs(psit[:, 0]) ** 2 for psit in psits]
 
-# get positions in Cartesian coordinates (requires find_positions() defined above)
-positions = mf.find_positions(finiteModel._orb, finiteModel._lat)
-
-# get photonic component of the overall wave function at selected time, i.e, tvals[time_index]
-mod_Cr_squareds = [np.abs(psit[TIME_INDEX, N_EMITTERS:]) ** 2 for psit in psits]
+positions = mf.find_positions(finite_model._orb, finite_model._lat)
+mod_Cr_squareds = [np.abs(psit[SNAP_IDX, N_EMITTERS:]) ** 2 for psit in psits]
 
 x = positions[:, 0]
 y = positions[:, 1]
 
 # ------------------------------------------------------------------------------
-# plot the time evolutions for the different polarizations
+# Plot the time evolutions for the different polarizations
 # ------------------------------------------------------------------------------
 fig, ax = plt.subplots()
 
 for i, theta in enumerate(THETAS):
-    ax.plot(tvals, mod_Ce_squareds[i], label=rf"$\theta = {theta*180/np.pi:.0f}^\circ$")
+    ax.plot(
+        ts_norm, mod_Ce_squareds[i], label=rf"$\theta = {theta*180/np.pi:.0f}^\circ$"
+    )
 
 ax.legend()
-ax.set(xlabel=r"$t [\tau_1]$", ylabel=r"$|C_e(t)|^2$", xscale="log", yscale="log")
+ax.set(xlabel=r"$t \Gamma_0$", ylabel=r"$|C_e(t)|^2$", xscale="log", yscale="log")
 
 fig.tight_layout()
 plt.show()
-fig.savefig(f"./figures/miscellaneous/{R0}_polarization_sweep_emit_population.png")
+fig.savefig(f"./figures/miscellaneous/{R_0}_polarization_sweep_emit_population.png")
 
 fig, axs = plt.subplots(1, len(THETAS))
 
@@ -288,4 +254,4 @@ for i, theta in enumerate(THETAS):
 
 fig.tight_layout()
 plt.show()
-fig.savefig(f"./figures/miscellaneous/{R0}_polarization_sweep_bath_population.png")
+fig.savefig(f"./figures/miscellaneous/{R_0}_polarization_sweep_bath_population.png")
