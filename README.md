@@ -7,7 +7,7 @@ Companion code for the paper:
 
 ## Contents
 
-### `src/`
+### `emitter_crystal_coupling/`
 Core physics library imported as `mf` throughout the scripts. Provides:
 - **`coupling.py`** — reciprocal- and real-space emitter–bath coupling $g_{n,k}(\mathbf{r}_0)$, $g_{n,\mathbf{R}}(\mathbf{r}_0)$, and LDOS computation.
 - **`hamiltonian.py`** — construction of the full light–matter Hamiltonian.
@@ -49,7 +49,12 @@ Meep and MPB are not available on PyPI and must be installed through conda:
 conda install -c conda-forge pymeep=1.30
 ```
 
-### 2. Install remaining dependencies
+### 2. Install the package
 ```bash
-pip install -r requirements.txt
+pip install .
+```
+
+If you plan to modify the source code, use the editable install instead:
+```bash
+pip install -e .
 ```

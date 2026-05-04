@@ -21,7 +21,7 @@ from scipy.sparse import csr_matrix, diags, bmat
 from scipy.linalg import eigh
 from scipy.sparse.linalg import expm_multiply
 
-import src as mf
+import emitter_crystal_coupling as mf
 
 # %% Parameters (matching probe_orientation_sweep.py exactly)
 

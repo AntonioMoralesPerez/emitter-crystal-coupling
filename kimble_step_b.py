@@ -26,7 +26,7 @@ import matplotlib.colors as colors
 import pythtb as tb
 
 # Local
-import src as mf
+import emitter_crystal_coupling as mf
 
 
 # ------------------------------------------------------------------------------

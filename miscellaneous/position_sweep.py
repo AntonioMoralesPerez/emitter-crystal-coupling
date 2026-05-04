@@ -13,7 +13,7 @@ import pythtb as tb  # for easy simulation of the tight-binding model
 # some imports for plotting utilities
 import matplotlib.pyplot as plt
 
-import src as mf  # our package functions to work with
+import emitter_crystal_coupling as mf  # our package functions to work with
 
 # %% Define the main constants and parameters for the current simulation
 NUM_BANDS = 2

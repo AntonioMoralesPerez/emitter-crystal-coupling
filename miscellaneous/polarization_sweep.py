@@ -14,7 +14,7 @@ import pythtb as tb
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
-import src as mf
+import emitter_crystal_coupling as mf
 
 # %% Define the main constants and parameters for the current simulation
 BAND_IDX = 0

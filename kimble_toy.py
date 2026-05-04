@@ -35,7 +35,7 @@ import matplotlib.colors as colors
 import pythtb as tb  # tight-binding model
 
 # Local
-import src as mf
+import emitter_crystal_coupling as mf
 
 
 # ------------------------------------------------------------------------------

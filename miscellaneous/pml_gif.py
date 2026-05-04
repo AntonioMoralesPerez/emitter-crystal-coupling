@@ -14,7 +14,7 @@ import matplotlib.animation as animation
 import pythtb as tb
 from scipy.sparse.linalg import expm_multiply
 
-import src as mf
+import emitter_crystal_coupling as mf
 
 # ------------------------------------------------------------------------------
 # Parameters (mirror kimble.py test values)

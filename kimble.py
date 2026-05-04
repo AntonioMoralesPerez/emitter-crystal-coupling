@@ -40,7 +40,7 @@ from meep import mpb  # MPB eigensolver interface
 import pythtb as tb  # tight-binding model
 
 # Local
-import src as mf
+import emitter_crystal_coupling as mf
 
 
 # ------------------------------------------------------------------------------
@@ -90,7 +90,7 @@ configure_matplotlib()
 LAT_PARAM: float = 300e-9  # lattice parameter [m]
 N_BANDS: int = 2
 BAND_IDX: int = 0  # band index (0-based)
-N_K: int = 64  # k-points per direction in Monkhorst-Pack grid
+N_K: int = 81  # k-points per direction in Monkhorst-Pack grid
 EPSILON_INPUT_FILE: str = "data/kimble/epsilon.h5"
 # NOTE: N_K is also used to identify the file where the fields are stored.
 
@@ -101,7 +101,7 @@ DIP_STRENGTH: float = 50  # dipole moment strength [Debye]
 P_A: float = mf.unit_dip(a=LAT_PARAM)
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 N_EMITTERS: int = 1  # emitters per simulation
-R_0: list = [0.0, 0.0]  # emitter position(s) in lattice units
+R_0: list = [0, 0]  # emitter position(s) in lattice units
 # NOTE: Two simulations are run in total, one per orientation.
 # NOTE: A list of positions is also accepted by R_0.
 

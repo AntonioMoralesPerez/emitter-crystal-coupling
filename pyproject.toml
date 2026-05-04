@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "emitter-crystal-coupling"
+version = "0.1.0"
+description = "Atom–light coupling in a 2D photonic crystal"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=2.0",
+    "scipy>=1.13",
+    "h5py>=3.10",
+    "pythtb>=1.8",
+    "matplotlib>=3.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ipykernel"]
+
+[tool.setuptools]
+packages = ["emitter_crystal_coupling"]
+
+# meep and mpb are not on PyPI — install via conda before using this package:
+#   conda install -c conda-forge pymeep=1.30

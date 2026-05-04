@@ -25,7 +25,7 @@ from scipy.sparse.linalg import expm_multiply
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
-import src as mf  # our package functions to work with
+import emitter_crystal_coupling as mf  # our package functions to work with
 
 # %% Define the main constants and parameters for the current simulation
 NUM_BANDS = 2

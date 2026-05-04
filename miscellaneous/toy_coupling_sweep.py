@@ -14,7 +14,7 @@ import pythtb as tb
 from scipy.sparse.linalg import expm_multiply
 from scipy.sparse import csr_matrix, diags, bmat
 
-import src as mf
+import emitter_crystal_coupling as mf
 
 # %% Parameters (matching kimble_toy.py)
 

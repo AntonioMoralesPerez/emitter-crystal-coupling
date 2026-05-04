@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import pythtb as tb
 
 # Local
-import src as mf
+import emitter_crystal_coupling as mf
 
 
 # ------------------------------------------------------------------------------

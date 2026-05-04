@@ -13,7 +13,7 @@ import numpy as np
 import meep as mp  # needed for the numerical simulation of the photonic crystal
 from meep import mpb  # same case as the previous package
 
-import src as mf  # our package functions to work with
+import emitter_crystal_coupling as mf  # our package functions to work with
 
 # %% Define the main constants and parameters for the current simulation
 NUM_BANDS = 1
