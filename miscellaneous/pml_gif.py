@@ -6,15 +6,16 @@ Layout: 2 rows (with PML / no PML) × 2 columns (90° / 135°).
 Also saves a static plot of |C_e(t)|² for both cases to check for revivals.
 """
 
-import numpy as np
-import matplotlib
-import matplotlib.colors as mcolors
-import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import matplotlib.colors as mcolors
+import matplotlib.patches as mpl_patches
+import matplotlib.pyplot as plt
+import numpy as np
 import pythtb as tb
 from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf
+from emitter_crystal_coupling.constants import C_LIGHT
 
 # ------------------------------------------------------------------------------
 # Parameters (mirror kimble.py test values)
@@ -27,7 +28,7 @@ R_0: list = [0.0, 0.0]
 THETA_1: float = 90 * np.pi / 180
 THETA_2: float = 135 * np.pi / 180
 DIP_STRENGTH: float = 50  # [Debye]
-DIP_STRENGTH_NORM: float = DIP_STRENGTH / mf.unit_dip(a=LAT_PARAM)
+DIP_STRENGTH_NORM: float = DIP_STRENGTH / float(mf.unit_dip(a=LAT_PARAM))
 THETAS: list = [THETA_1, THETA_2]
 DIPOLES: list = [
     DIP_STRENGTH_NORM * np.array([np.cos(t), np.sin(t), 0]) for t in THETAS
@@ -95,7 +96,7 @@ pml_dampings = compute_pml_dampings(rs_f, N_CELLS, N_PML, GAMMA_MAX)
 gamma_0 = mf.free_spontaneous_emission(
     omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
 )
-_t_conv = LAT_PARAM / mf.constants.C_LIGHT * gamma_0
+_t_conv = LAT_PARAM / C_LIGHT * gamma_0
 t_0 = T_0 / _t_conv
 t_f = T_F / _t_conv
 ts_norm = np.linspace(T_0, T_F, T_STEPS, endpoint=True)
@@ -123,9 +124,10 @@ def run_evolution(dampings):
         H, _ = mf.make_light_matter_Hamiltonian(
             tb_model=finite_model,
             omega_0s=omega_0,
-            gr0s_rs=[[list(gr0_rs), idxs]],
+            gr0s_rs=[(list(gr0_rs), idxs)],
             pml_dampings=dampings,
         )
+        assert H.shape is not None
         psi_0 = np.zeros(H.shape[0])
         psi_0[0] = 1
         results.append(expm_multiply(-1j * H, psi_0, t_0, t_f, T_STEPS, endpoint=True))
@@ -212,7 +214,7 @@ for norm, scale_label in gif_norms:
             )
             pml_boundary = N_CELLS // 2 - N_PML + 0.5
             ax.add_patch(
-                matplotlib.patches.Rectangle(
+                mpl_patches.Rectangle(
                     (-pml_boundary, -pml_boundary),
                     2 * pml_boundary,
                     2 * pml_boundary,

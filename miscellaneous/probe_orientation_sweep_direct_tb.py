@@ -14,20 +14,20 @@ to probe_orientation_sweep.py.
 NOTE: run mpb_field_computation.py at EXCITED_R and PROBE_R before executing.
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import pythtb as tb
-from scipy.sparse import csr_matrix, diags, bmat
-from scipy.linalg import eigh
+from scipy.sparse import bmat, csr_matrix, diags
 from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf
+from emitter_crystal_coupling.constants import C_LIGHT
 
 # %% Parameters (matching probe_orientation_sweep.py exactly)
 
 LAT_PARAM: float = 300e-9
 DIP_STRENGTH: float = 50
-P_A: float = mf.unit_dip(a=LAT_PARAM)
+P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 
 BAND_IDX: int = 0
@@ -65,6 +65,7 @@ T_STEPS: int = 50
 
 # %% Helper: PML dampings
 
+
 def compute_pml_dampings(
     rs: np.ndarray, n_cells: int, n_pml: int, gamma_max: float
 ) -> np.ndarray:
@@ -74,6 +75,7 @@ def compute_pml_dampings(
 
 
 # %% Helper: Hamiltonian with H_b = Theta (no sqrt)
+
 
 def make_direct_tb_Hamiltonian(
     tb_model: tb.tb_model,
@@ -101,8 +103,9 @@ def make_direct_tb_Hamiltonian(
 
     if pml_dampings is not None:
         pml_dampings = np.asarray(pml_dampings, dtype=float)
-        pml_diag = diags(pml_dampings, offsets=0,
-                         shape=(n_orbitals, n_orbitals), format="csr")
+        pml_diag = diags(
+            pml_dampings, offsets=0, shape=(n_orbitals, n_orbitals), format="csr"
+        )
         h_bath_csr = h_bath_csr - 1j * pml_diag
 
     # --- Emitter block ---
@@ -165,13 +168,15 @@ indexes = np.arange(len(rs_finite))
 gamma_0 = mf.free_spontaneous_emission(
     omega_0=omega_0_phys, dip_strength=DIP_STRENGTH, a=LAT_PARAM
 )
-_t_conv = LAT_PARAM / mf.constants.C_LIGHT * gamma_0
+_t_conv = LAT_PARAM / C_LIGHT * gamma_0
 t_f_internal = T_F / _t_conv
 
 # %% Load fields — use omega_ks^2 in coupling prefactor for self-consistency with H_b=Theta
 
 data_excited = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{EXCITED_R}.pkl")
-omega_ks_n_exc = np.asarray(data_excited["freqs"]) ** 2  # omega^2 for direct-TB coupling
+omega_ks_n_exc = (
+    np.asarray(data_excited["freqs"]) ** 2
+)  # omega^2 for direct-TB coupling
 fr0_n_ks_exc = np.asarray(data_excited["Eks"])[0]
 ks_exc = np.asarray(data_excited["kpts"])
 
@@ -215,6 +220,7 @@ for i, probe_theta in enumerate(PROBE_THETAS):
         pml_dampings=pml_dampings,
     )
 
+    assert H.shape is not None
     psi0 = np.zeros(H.shape[0])
     psi0[0] = 1
     psit = expm_multiply(-1j * H, psi0, 0.0, t_f_internal, T_STEPS, endpoint=True)

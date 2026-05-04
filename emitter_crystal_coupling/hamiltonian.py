@@ -1,9 +1,10 @@
-import numpy as np
-from scipy.sparse import csr_matrix, diags, bmat
-from scipy.linalg import eigh
 from collections.abc import Sequence
+from typing import cast
 
+import numpy as np
 import pythtb as tb
+from scipy.linalg import eigh
+from scipy.sparse import bmat, csr_matrix, diags
 
 
 def make_light_matter_Hamiltonian(
@@ -84,13 +85,15 @@ def make_light_matter_Hamiltonian(
 
     # Broadcast emitter detunings if needed
     if np.isscalar(omega_0s):
-        omega_0s = [omega_0s] * n_emitters
-    elif len(omega_0s) == 1 and n_emitters > 1:
-        omega_0s = list(omega_0s) * n_emitters
+        omega_0s_list: list[float] = [float(omega_0s)] * n_emitters  # type: ignore[arg-type]
+    elif len(cast(Sequence[float], omega_0s)) == 1 and n_emitters > 1:
+        omega_0s_list = list(cast(Sequence[float], omega_0s)) * n_emitters
+    else:
+        omega_0s_list = list(cast(Sequence[float], omega_0s))
 
-    if len(omega_0s) != n_emitters:
+    if len(omega_0s_list) != n_emitters:
         raise ValueError(
-            f"`omega_0s` length ({len(omega_0s)}) must match the number of "
+            f"`omega_0s` length ({len(omega_0s_list)}) must match the number of "
             f"emitters ({n_emitters})."
         )
 
@@ -139,7 +142,7 @@ def make_light_matter_Hamiltonian(
     # 3. Emitter block H_e
     # --------------------------------------------------------------------------
     h_emitter = diags(
-        np.asarray(omega_0s, dtype=complex),
+        np.asarray(omega_0s_list, dtype=complex),
         offsets=0,
         shape=(n_emitters, n_emitters),
         format="csr",
@@ -188,9 +191,12 @@ def make_light_matter_Hamiltonian(
     # --------------------------------------------------------------------------
     # 5. Full Hamiltonian
     # --------------------------------------------------------------------------
-    H = bmat(
-        [[h_emitter, h_int], [h_int.getH(), h_bath_csr]],
-        format="csr",
+    H = cast(
+        csr_matrix,
+        bmat(
+            [[h_emitter, h_int], [h_int.getH(), h_bath_csr]],
+            format="csr",
+        ),
     )
 
     # --------------------------------------------------------------------------

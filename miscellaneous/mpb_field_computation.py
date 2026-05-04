@@ -75,7 +75,7 @@ geometry_lattice = mp.Lattice(
 # ------------------------------------------------------------------------------
 ms = mpb.ModeSolver(
     num_bands=NUM_BANDS,
-    resolution=mp.Vector3(*resolution),
+    resolution=int(resolution[0]),
     epsilon_input_file=EPSILON_INPUT_FILE,
     geometry_lattice=geometry_lattice,
     k_points=k_points,

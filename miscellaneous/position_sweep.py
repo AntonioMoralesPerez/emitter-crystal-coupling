@@ -7,11 +7,11 @@ emitter positions is performed.
 """
 
 # %% Import necessary packages
-import numpy as np
-import pythtb as tb  # for easy simulation of the tight-binding model
-
 # some imports for plotting utilities
 import matplotlib.pyplot as plt
+import numpy as np
+import pythtb as tb  # for easy simulation of the tight-binding model
+from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf  # our package functions to work with
 
@@ -182,7 +182,7 @@ gr0rjs_norm = [gr0rj / np.sqrt(np.abs(TAU_1)) for gr0rj in gr0rjs]
 # %% Build the light-matter Hamiltonian
 
 indexes = np.arange(0, len(gr0rjs_norm[0]), 1)
-couplings = [[[list(gr0rj_norm), list(indexes)]] for gr0rj_norm in gr0rjs_norm]
+couplings = [[(list(gr0rj_norm), list(indexes))] for gr0rj_norm in gr0rjs_norm]
 
 # build the light matter Hamiltonian
 hamiltonians = [
@@ -192,10 +192,10 @@ hamiltonians = [
 
 # %% Compute time evolution
 
-from scipy.sparse.linalg import expm_multiply
 
 tvals = np.linspace(T0, TF, T_STEPS)
 
+assert hamiltonians[0].shape is not None
 psi0 = np.zeros(hamiltonians[0].shape[0])
 psi0[0] = 1
 

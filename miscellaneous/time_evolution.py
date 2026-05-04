@@ -15,17 +15,15 @@ the emitters are located. If not, consider running `mpb_field_computation.py`.
 """
 
 # %% Import necessary packages
+# some imports for plotting utilities
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mpl_ticker
 import numpy as np
-import meep as mp  # needed for the numerical simulation of the photonic crystal
-from meep import mpb  # same case as the previous package
 import pythtb as tb  # for easy simulation of the tight-binding model
 from scipy.sparse.linalg import expm_multiply
 
-# some imports for plotting utilities
-import matplotlib.pyplot as plt
-import matplotlib.colors as colors
-
 import emitter_crystal_coupling as mf  # our package functions to work with
+from emitter_crystal_coupling.constants import C_LIGHT
 
 # %% Define the main constants and parameters for the current simulation
 NUM_BANDS = 2
@@ -107,7 +105,7 @@ omega_0 = mf.safe_sqrt(tb_evals[BAND_INDEX][x_mask]).item()
 gamma_0 = mf.free_spontaneous_emission(
     omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
 )
-_t_conv = LAT_PARAM / mf.constants.C_LIGHT * gamma_0
+_t_conv = LAT_PARAM / C_LIGHT * gamma_0
 T0 = T0_PHYS / _t_conv
 TF = TF_PHYS / _t_conv
 NEW_TF = NEW_TF_PHYS / _t_conv
@@ -141,7 +139,7 @@ E_k_r0 = Eks[0, :, :, :]  # (Nb, Nk, 3)
 gr0rj = mf.compute_real_space_coupling(E_k_r0, dipole, omegas, kpts, rjpts)
 value = gr0rj[BAND_INDEX, :]
 indexes = np.arange(0, len(value), 1)
-couplings = [[list(value), list(indexes)]]
+couplings = [(list(value), list(indexes))]
 
 # %% Build the single-emitter light-matter Hamiltonian
 H_total, omega_sites = mf.make_light_matter_Hamiltonian(
@@ -152,6 +150,7 @@ H_total, omega_sites = mf.make_light_matter_Hamiltonian(
 )
 
 # %% Compute time evolution (single excited emitter)
+assert H_total.shape is not None
 psi0 = np.zeros(H_total.shape[0])
 psi0[0] = 1
 
@@ -180,7 +179,7 @@ probe_values = [
 
 # Build two-emitter Hamiltonians (one per probe orientation)
 two_em_couplings = [
-    [[list(value), list(indexes)], [list(pv), list(indexes)]] for pv in probe_values
+    [(list(value), list(indexes)), (list(pv), list(indexes))] for pv in probe_values
 ]
 
 new_Hs = [
@@ -194,6 +193,7 @@ new_Hs = [
 ]
 
 # Initial state: only the excited emitter populated
+assert new_Hs[0].shape is not None
 new_psi0 = np.zeros(new_Hs[0].shape[0])
 new_psi0[0] = 1
 
@@ -248,6 +248,7 @@ ax.set(
     aspect="equal",
 )
 cbar = fig.colorbar(sc, ax=ax, label=r"$|C_\mathbf{r}|^2$", shrink=0.8)
+assert isinstance(cbar.formatter, mpl_ticker.ScalarFormatter)
 cbar.formatter.set_powerlimits((0, 0))
 
 fig.tight_layout()
@@ -280,6 +281,7 @@ for i, (pv, ptheta, color) in enumerate(zip(probe_values, probe_thetas, probe_co
     )
     ax.title.set_color(color)
     cbar = fig.colorbar(sc, ax=ax, label=r"$|g_\mathbf{r}(\mathbf{R})|$")
+    assert isinstance(cbar.formatter, mpl_ticker.ScalarFormatter)
     cbar.formatter.set_powerlimits((0, 0))
 
 fig.tight_layout()

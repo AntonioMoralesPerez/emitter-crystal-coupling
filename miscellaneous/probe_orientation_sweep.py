@@ -10,18 +10,19 @@ same PML settings, same time units (1/Γ₀), same TB model.
 NOTE: run mpb_field_computation.py at EXCITED_R and PROBE_R before executing.
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import pythtb as tb
 from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf
+from emitter_crystal_coupling.constants import C_LIGHT
 
 # %% Parameters (matching kimble.py)
 
 LAT_PARAM: float = 300e-9  # lattice parameter [m]
 DIP_STRENGTH: float = 7000  # dipole moment [Debye] — same for both emitters
-P_A: float = mf.unit_dip(a=LAT_PARAM)
+P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 
 BAND_IDX: int = 0
@@ -94,7 +95,7 @@ indexes = np.arange(len(rs_finite))
 gamma_0 = mf.free_spontaneous_emission(
     omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
 )
-_t_conv = LAT_PARAM / mf.constants.C_LIGHT * gamma_0
+_t_conv = LAT_PARAM / C_LIGHT * gamma_0
 t_f_internal = T_F / _t_conv
 ts_norm = np.linspace(0.0, T_F, T_STEPS, endpoint=True)
 
@@ -141,12 +142,13 @@ for i, probe_theta in enumerate(PROBE_THETAS):
         tb_model=finite_model,
         omega_0s=[omega_0, omega_0],
         gr0s_rs=[
-            [list(excited_coupling), list(indexes)],
-            [list(probe_coupling), list(indexes)],
+            (list(excited_coupling), list(indexes)),
+            (list(probe_coupling), list(indexes)),
         ],
         pml_dampings=pml_dampings,
     )
 
+    assert H.shape is not None
     psi0 = np.zeros(H.shape[0])
     psi0[0] = 1
     psit = expm_multiply(-1j * H, psi0, 0.0, t_f_internal, T_STEPS, endpoint=True)

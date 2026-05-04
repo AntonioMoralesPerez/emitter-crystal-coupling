@@ -16,18 +16,19 @@ kimble_toy.py  →  Step A (this)  →  Step B  →  kimble.py
 """
 
 # Standard library
-from scipy.sparse.linalg import expm_multiply
+import matplotlib as mpl
+import matplotlib.patches as mpl_patches
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mpl_ticker
 
 # Third-party
 import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.colors as colors
 import pythtb as tb
+from scipy.sparse.linalg import expm_multiply
 
 # Local
 import emitter_crystal_coupling as mf
-
+from emitter_crystal_coupling.constants import C_LIGHT
 
 # ------------------------------------------------------------------------------
 # Matplotlib configuration
@@ -75,7 +76,7 @@ N_K: int = 64
 # Emitter — single orientation used only to extract G from MPB fields
 THETA: float = 90 * np.pi / 180  # [rad]
 DIP_STRENGTH: float = 7000  # dipole moment [Debye]
-P_A: float = mf.unit_dip(a=LAT_PARAM)
+P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array([np.cos(THETA), np.sin(THETA), 0])
 N_EMITTERS: int = 1
@@ -195,7 +196,7 @@ def plot_band_structure(
 
 infinite_model = build_tight_binding_model()
 k_vec, k_dist, k_node = infinite_model.k_path(K_PATH, N_K_PATH, report=False)
-tb_evals = infinite_model.solve_all(k_vec)
+tb_evals: np.ndarray = np.asarray(infinite_model.solve_all(k_vec))
 omega_0 = compute_detuning_frequency(tb_evals, k_dist, k_node)
 print(f"Detuning frequency at X point (NN): omega_0 = {omega_0:.6f} c/a")
 
@@ -213,12 +214,15 @@ def compute_and_plot_isofrequency(model: tb.tb_model, omega_0: float) -> None:
     k_x_grid, k_y_grid = np.meshgrid(k_x, k_y, indexing="ij")
 
     ks_grid_flat = np.column_stack((k_x_grid.ravel(), k_y_grid.ravel()))
-    tb_evals_grid = np.array([model.solve_one(k)[BAND_IDX] for k in ks_grid_flat])
+    tb_evals_grid = np.array(
+        [np.asarray(model.solve_one(k))[BAND_IDX] for k in ks_grid_flat]
+    )
     omega_grid = mf.safe_sqrt(tb_evals_grid).reshape(N_K_PATH, N_K_PATH)
 
     fig, ax = plt.subplots()
     c = ax.contourf(k_x_grid, k_y_grid, omega_grid, levels=12)
     cbar = fig.colorbar(c, ax=ax, label=r"$\omega_\mathbf{k} \, [c/a]$")
+    assert isinstance(cbar.formatter, mpl_ticker.ScalarFormatter)
     cbar.formatter.set_powerlimits((0, 0))
     ax.contour(
         k_x_grid, k_y_grid, omega_grid, levels=[omega_0], colors=MY_RED, linewidths=2
@@ -303,10 +307,12 @@ print(f"Probe site index:   {idx_new_r}  →  r = {rs_finite[idx_new_r]}")
 # Γ₀ and time conversion
 # ------------------------------------------------------------------------------
 
-gamma_0 = mf.free_spontaneous_emission(
-    omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
+gamma_0: float = float(
+    mf.free_spontaneous_emission(
+        omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
+    )
 )
-_t_conv = LAT_PARAM / mf.constants.C_LIGHT * gamma_0
+_t_conv = LAT_PARAM / C_LIGHT * gamma_0
 T_0 /= _t_conv
 T_F /= _t_conv
 NEW_T_F /= _t_conv
@@ -353,6 +359,7 @@ def compute_time_evolution(
         gr0s_rs=[([g], [idx])],
         pml_dampings=pml_dampings,
     )
+    assert H.shape is not None
     psi_0 = np.zeros(H.shape[0])
     psi_0[0] = 1
     return expm_multiply(-1j * H, psi_0, t_0, t_f, t_steps, endpoint=True)
@@ -374,7 +381,7 @@ def plot_emitter_time_evolution(
     ax2 = ax.twinx()
     (l2,) = ax2.plot(ts, S_t, ls="--", color=MY_BLUE, lw=2, label=r"$S(t)$")
     ax2.set(ylabel=r"$S(t)$")
-    ax.legend([l1, l2], [l1.get_label(), l2.get_label()])
+    ax.legend([l1, l2], [str(l1.get_label()), str(l2.get_label())])
 
     fig.savefig(f"./figures/kimble_step_a/emitter_timeevolution_entropy_at_{r_0}.svg")
     plt.close(fig)
@@ -407,7 +414,7 @@ def plot_bath_snapshot(
     )
     pml_boundary = N_CELLS // 2 - N_PML + 0.5
     ax.add_patch(
-        mpl.patches.Rectangle(
+        mpl_patches.Rectangle(
             (-pml_boundary, -pml_boundary),
             2 * pml_boundary,
             2 * pml_boundary,
@@ -420,7 +427,7 @@ def plot_bath_snapshot(
     cbar = fig.colorbar(
         sc, ax=ax, label=rf"$|C_\mathbf{{R}}(t)|^2 \; [\times 10^{{{exp}}}]$", pad=0.1
     )
-    cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+    cbar.formatter = mpl_ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
     cbar.update_ticks()
     ax.set(
         xlabel=r"$x/a$",
@@ -490,6 +497,7 @@ def compute_probe_emitter_evolution(
         gr0s_rs=[([g], [idx_main]), ([g_probe], [idx_probe])],
         pml_dampings=pml_dampings,
     )
+    assert H.shape is not None
     psi_0 = np.zeros(H.shape[0])
     psi_0[0] = 1
     return expm_multiply(-1j * H, psi_0, t_0, t_f, t_steps, endpoint=True)
@@ -527,7 +535,7 @@ def plot_probe_bath_snapshot(
     )
     pml_boundary = N_CELLS // 2 - N_PML + 0.5
     ax.add_patch(
-        mpl.patches.Rectangle(
+        mpl_patches.Rectangle(
             (-pml_boundary, -pml_boundary),
             2 * pml_boundary,
             2 * pml_boundary,
@@ -540,7 +548,7 @@ def plot_probe_bath_snapshot(
     cbar = fig.colorbar(
         sc, ax=ax, label=rf"$|C_\mathbf{{r}}(t)|^2 \; [\times 10^{{{exp}}}]$"
     )
-    cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+    cbar.formatter = mpl_ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
     cbar.update_ticks()
     ax.set(
         xlabel=r"$x/a$",

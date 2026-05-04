@@ -11,18 +11,19 @@ time units (1/Γ₀), same TB model.
 NOTE: run mpb_field_computation.py at EMITTER_R before executing.
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import pythtb as tb
 from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf
+from emitter_crystal_coupling.constants import C_LIGHT
 
 # %% Parameters
 
 LAT_PARAM: float = 300e-9
 DIP_STRENGTH: float = 100  # [Debye]
-P_A: float = mf.unit_dip(a=LAT_PARAM)
+P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 
 BAND_IDX: int = 0
 N_K: int = 64
@@ -77,7 +78,7 @@ indexes = np.arange(len(rs_finite))
 gamma_0 = mf.free_spontaneous_emission(
     omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
 )
-_t_conv = LAT_PARAM / mf.constants.C_LIGHT * gamma_0
+_t_conv = LAT_PARAM / C_LIGHT * gamma_0
 t_f_internal = T_F / _t_conv
 tvals_norm = np.linspace(0.0, T_F, T_STEPS, endpoint=True)
 
@@ -104,10 +105,11 @@ for i, theta in enumerate(THETAS):
     H, _ = mf.make_light_matter_Hamiltonian(
         tb_model=finite_model,
         omega_0s=omega_0,
-        gr0s_rs=[[list(coupling), list(indexes)]],
+        gr0s_rs=[(list(coupling), list(indexes))],
         pml_dampings=pml_dampings,
     )
 
+    assert H.shape is not None
     psi0 = np.zeros(H.shape[0])
     psi0[0] = 1
     psit = expm_multiply(-1j * H, psi0, 0.0, t_f_internal, T_STEPS, endpoint=True)
@@ -124,6 +126,7 @@ N_ROWS = int(np.ceil(N_THETAS / N_COLS))
 
 fig, axs = plt.subplots(N_ROWS, N_COLS, figsize=(3 * N_COLS, 3.2 * N_ROWS))
 
+sc = None
 for i, (theta, z) in enumerate(zip(THETAS, zs)):
     ax = axs.flat[i]
     sc = ax.pcolormesh(xjg, yjg, z, vmin=0, vmax=vmax)
@@ -138,6 +141,7 @@ for i, (theta, z) in enumerate(zip(THETAS, zs)):
 for ax in axs.flat[N_THETAS:]:
     ax.set_visible(False)
 
+assert sc is not None
 fig.colorbar(
     sc, ax=axs.flat[:N_THETAS].tolist(), label=r"$|C_\mathbf{r}|^2$", shrink=0.6
 )

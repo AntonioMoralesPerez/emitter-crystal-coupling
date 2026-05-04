@@ -7,14 +7,14 @@ performed.
 """
 
 # %% Import necessary packages
-from scipy.sparse.linalg import expm_multiply
-
+import matplotlib.colors as colors
+import matplotlib.pyplot as plt
 import numpy as np
 import pythtb as tb
-import matplotlib.pyplot as plt
-import matplotlib.colors as colors
+from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf
+from emitter_crystal_coupling.constants import C_LIGHT
 
 # %% Define the main constants and parameters for the current simulation
 BAND_IDX = 0
@@ -100,6 +100,7 @@ n_cols = 3
 n_rows = int(np.ceil(len(THETAS) / n_cols))
 fig, axs = plt.subplots(n_rows, n_cols, squeeze=False)
 
+sc = None
 for i, theta in enumerate(THETAS):
     ax = axs[i // n_cols, i % n_cols]
     sc = ax.pcolormesh(
@@ -117,6 +118,7 @@ for i, theta in enumerate(THETAS):
     )
     ax.title.set_color(theta_colors[i])
 
+assert sc is not None
 fig.colorbar(
     sc, ax=axs.ravel().tolist(), label=r"$|g_\mathbf{R}(\mathbf{r}_0)| \, [c/a]$"
 )
@@ -174,7 +176,7 @@ gr0rjs = [
 # %% Build the light-matter Hamiltonian
 
 idxs = np.arange(len(gr0rjs[0]))
-interactions = [[[list(gr0rj), list(idxs)]] for gr0rj in gr0rjs]
+interactions = [[(list(gr0rj), list(idxs))] for gr0rj in gr0rjs]
 
 hamiltonians = [
     mf.make_light_matter_Hamiltonian(
@@ -191,12 +193,13 @@ hamiltonians = [
 gamma_0 = mf.free_spontaneous_emission(
     omega_0=DETUNING_FREQ, dip_strength=DIP_STRENGTH, a=LAT_PARAM
 )
-_t_conv = LAT_PARAM / mf.constants.C_LIGHT * gamma_0
+_t_conv = LAT_PARAM / C_LIGHT * gamma_0
 _T_0_ac = T_0 / _t_conv  # [a/c]
 _T_F_ac = T_F / _t_conv  # [a/c]
 
 ts_norm = np.linspace(T_0, T_F, T_STEPS, endpoint=True)  # [1/Γ₀]
 
+assert hamiltonians[0].shape is not None
 psi0 = np.zeros(hamiltonians[0].shape[0])
 psi0[0] = 1
 
@@ -220,7 +223,9 @@ fig, ax = plt.subplots()
 
 for i, theta in enumerate(THETAS):
     ax.plot(
-        ts_norm, mod_Ce_squareds[i], label=rf"$\theta = {theta*180/np.pi:.0f}^\circ$"
+        ts_norm,
+        mod_Ce_squareds[i],
+        label=rf"$\theta = {theta * 180 / np.pi:.0f}^\circ$",
     )
 
 ax.legend()
@@ -248,7 +253,7 @@ for i, theta in enumerate(THETAS):
     axs[i].set(
         xlabel=r"$x/a$",
         ylabel=r"$y/a$",
-        title=rf"$\theta = {theta*180/np.pi:.0f}^\circ$",
+        title=rf"$\theta = {theta * 180 / np.pi:.0f}^\circ$",
         aspect="equal",
     )
 
