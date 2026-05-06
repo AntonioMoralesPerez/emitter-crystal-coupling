@@ -25,13 +25,13 @@ from emitter_crystal_coupling.constants import C_LIGHT
 
 # %% Parameters (matching probe_orientation_sweep.py exactly)
 
-LAT_PARAM: float = 300e-9
-DIP_STRENGTH: float = 50
+LAT_PARAM: float = 300e-9  # [m]
+DIP_STRENGTH: float = 7000  # [D]
 P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 
 BAND_IDX: int = 0
-N_K: int = 128
+N_K: int = 81
 
 EXCITED_R: list = [0, 0]
 EXCITED_THETA: float = 90 * np.pi / 180
@@ -41,7 +41,7 @@ EXCITED_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
 
 PROBE_R: list = [-5, 5]
 PROBE_DIP_STRENGTH: float = DIP_STRENGTH
-N_THETAS: int = 13
+N_THETAS: int = 21
 PROBE_THETAS: np.ndarray = np.linspace(40, 60, N_THETAS) * np.pi / 180
 
 KIMBLE_PROBE_THETA: float = np.deg2rad(45)
@@ -50,8 +50,9 @@ LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
 N_CELLS: int = 41
 N_PML: int = 8
-GAMMA_MAX: float = 3e-2
+GAMMA_MAX: float = 3e-2  # [c/a]
 
+# in units of [c/a]
 J_0: float = 0.07755639
 J_1: float = -0.01993698
 J_2: float = 0.00053966
@@ -59,8 +60,8 @@ J_2: float = 0.00053966
 K_PATH: list = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 N_K_PATH: int = 100
 
-T_F: float = 2e-5
-T_STEPS: int = 50
+T_F: float = 1e-2  # [Γ₀⁻¹]
+T_STEPS: int = 100
 
 
 # %% Helper: PML dampings
@@ -157,6 +158,37 @@ omega_0_sq = omega_0_phys**2  # eigenvalue used as emitter frequency in direct-T
 print(f"omega_0 (phys) = {omega_0_phys:.6f} c/a")
 print(f"omega_0 (sq)   = {omega_0_sq:.6f} (c/a)^2")
 
+# %% Band structure plot
+
+K_LABELS = [r"$\Gamma$", "X", "M", r"$\Gamma$"]
+
+fig_bs, ax_bs = plt.subplots()
+ax_bs.plot(k_dist, tb_evals[BAND_IDX], color="r", linestyle="--")
+ax_bs.hlines(
+    omega_0_sq,
+    xmin=k_dist[0],
+    xmax=k_dist[-1],
+    color="k",
+    linestyle="--",
+    alpha=0.5,
+    label=rf"$\omega_0^2 = {omega_0_sq:.4f}$ $(c/a)^2$",
+)
+ax_bs.set(
+    xlim=(k_node[0], k_node[-1]),
+    xticks=k_node,
+    xticklabels=K_LABELS,
+    ylabel=r"$\omega^2 \, [(c/a)^2]$",
+    title="TB band structure (direct TB)",
+)
+ax_bs.grid(axis="x")
+ax_bs.legend()
+fig_bs.tight_layout()
+fig_bs.savefig(
+    "../figures/miscellaneous/tb_bandstructure_probe_orientation_sweep_direct_tb.png",
+    bbox_inches="tight",
+)
+plt.show()
+
 temporal_model = infinite_model.cut_piece(N_CELLS, fin_dir=0, glue_edgs=False)
 finite_model = temporal_model.cut_piece(N_CELLS, fin_dir=1, glue_edgs=False)
 _, _, rs_finite = mf.build_finite_grid(N_CELLS)
@@ -173,7 +205,7 @@ t_f_internal = T_F / _t_conv
 
 # %% Load fields — use omega_ks^2 in coupling prefactor for self-consistency with H_b=Theta
 
-data_excited = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{EXCITED_R}.pkl")
+data_excited = mf.load(f"../data/kimble/fields/{N_K}_meshgrid_at_{EXCITED_R}.pkl")
 omega_ks_n_exc = (
     np.asarray(data_excited["freqs"]) ** 2
 )  # omega^2 for direct-TB coupling
@@ -188,7 +220,7 @@ excited_coupling = mf.compute_real_space_coupling(
     rs=rs_finite,
 )[BAND_IDX, :]
 
-data_probe = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{PROBE_R}.pkl")
+data_probe = mf.load(f"../data/kimble/fields/{N_K}_meshgrid_at_{PROBE_R}.pkl")
 omega_ks_n_probe = np.asarray(data_probe["freqs"]) ** 2
 fr0_probe = np.asarray(data_probe["Eks"])[0]
 ks_probe = np.asarray(data_probe["kpts"])
@@ -268,7 +300,7 @@ ax.legend()
 
 fig.tight_layout()
 fig.savefig(
-    f"./figures/miscellaneous/probe_orientation_sweep_direct_tb_at_{PROBE_R}.png",
+    f"../figures/miscellaneous/probe_orientation_sweep_direct_tb_at_{PROBE_R}.png",
     bbox_inches="tight",
 )
 plt.show()
