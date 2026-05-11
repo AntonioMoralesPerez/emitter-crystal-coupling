@@ -51,38 +51,58 @@ from emitter_crystal_coupling.constants import C_LIGHT
 
 
 def configure_matplotlib() -> None:
-    """Configure Matplotlib rcParams for journal-quality figures."""
+    """Configure Matplotlib rcParams for journal-quality figures.
+
+    Sized for PRX half-column panels (~42.5 mm) assembled in Inkscape.
+    """
     mm_to_inches = 1 / 25.4
     mpl.rcParams.update(
         {
             # Figure
-            "figure.figsize": (85 * mm_to_inches, 42.5 * mm_to_inches),
+            "figure.figsize": (42.5 * mm_to_inches, 42.5 * mm_to_inches),
             "figure.dpi": 300,
+            "figure.constrained_layout.use": True,
             # Font
             "font.family": "serif",
-            "font.size": 13,
+            "font.size": 8,
             "mathtext.fontset": "stix",
             # Axes
-            "axes.labelsize": 13,
-            "axes.titlesize": 14,
-            "axes.linewidth": 1,
+            "axes.labelsize": 8,
+            "axes.titlesize": 8,
+            "axes.linewidth": 0.5,
             # Ticks
             "xtick.direction": "in",
             "ytick.direction": "in",
             "xtick.top": True,
             "ytick.right": True,
-            "xtick.labelsize": 11,
-            "ytick.labelsize": 11,
+            "xtick.labelsize": 7,
+            "ytick.labelsize": 7,
+            "xtick.major.width": 0.5,
+            "ytick.major.width": 0.5,
+            "xtick.major.size": 2.5,
+            "ytick.major.size": 2.5,
+            # Lines
+            "lines.linewidth": 0.8,
             # Legend
-            "legend.fontsize": 11,
+            "legend.fontsize": 7,
             "legend.frameon": False,
             # Save
             "savefig.bbox": "tight",
+            "savefig.pad_inches": 0.02,
+            "savefig.format": "svg",
+            "savefig.dpi": 300,
+            "svg.fonttype": "none",
         }
     )
 
 
 configure_matplotlib()
+
+# Per-figure sizes for PRX half-column panels assembled in Inkscape.
+_MM_TO_IN = 1 / 25.4
+_HALF_COL = 42.5 * _MM_TO_IN
+FIGSIZE_SQUARE_CBAR = (_HALF_COL, _HALF_COL * 0.95)  # square data axis + colorbar
+FIGSIZE_WIDE = (_HALF_COL, _HALF_COL * 0.75)  # x-vs-y line plots
 
 # ------------------------------------------------------------------------------
 # Simulation parameters
@@ -198,7 +218,7 @@ def plot_dielectric_function(r_0: list[float]) -> None:
     pos_y = epsilon_converted["positions-lattice"][:, 1]
     epsilon_vals = epsilon_converted["epsilon_values"]
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE_CBAR)
     sc = ax.scatter(
         pos_x,
         pos_y,
@@ -206,8 +226,9 @@ def plot_dielectric_function(r_0: list[float]) -> None:
         marker="s",
         cmap="copper_r",
         s=mf.marker_size(len(pos_x)),
+        rasterized=True,
     )
-    fig.colorbar(sc, ax=ax, label=r"$\epsilon(\mathbf{r})$")
+    fig.colorbar(sc, ax=ax, label=r"$\epsilon(\mathbf{r})$", shrink=0.7, aspect=30)
     ax.set(xlabel=r"$x/a$", ylabel=r"$y/a$", aspect="equal")
 
     for i, theta in enumerate(THETAS, start=1):
@@ -220,6 +241,9 @@ def plot_dielectric_function(r_0: list[float]) -> None:
             length=0.7,
             label_offset=0.17,
             arrow_offset=0.07,
+            lw=1,
+            mutation_scale=5,
+            fontsize=7,
         )
 
     fig.savefig(f"./figures/kimble/dielectric_function_dipoles_at_{r_0}.svg")
@@ -346,7 +370,7 @@ def plot_band_structure(
     omega_0 : float
         Detuning frequency to mark on the plot [c/a].
     """
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=FIGSIZE_WIDE)
 
     for tb_eval in tb_evals:
         ax.plot(k_dist, mf.safe_sqrt(tb_eval), color="r", linestyle="--")
@@ -484,16 +508,29 @@ def plot_real_space_coupling(
     cbar_max = np.abs(gr0_rs_list).max()
 
     for i, theta in enumerate(THETAS, start=1):
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE_CBAR)
         sc = ax.pcolormesh(
             xs,
             ys,
             np.abs(gr0_rs_list[i - 1]),
             norm=colors.LogNorm(vmin=cbar_min, vmax=cbar_max),
         )
-        fig.colorbar(sc, ax=ax, label=r"$|g_\mathbf{R}(\mathbf{r}_0)| \, [c/a]$")
+        fig.colorbar(
+            sc,
+            ax=ax,
+            label=r"$|g_\mathbf{R}(\mathbf{r}_0)| \, [c/a]$",
+            shrink=0.6,
+            aspect=20,
+        )
         mf.draw_arrow(
-            ax, r_0, theta, color=DIP_COLORS[i - 1], length=4, arrow_offset=0.4
+            ax,
+            r_0,
+            theta,
+            color=DIP_COLORS[i - 1],
+            length=4,
+            arrow_offset=0.4,
+            lw=0.8,
+            mutation_scale=5,
         )
         ax.set(
             title=rf"$\theta_{i} = {np.rad2deg(theta):.0f}$°",
@@ -593,7 +630,7 @@ def compute_and_plot_ldos(
     ]
 
     for i, ldos in enumerate(ldos_list, start=1):
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=FIGSIZE_WIDE)
         ax.scatter(omegas, ldos, c=DIP_COLORS[i - 1])
         ax.axvline(
             x=omega_0,
@@ -642,13 +679,15 @@ def compute_and_plot_isofrequency(model: tb.tb_model, omega_0: float) -> None:
     )
     omega_grid = mf.safe_sqrt(tb_evals_grid).reshape(N_K_PATH, N_K_PATH)
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE_CBAR)
     c = ax.contourf(k_x_grid, k_y_grid, omega_grid, levels=12)
-    cbar = fig.colorbar(c, ax=ax, label=r"$\omega_\mathbf{k} a/c$")
+    cbar = fig.colorbar(
+        c, ax=ax, label=r"$\omega_\mathbf{k} a/c$", shrink=0.45, aspect=20, pad=-0.3
+    )
     assert isinstance(cbar.formatter, mpl_ticker.ScalarFormatter)
     cbar.formatter.set_powerlimits((0, 0))
     ax.contour(
-        k_x_grid, k_y_grid, omega_grid, levels=[omega_0], colors="k", linewidths=2
+        k_x_grid, k_y_grid, omega_grid, levels=[omega_0], colors="k", linewidths=0.8
     )
     ax.set(
         xlabel=r"$k_x a/2\pi$",
@@ -866,46 +905,28 @@ def plot_emitter_time_evolution(
     S_t_1 = mf.binary_entropy(mod_Ce_sq_t_1)
     S_t_2 = mf.binary_entropy(mod_Ce_sq_t_2)
 
-    fig, ax = plt.subplots()
-    (l1,) = ax.plot(
+    fig, ax = plt.subplots(figsize=FIGSIZE_WIDE)
+    ax.plot(
         ts,
         mod_Ce_sq_t_1,
-        lw=3,
         color=DIP_COLORS[0],
-        label=r"$|C_e(t)|^2$, $\theta_1 = 90$°",
+        label=r"$\theta_1 = 90$°",
     )
-    (l2,) = ax.plot(
+    ax.plot(
         ts,
         mod_Ce_sq_t_2,
-        lw=2,
         color=DIP_COLORS[1],
         alpha=0.9,
-        label=r"$|C_e(t)|^2$, $\theta_2 = 135$°",
+        label=r"$\theta_2 = 135$°",
     )
     ax.set(xlabel=r"$t \Gamma_0$", ylabel=r"$|C_e(t)|^2$", yscale="log")
 
     ax2 = ax.twinx()
-    (l3,) = ax2.plot(
-        ts,
-        S_t_1,
-        ls="--",
-        color=DIP_COLORS[0],
-        lw=3,
-        label=r"$S(t)$, $\theta_1 = 90$°",
-    )
-    (l4,) = ax2.plot(
-        ts,
-        S_t_2,
-        ls="--",
-        color=DIP_COLORS[1],
-        alpha=0.9,
-        lw=2.0,
-        label=r"$S(t)$, $\theta_2 = 135$°",
-    )
+    ax2.plot(ts, S_t_1, ls="--", color=DIP_COLORS[0])
+    ax2.plot(ts, S_t_2, ls="--", color=DIP_COLORS[1], alpha=0.9)
     ax2.set(ylabel=r"$S(t)$")
 
-    lines = [l1, l4]
-    ax.legend(lines, [str(line.get_label()) for line in lines])
+    ax.legend(loc="upper right")
 
     fig.savefig(f"./figures/kimble/emitter_timeevolution_entropy_at_{r_0}.svg")
     plt.close(fig)
@@ -919,7 +940,7 @@ def plot_quadrant_entropy(
     r_0: list[float],
 ) -> None:
     """Plot and save the quadrant directional entropy vs time for both dipole orientations."""
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=FIGSIZE_WIDE)
 
     ax.plot(
         ts[1:],
@@ -940,6 +961,7 @@ def plot_quadrant_entropy(
     trans = ax.get_yaxis_transform()
     for val, label, ls in [
         (np.log(4), r"$\ln 4$", "--"),
+        (np.log(3), r"$\ln 3$", "-."),
         (np.log(2), r"$\ln 2$", ":"),
     ]:
         ax.axhline(val, color="gray", lw=1, ls=ls, zorder=0)
@@ -1014,10 +1036,17 @@ def plot_bath_snapshot(
     exp = int(np.floor(np.log10(cbar_max))) if cbar_max > 0 else 0
 
     for i, (theta, z) in enumerate(zip(THETAS, [z1, z2])):
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE_CBAR)
         sc = ax.pcolormesh(pos_x, pos_y, z, vmin=0, vmax=cbar_max)
         mf.draw_arrow(
-            ax, r_0, theta, color=DIP_COLORS[i], length=17.5, arrow_offset=1.75
+            ax,
+            r_0,
+            theta,
+            color=DIP_COLORS[i],
+            length=17.5,
+            arrow_offset=1.75,
+            lw=0.8,
+            mutation_scale=5,
         )
         pml_boundary = N_CELLS // 2 - N_PML + 0.5
         ax.add_patch(
@@ -1027,7 +1056,7 @@ def plot_bath_snapshot(
                 2 * pml_boundary,
                 fill=False,
                 edgecolor="white",
-                linewidth=1.5,
+                linewidth=0.6,
                 linestyle="--",
             )
         )
@@ -1035,7 +1064,8 @@ def plot_bath_snapshot(
             sc,
             ax=ax,
             label=rf"$|C_\mathbf{{R}}(t)|^2 \; [\times 10^{{{exp}}}]$",
-            pad=0.1,
+            shrink=0.6,
+            aspect=20,
         )
         cbar.formatter = mpl_ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
         cbar.update_ticks()
@@ -1264,10 +1294,28 @@ def plot_probe_bath_snapshot(
     exp = int(np.floor(np.log10(cbar_max))) if cbar_max > 0 else 0
 
     for i, (theta, z) in enumerate(zip(THETAS, [new_z1, new_z2]), start=1):
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE_CBAR)
         sc = ax.pcolormesh(pos_x, pos_y, z, vmin=0, vmax=cbar_max)
-        mf.draw_arrow(ax, NEW_R, NEW_THETA, NEW_DIP_COLOR, length=5, arrow_offset=0.5)
-        mf.draw_arrow(ax, r_0, theta, DIP_COLORS[i - 1], length=5, arrow_offset=0.5)
+        mf.draw_arrow(
+            ax,
+            NEW_R,
+            NEW_THETA,
+            NEW_DIP_COLOR,
+            length=5,
+            arrow_offset=0.5,
+            lw=0.8,
+            mutation_scale=5,
+        )
+        mf.draw_arrow(
+            ax,
+            r_0,
+            theta,
+            DIP_COLORS[i - 1],
+            length=5,
+            arrow_offset=0.5,
+            lw=0.8,
+            mutation_scale=5,
+        )
         pml_boundary = N_CELLS // 2 - N_PML + 0.5
         ax.add_patch(
             mpl_patches.Rectangle(
@@ -1276,7 +1324,7 @@ def plot_probe_bath_snapshot(
                 2 * pml_boundary,
                 fill=False,
                 edgecolor="white",
-                linewidth=1.5,
+                linewidth=0.6,
                 linestyle="--",
             )
         )
@@ -1284,6 +1332,8 @@ def plot_probe_bath_snapshot(
             sc,
             ax=ax,
             label=rf"$|C_\mathbf{{r}}(t)|^2 \; [\times 10^{{{exp}}}]$",
+            shrink=0.6,
+            aspect=20,
         )
         cbar.formatter = mpl_ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
         cbar.update_ticks()
@@ -1337,7 +1387,7 @@ def plot_probe_time_evolution(
     C_max = max(C_ts[0].max(), C_ts[1].max())
 
     for i, theta in enumerate(THETAS):
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=FIGSIZE_WIDE)
         ax.plot(ts, mod_Ce_excited_sq[i], c=DIP_COLORS[i])
         ax.plot(ts, mod_Ce_probe_sq[i], c=NEW_DIP_COLOR)
 
