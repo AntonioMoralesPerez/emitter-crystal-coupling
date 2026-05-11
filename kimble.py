@@ -912,6 +912,51 @@ def plot_emitter_time_evolution(
     return S_t_1, S_t_2
 
 
+def plot_quadrant_entropy(
+    ts: np.ndarray,
+    S_1: np.ndarray,
+    S_2: np.ndarray,
+    r_0: list[float],
+) -> None:
+    """Plot and save the quadrant directional entropy vs time for both dipole orientations."""
+    fig, ax = plt.subplots()
+
+    ax.plot(
+        ts[1:],
+        S_1[1:],
+        color=DIP_COLORS[0],
+        lw=3,
+        label=rf"$\theta = {np.rad2deg(THETA_1):.0f}$°",
+    )
+    ax.plot(
+        ts[1:],
+        S_2[1:],
+        color=DIP_COLORS[1],
+        lw=2,
+        alpha=0.9,
+        label=rf"$\theta = {np.rad2deg(THETA_2):.0f}$°",
+    )
+
+    trans = ax.get_yaxis_transform()
+    for val, label, ls in [
+        (np.log(4), r"$\ln 4$", "--"),
+        (np.log(2), r"$\ln 2$", ":"),
+    ]:
+        ax.axhline(val, color="gray", lw=1, ls=ls, zorder=0)
+        ax.text(0.98, val, f" {label}", color="gray", fontsize=9,
+                va="bottom", ha="right", transform=trans)
+
+    ax.set(
+        xlabel=r"$t\Gamma_0$",
+        ylabel=r"$S_{\rm dir}(t)$",
+        ylim=(0, np.log(4) * 1.2),
+    )
+    ax.legend(loc="lower right")
+
+    fig.savefig(f"./figures/kimble/quadrant_entropy_at_{r_0}.svg")
+    plt.close(fig)
+
+
 def plot_bath_snapshot(
     pos_x: np.ndarray,
     pos_y: np.ndarray,
@@ -1075,15 +1120,7 @@ Cr_t_2 = psi_t_2[:, N_EMITTERS:]
 S_1, p_1 = mf.quadrant_entropy(rs_finite[:, 0], rs_finite[:, 1], Cr_t_1)
 S_2, p_2 = mf.quadrant_entropy(rs_finite[:, 0], rs_finite[:, 1], Cr_t_2)
 
-check_1 = np.allclose(S_1[1:], np.log(4), atol=1e-3)
-check_2 = np.allclose(S_2[1:], np.log(2), atol=1e-3)
-
-print(
-    rf"Is $S_{{dir}}$ equal to $\log(4)$ for $\theta = {np.rad2deg(THETA_1):.0f}º$? {check_1}, $S_1 = {S_1}$."
-)
-print(
-    rf"Is $S_{{dir}}$ equal to $\log(2)$ for $\theta = {np.rad2deg(THETA_2):.0f}º$? {check_2}, $S_2 = {S_2}$."
-)
+plot_quadrant_entropy(ts_norm, S_1, S_2, R_0)
 
 # ------------------------------------------------------------------------------
 # Probe emitter: directional emission and concurrence
