@@ -93,7 +93,8 @@ LAT_PARAM: float = 300e-9  # lattice parameter [m]
 N_BANDS: int = 2
 BAND_IDX: int = 0  # band index (0-based)
 N_K: int = 81  # k-points per direction in Monkhorst-Pack grid
-EPSILON_INPUT_FILE: str = "data/kimble/epsilon.h5"
+RESOLUTION: int = 128  # MPB grid resolution (must match a precomputed epsilon file)
+EPSILON_INPUT_FILE: str = f"./data/kimble/{RESOLUTION}-epsilon.h5"
 # NOTE: N_K is also used to identify the file where the fields are stored.
 
 # Emitter parameters
@@ -161,7 +162,6 @@ MY_RED: str = "#d62728"
 # ------------------------------------------------------------------------------
 
 EPSILON_DATA: dict = mf.read_epsilon_file(EPSILON_INPUT_FILE)
-RESOLUTION: int = EPSILON_DATA["resolution"]
 LATTICE_VECS: list = EPSILON_DATA["lattice_vectors"]
 LATTICE_SIZE: list = EPSILON_DATA["lattice_size"]
 
@@ -943,8 +943,16 @@ def plot_quadrant_entropy(
         (np.log(2), r"$\ln 2$", ":"),
     ]:
         ax.axhline(val, color="gray", lw=1, ls=ls, zorder=0)
-        ax.text(0.98, val, f" {label}", color="gray", fontsize=9,
-                va="bottom", ha="right", transform=trans)
+        ax.text(
+            0.98,
+            val,
+            f" {label}",
+            color="gray",
+            fontsize=9,
+            va="bottom",
+            ha="right",
+            transform=trans,
+        )
 
     ax.set(
         xlabel=r"$t\Gamma_0$",

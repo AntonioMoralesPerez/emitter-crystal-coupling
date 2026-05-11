@@ -1,28 +1,31 @@
 """
-    Docstring for mpb_fields_plot.py
+Visualize MPB electric fields at an emitter position in reciprocal and real space.
 
-This file is used for plotting the coupling in real space for the already computed
-fields at such position. The main purpose is to see where the maximum coupling
-strength is located in real space and its overall shape.
+Three sections:
+  1. Reciprocal space — amplitude and phase of Ex, Ey as scatter plots over k;
+     total field amplitude; real/imaginary vector field quiver plots.
+  2. Real space — discrete inverse Bloch transform via `compute_fr0rs` to obtain
+     E_{n,R}(r_0); real/imaginary quiver plots over lattice translations.
+  3. Unit-cell profile — field structure inside the first unit cell summed over k.
 
-NOTE: use the file `mpb_field_computation.py` for obtaining the fields before
-executing this file.
+Run from the `miscellaneous/` directory. Requires precomputed MPB fields in
+`data/kimble/fields/`. If absent, run `mpb_field_computation.py` first.
 """
 
-import numpy as np
-
 # some imports for plotting utilities
+import warnings
+
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
+import numpy as np
 
 import emitter_crystal_coupling as mf  # our package functions to work with
 
 # %% Define the main constants and parameters for the current simulation
-NK = 64  # number of points per direction for the Monkhorst-Pack grid
+NK = 81  # number of points per direction for the Monkhorst-Pack grid
 
 # Position of the quantum emitter in units of the lattice constant 'a'
 # list of positions are also allowed
-R0 = [0.0, 0.0]
+R0 = [0, 0]
 
 BAND_INDEX = 0  # index of the band to consider (0-based)
 
@@ -32,7 +35,7 @@ BAND_INDEX = 0  # index of the band to consider (0-based)
 
 # Load the fields and k-points from the MPB calculation
 # This file was generated previously
-data = mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_{R0}.pkl")
+data = mf.load(f"../data/kimble/fields/{NK}_meshgrid_at_{R0}.pkl")
 
 # Extract relevant quantities
 Eks = np.asarray(data["Eks"])  # Electric fields, shape: (Nr, Nb, Nk, 3)
@@ -84,7 +87,7 @@ axs[1, 1].set_title(r"$\arg(E_{y,\mathbf{k}}(\mathbf{r}_0))$")
 fig.tight_layout(h_pad=2)
 plt.show()
 fig.savefig(
-    f"./figures/miscellaneous/{R0}_phase_amplitude_fields_reciprocal_space_.png"
+    f"../figures/miscellaneous/{R0}_phase_amplitude_fields_reciprocal_space_.png"
 )
 
 # ------------------------------------------------------------------------------
@@ -107,7 +110,7 @@ ax.set(
 
 fig.tight_layout()
 plt.show()
-fig.savefig(f"./figures/miscellaneous/{R0}_total_amplitude_field_reciprocal_space.png")
+fig.savefig(f"../figures/miscellaneous/{R0}_total_amplitude_field_reciprocal_space.png")
 
 # ------------------------------------------------------------------------------
 # Plot the electric field profile at r₀ in `k` space as a vector field
@@ -129,7 +132,7 @@ axs[1].set_title(r"$\Im(\mathbf{E}_\mathbf{k}(\mathbf{r}_0))$")
 
 fig.tight_layout()
 plt.show()
-fig.savefig(f"./figures/miscellaneous/{R0}_field_reciprocal_space.png")
+fig.savefig(f"../figures/miscellaneous/{R0}_field_reciprocal_space.png")
 
 # ---------------------------------------------------------------------------- #
 # Define the real-space grid. Here you must pick a set of lattice translations
@@ -151,7 +154,7 @@ def pad_to_3d(array: np.ndarray) -> np.ndarray:
 rjpts = pad_to_3d(rjpts)
 
 # ---------------------------------------------------------------------------- #
-# Compute E_r(r0), shape (Nr, 3)
+# Compute E_r(r0), shape (Nb, Nr, 3)
 # ---------------------------------------------------------------------------- #
 E_rjs_r0 = mf.compute_fr0rs(E_ks_r0, kpts, rjpts)
 
@@ -163,8 +166,30 @@ if not np.allclose(E_rjs_r0[:, :, 2], 0):
 E_rjs_r0_band = E_rjs_r0[BAND_INDEX]
 
 # ------------------------------------------------------------------------------
-# plot the different couplings for the different dipole moments
+# Symmetry check: along the y-axis (x = 0), E_y should vanish. The residual
+# is a discretization-limited artefact (scales like 1/RESOLUTION²), so warn
+# rather than abort.
 # ------------------------------------------------------------------------------
+on_y_axis = np.isclose(rjpts[:, 0], 0)
+if on_y_axis.any():
+    Ey_on_y_axis = E_rjs_r0_band[on_y_axis, 1]
+    if not np.allclose(Ey_on_y_axis, 0):
+        warnings.warn(
+            f"E_y is not zero along the y-axis: "
+            f"max |E_y| = {np.max(np.abs(Ey_on_y_axis)):.3e}.",
+            stacklevel=2,
+        )
+
+# ------------------------------------------------------------------------------
+# Plot E_R(r0) in real space as a vector field
+# ------------------------------------------------------------------------------
+# Shared scale so Re and Im subplots are visually comparable. With
+# scale_units="xy", a max-magnitude arrow has length ≈ 1 lattice unit.
+arrow_scale = max(
+    np.abs(np.real(E_rjs_r0_band[:, :2])).max(),
+    np.abs(np.imag(E_rjs_r0_band[:, :2])).max(),
+)
+
 fig, axs = plt.subplots(1, 2)
 
 axs[0].quiver(
@@ -173,7 +198,9 @@ axs[0].quiver(
     np.real(E_rjs_r0_band[:, 0]),
     np.real(E_rjs_r0_band[:, 1]),
     color="r",
-    scale=7e-4,
+    angles="xy",
+    scale_units="xy",
+    scale=arrow_scale,
 )
 axs[1].quiver(
     rjpts[:, 0],
@@ -181,7 +208,9 @@ axs[1].quiver(
     np.imag(E_rjs_r0_band[:, 0]),
     np.imag(E_rjs_r0_band[:, 1]),
     color="r",
-    scale=3,
+    angles="xy",
+    scale_units="xy",
+    scale=arrow_scale,
 )
 
 for ax in axs:
@@ -196,52 +225,4 @@ axs[1].set_title(r"$\Im(\mathbf{E}_\mathbf{R}(\mathbf{r}_0))$")
 
 fig.tight_layout()
 plt.show()
-fig.savefig(f"./figures/miscellaneous/{R0}_fields_real_space.png")
-
-# ------------------------------------------------------------------------------
-# let us analyze the field structure inside the unit cell
-# ------------------------------------------------------------------------------
-
-# Load the fields and k-points from the MPB calculation
-# This file was generated previously
-data = mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_whole_unitcell.pkl")
-
-# Extract relevant quantities
-Eks = np.asarray(data["Eks"])  # Electric fields, shape: (Nr, Nb, Nk, 3)
-kpts = np.asarray(data["kpts"])  # k-points in cartesian coordinates, shape: (Nk, 3)
-rpts = np.asarray(data["r0pts"])
-
-# take the field for the band of interest
-# NOTE: for the previously specified data we computed for a 10x10 mesh in the unit
-#       cell and only one band
-E_krs = Eks[:, BAND_INDEX, :, :]  # Shape: (Nr, Nk, 3)
-
-if not np.allclose(E_krs[:, :, 2], 0):
-    raise ValueError(
-        "The z-component of the field is not zero. Not considered in this script."
-    )
-
-E_rs = np.sum(
-    E_krs, axis=1
-)  # sum over `k` to obtain the electric field in the first unit cell, shape (Nr, 2)
-
-# plot the electric field profile in the unit cell to see how it looks
-
-fig, ax = plt.subplots()
-
-qv = ax.quiver(
-    rpts[:, 0],
-    rpts[:, 1],
-    np.abs(E_rs[:, 0]),
-    np.abs(E_rs[:, 1]),
-    color="r",
-    scale_units="xy",
-    angles="xy",
-)
-
-ax.grid()
-ax.set(xlabel=r"$x/a$", ylabel=r"$y/a$", title="Electric field profile", aspect="equal")
-
-fig.tight_layout()
-plt.show()
-fig.savefig("./figures/miscellaneous/field_inside_unitcell.png")
+fig.savefig(f"../figures/miscellaneous/{R0}_fields_real_space.png")
