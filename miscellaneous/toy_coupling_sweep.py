@@ -8,13 +8,15 @@ and records max_t C(t).
 Parameters and conventions match kimble_toy.py.
 """
 
-import numpy as np
-import matplotlib.pyplot as plt
-import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
-from scipy.sparse import csr_matrix, diags, bmat
+from typing import Optional, cast
 
-import src as mf
+import matplotlib.pyplot as plt
+import numpy as np
+import pythtb as tb
+from scipy.sparse import bmat, csr_matrix, diags
+from scipy.sparse.linalg import expm_multiply
+
+import emitter_crystal_coupling as mf
 
 # %% Parameters (matching kimble_toy.py)
 
@@ -96,7 +98,9 @@ def build_toy_hamiltonian(
         dtype=complex,
     )
 
-    return bmat([[h_emitter, h_int], [h_int.getH(), h_bath]], format="csr")
+    return cast(
+        csr_matrix, bmat([[h_emitter, h_int], [h_int.getH(), h_bath]], format="csr")
+    )
 
 
 # %% Build tight-binding model and detuning
@@ -127,7 +131,9 @@ ts = np.linspace(T_0, T_F, T_STEPS, endpoint=True)
 # %% G sweep
 # results[i] = (Ce_sq, Cp_sq, C_t) arrays of shape (T_STEPS,)
 
-results = [None] * len(G_VALUES)
+results: list[Optional[tuple[np.ndarray, np.ndarray, np.ndarray]]] = [None] * len(
+    G_VALUES
+)
 
 for i, g in enumerate(G_VALUES):
     H = build_toy_hamiltonian(
@@ -137,6 +143,7 @@ for i, g in enumerate(G_VALUES):
         pml_dampings=pml_dampings,
     )
 
+    assert H.shape is not None
     psi0 = np.zeros(H.shape[0])
     psi0[0] = 1
     psit = expm_multiply(-1j * H, psi0, T_0, T_F, T_STEPS, endpoint=True)
@@ -156,7 +163,9 @@ sweep_colors = [cmap(i / (len(G_VALUES) - 1)) for i in range(len(G_VALUES))]
 fig, (ax_e, ax_p, ax_c) = plt.subplots(1, 3, figsize=(12, 4), sharex=True)
 
 for i, (g, color) in enumerate(zip(G_VALUES, sweep_colors)):
-    ce_sq, cp_sq, c_t = results[i]
+    res_i = results[i]
+    assert res_i is not None
+    ce_sq, cp_sq, c_t = res_i
     label = rf"${g:g}$"
     ax_e.plot(ts, ce_sq, color=color, label=label)
     ax_p.plot(ts, cp_sq, color=color, label=label)
@@ -180,7 +189,7 @@ plt.show()
 
 # %% Summary plot: max C(t) vs. G/|J_1|
 
-max_c = [results[i][2].max() for i in range(len(G_VALUES))]
+max_c = [r[2].max() for r in results if r is not None]
 
 best_idx = int(np.argmax(max_c))
 best_g = G_VALUES[best_idx]

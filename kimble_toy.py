@@ -24,19 +24,21 @@ this script:
 """
 
 # Standard library
-from scipy.sparse.linalg import expm_multiply  # time-dependent Schrödinger equation
-from scipy.sparse import csr_matrix, diags, bmat
+from typing import cast
+
+import matplotlib as mpl
+import matplotlib.patches as mpl_patches
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mpl_ticker
 
 # Third-party
 import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.colors as colors
 import pythtb as tb  # tight-binding model
+from scipy.sparse import bmat, csr_matrix, diags
+from scipy.sparse.linalg import expm_multiply  # time-dependent Schrödinger equation
 
 # Local
-import src as mf
-
+import emitter_crystal_coupling as mf
 
 # ------------------------------------------------------------------------------
 # Matplotlib configuration
@@ -232,7 +234,7 @@ def plot_band_structure(
 # Run band structure computation
 infinite_model = build_tight_binding_model()
 k_vec, k_dist, k_node = infinite_model.k_path(K_PATH, N_K_PATH, report=False)
-tb_evals = infinite_model.solve_all(k_vec)
+tb_evals: np.ndarray = np.asarray(infinite_model.solve_all(k_vec))
 
 omega_0 = compute_detuning_frequency(tb_evals, k_dist, k_node)
 print(f"Detuning energy at X point: omega_0 = {omega_0:.6f} |J_1|")
@@ -261,12 +263,13 @@ def compute_and_plot_isofrequency(model: tb.tb_model, omega_0: float) -> None:
     k_x_grid, k_y_grid = np.meshgrid(k_x, k_y, indexing="ij")
 
     ks_grid_flat = np.column_stack((k_x_grid.ravel(), k_y_grid.ravel()))
-    tb_evals_grid = np.array([model.solve_one(k)[0] for k in ks_grid_flat])
+    tb_evals_grid = np.array([np.asarray(model.solve_one(k))[0] for k in ks_grid_flat])
     omega_grid = tb_evals_grid.reshape(N_K_PATH, N_K_PATH)
 
     fig, ax = plt.subplots()
     c = ax.contourf(k_x_grid, k_y_grid, omega_grid, levels=12)
     cbar = fig.colorbar(c, ax=ax, label=r"$\varepsilon_\mathbf{k} \, [|J_1|]$")
+    assert isinstance(cbar.formatter, mpl_ticker.ScalarFormatter)
     cbar.formatter.set_powerlimits((0, 0))
     ax.contour(
         k_x_grid, k_y_grid, omega_grid, levels=[omega_0], colors=MY_RED, linewidths=2
@@ -416,7 +419,9 @@ def build_toy_hamiltonian(
     n_emitters = len(couplings)
 
     if np.isscalar(omega_0s):
-        omega_0s = [omega_0s] * n_emitters
+        omega_0s_list: list[float] = cast(list[float], [omega_0s] * n_emitters)
+    else:
+        omega_0s_list = cast(list[float], omega_0s)
 
     # Build TB Hamiltonian Θ from private PythTB attributes (no public API)
     # NOTE: pin PythTB version if _site_energies or _hoppings are renamed.
@@ -434,7 +439,7 @@ def build_toy_hamiltonian(
         h_bath = h_bath - 1j * diags(pml_dampings, format="csr")
 
     h_emitter = diags(
-        np.asarray(omega_0s, dtype=complex),
+        np.asarray(omega_0s_list, dtype=complex),
         offsets=0,
         shape=(n_emitters, n_emitters),
         format="csr",
@@ -450,7 +455,9 @@ def build_toy_hamiltonian(
         dtype=complex,
     )
 
-    return bmat([[h_emitter, h_int], [h_int.getH(), h_bath]], format="csr")
+    return cast(
+        csr_matrix, bmat([[h_emitter, h_int], [h_int.getH(), h_bath]], format="csr")
+    )
 
 
 # ------------------------------------------------------------------------------
@@ -509,6 +516,7 @@ def compute_time_evolution(
         pml_dampings=pml_dampings,
     )
 
+    assert H.shape is not None
     psi_0 = np.zeros(H.shape[0])
     psi_0[0] = 1
 
@@ -548,7 +556,7 @@ def plot_emitter_time_evolution(
     (l2,) = ax2.plot(ts, S_t, ls="--", color=MY_BLUE, lw=2, label=r"$S(t)$")
     ax2.set(ylabel=r"$S(t)$")
 
-    ax.legend([l1, l2], [l1.get_label(), l2.get_label()])
+    ax.legend([l1, l2], [str(l1.get_label()), str(l2.get_label())])
 
     fig.savefig(f"./figures/kimble_toy/emitter_timeevolution_entropy_at_{r_0}.svg")
     plt.close(fig)
@@ -603,7 +611,7 @@ def plot_bath_snapshot(
     )
     pml_boundary = N_CELLS // 2 - N_PML + 0.5
     ax.add_patch(
-        mpl.patches.Rectangle(
+        mpl_patches.Rectangle(
             (-pml_boundary, -pml_boundary),
             2 * pml_boundary,
             2 * pml_boundary,
@@ -619,7 +627,7 @@ def plot_bath_snapshot(
         label=rf"$|C_\mathbf{{R}}(t)|^2 \; [\times 10^{{{exp}}}]$",
         pad=0.1,
     )
-    cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+    cbar.formatter = mpl_ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
     cbar.update_ticks()
     ax.set(
         xlabel=r"$x/a$",
@@ -721,6 +729,7 @@ def compute_probe_emitter_evolution(
         pml_dampings=pml_dampings,
     )
 
+    assert H.shape is not None
     psi_0 = np.zeros(H.shape[0])
     psi_0[0] = 1
 
@@ -773,7 +782,7 @@ def plot_probe_bath_snapshot(
     )
     pml_boundary = N_CELLS // 2 - N_PML + 0.5
     ax.add_patch(
-        mpl.patches.Rectangle(
+        mpl_patches.Rectangle(
             (-pml_boundary, -pml_boundary),
             2 * pml_boundary,
             2 * pml_boundary,
@@ -788,7 +797,7 @@ def plot_probe_bath_snapshot(
         ax=ax,
         label=rf"$|C_\mathbf{{r}}(t)|^2 \; [\times 10^{{{exp}}}]$",
     )
-    cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+    cbar.formatter = mpl_ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
     cbar.update_ticks()
     ax.set(
         xlabel=r"$x/a$",

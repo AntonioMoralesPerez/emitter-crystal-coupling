@@ -16,18 +16,20 @@ kimble_toy.py  →  Step A  →  Step B (this)  →  kimble.py
 """
 
 # Standard library
-from scipy.sparse.linalg import expm_multiply
+import matplotlib as mpl
+import matplotlib.colors as colors
+import matplotlib.patches as mpl_patches
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mpl_ticker
 
 # Third-party
 import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.colors as colors
 import pythtb as tb
+from scipy.sparse.linalg import expm_multiply
 
 # Local
-import src as mf
-
+import emitter_crystal_coupling as mf
+from emitter_crystal_coupling.constants import C_LIGHT
 
 # ------------------------------------------------------------------------------
 # Matplotlib configuration
@@ -76,7 +78,7 @@ N_K: int = 64
 THETA_1: float = 90 * np.pi / 180  # [rad]
 THETA_2: float = 135 * np.pi / 180  # [rad]
 DIP_STRENGTH: float = 7000  # dipole moment [Debye]
-P_A: float = mf.unit_dip(a=LAT_PARAM)
+P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 N_EMITTERS: int = 1
 R_0: list = [0.0, 0.0]
@@ -189,12 +191,15 @@ def compute_and_plot_isofrequency(model: tb.tb_model, omega_0: float) -> None:
     k_x_grid, k_y_grid = np.meshgrid(k_x, k_y, indexing="ij")
 
     ks_grid_flat = np.column_stack((k_x_grid.ravel(), k_y_grid.ravel()))
-    tb_evals_grid = np.array([model.solve_one(k)[BAND_IDX] for k in ks_grid_flat])
+    tb_evals_grid = np.array(
+        [np.asarray(model.solve_one(k))[BAND_IDX] for k in ks_grid_flat]
+    )
     omega_grid = mf.safe_sqrt(tb_evals_grid).reshape(N_K_PATH, N_K_PATH)
 
     fig, ax = plt.subplots()
     c = ax.contourf(k_x_grid, k_y_grid, omega_grid, levels=12)
     cbar = fig.colorbar(c, ax=ax, label=r"$\omega_\mathbf{k} \, [c/a]$")
+    assert isinstance(cbar.formatter, mpl_ticker.ScalarFormatter)
     cbar.formatter.set_powerlimits((0, 0))
     ax.contour(
         k_x_grid, k_y_grid, omega_grid, levels=[omega_0], colors=MY_RED, linewidths=2
@@ -206,7 +211,7 @@ def compute_and_plot_isofrequency(model: tb.tb_model, omega_0: float) -> None:
 
 infinite_model = build_tight_binding_model()
 k_vec, k_dist, k_node = infinite_model.k_path(K_PATH, N_K_PATH, report=False)
-tb_evals = infinite_model.solve_all(k_vec)
+tb_evals: np.ndarray = np.asarray(infinite_model.solve_all(k_vec))
 omega_0 = compute_detuning_frequency(tb_evals, k_dist, k_node)
 print(f"Detuning frequency at X point (NN): omega_0 = {omega_0:.6f} c/a")
 
@@ -320,10 +325,12 @@ pml_dampings = compute_pml_dampings(rs_finite, N_CELLS, N_PML, GAMMA_MAX)
 # Γ₀ and time conversion
 # ------------------------------------------------------------------------------
 
-gamma_0 = mf.free_spontaneous_emission(
-    omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
+gamma_0: float = float(
+    mf.free_spontaneous_emission(
+        omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
+    )
 )
-_t_conv = LAT_PARAM / mf.constants.C_LIGHT * gamma_0
+_t_conv = LAT_PARAM / C_LIGHT * gamma_0
 T_0 /= _t_conv
 T_F /= _t_conv
 NEW_T_F /= _t_conv
@@ -371,8 +378,8 @@ def compute_time_evolution(
     couplings = [gr0_n_rs[BAND_IDX, :] for gr0_n_rs in gr0_n_rs_list]
 
     idxs = np.arange(len(couplings[0]))
-    interaction_1 = [[list(couplings[0]), list(idxs)]]
-    interaction_2 = [[list(couplings[1]), list(idxs)]]
+    interaction_1 = [(list(couplings[0]), list(idxs))]
+    interaction_2 = [(list(couplings[1]), list(idxs))]
 
     H_1, _ = mf.make_light_matter_Hamiltonian(
         tb_model=finite_model,
@@ -387,6 +394,7 @@ def compute_time_evolution(
         pml_dampings=pml_dampings,
     )
 
+    assert H_1.shape is not None
     psi_0 = np.zeros(H_1.shape[0])
     psi_0[0] = 1
 
@@ -448,7 +456,7 @@ def plot_emitter_time_evolution(
     ax2.set(ylabel=r"$S(t)$")
 
     lines = [l1, l4]
-    ax.legend(lines, [line.get_label() for line in lines])
+    ax.legend(lines, [str(line.get_label()) for line in lines])
 
     fig.savefig(f"./figures/kimble_step_b/emitter_timeevolution_entropy_at_{r_0}.svg")
     plt.close(fig)
@@ -481,7 +489,7 @@ def plot_bath_snapshot(
         )
         pml_boundary = N_CELLS // 2 - N_PML + 0.5
         ax.add_patch(
-            mpl.patches.Rectangle(
+            mpl_patches.Rectangle(
                 (-pml_boundary, -pml_boundary),
                 2 * pml_boundary,
                 2 * pml_boundary,
@@ -497,7 +505,7 @@ def plot_bath_snapshot(
             label=rf"$|C_\mathbf{{R}}(t)|^2 \; [\times 10^{{{exp}}}]$",
             pad=0.1,
         )
-        cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+        cbar.formatter = mpl_ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
         cbar.update_ticks()
         ax.set(
             xlabel=r"$x/a$",
@@ -578,12 +586,12 @@ def compute_probe_emitter_evolution(
     idxs = np.arange(len(couplings[0]))
 
     new_interaction_1 = [
-        [list(couplings[0]), list(idxs)],
-        [list(new_coupling), list(idxs)],
+        (list(couplings[0]), list(idxs)),
+        (list(new_coupling), list(idxs)),
     ]
     new_interaction_2 = [
-        [list(couplings[1]), list(idxs)],
-        [list(new_coupling), list(idxs)],
+        (list(couplings[1]), list(idxs)),
+        (list(new_coupling), list(idxs)),
     ]
 
     new_H_1, _ = mf.make_light_matter_Hamiltonian(
@@ -599,6 +607,7 @@ def compute_probe_emitter_evolution(
         pml_dampings=pml_dampings,
     )
 
+    assert new_H_1.shape is not None
     new_psi_0 = np.zeros(new_H_1.shape[0])
     new_psi_0[0] = 1
 
@@ -635,7 +644,7 @@ def plot_probe_bath_snapshot(
         mf.draw_arrow(ax, r_0, theta, DIP_COLORS[i - 1], length=5, arrow_offset=0.5)
         pml_boundary = N_CELLS // 2 - N_PML + 0.5
         ax.add_patch(
-            mpl.patches.Rectangle(
+            mpl_patches.Rectangle(
                 (-pml_boundary, -pml_boundary),
                 2 * pml_boundary,
                 2 * pml_boundary,
@@ -650,7 +659,7 @@ def plot_probe_bath_snapshot(
             ax=ax,
             label=rf"$|C_\mathbf{{r}}(t)|^2 \; [\times 10^{{{exp}}}]$",
         )
-        cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+        cbar.formatter = mpl_ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
         cbar.update_ticks()
         ax.set(
             xlabel=r"$x/a$",

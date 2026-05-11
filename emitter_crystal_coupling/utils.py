@@ -1,16 +1,18 @@
 import os
 import pickle
-import numpy as np
+from collections.abc import Sequence
+from typing import Any
+
 import h5py
 import meep as mp
 import meep.mpb as mpb
-
-from .constants import E_CHARGE, C_LIGHT, H_BAR, EPSILON_0
-
+import numpy as np
 from matplotlib.axes import Axes
 
+from .constants import C_LIGHT, E_CHARGE, EPSILON_0, H_BAR
 
-def save(data_dict: dict[str, any], filename: str, dirname: str = "") -> None:
+
+def save(data_dict: dict[str, Any], filename: str, dirname: str = "") -> None:
     """
     Save a dictionary of Python objects to a pickle file.
 
@@ -61,7 +63,7 @@ def save(data_dict: dict[str, any], filename: str, dirname: str = "") -> None:
         raise RuntimeError(f"Failed to save data to '{filename}': {e}") from e
 
 
-def load(filename: str) -> dict[str, any]:
+def load(filename: str) -> dict[str, Any]:
     """
     Load variables from a pickle file into a dictionary.
 
@@ -113,7 +115,7 @@ def arrange_data(
     r0pts_in: np.ndarray,
     freqs_in: np.ndarray,
     lattice_vecs: np.ndarray,
-) -> dict[str, any]:
+) -> dict[str, Any]:
     """
     Arrange photonic crystal field data and points for real-space calculations.
 
@@ -168,8 +170,7 @@ def arrange_data(
     expected_size = n_kpoints * n_bands * n_r
     if fields_in.shape[0] != expected_size or fields_in.shape[1] != 3:
         raise ValueError(
-            f"`fields_in` must have shape ({expected_size}, 3), "
-            f"got {fields_in.shape}."
+            f"`fields_in` must have shape ({expected_size}, 3), got {fields_in.shape}."
         )
 
     # Convert k-points and r0-points to Cartesian coordinates
@@ -201,7 +202,7 @@ def arrange_data(
     }
 
 
-def read_epsilon_file(epsilon_input_file: str) -> dict[str, any]:
+def read_epsilon_file(epsilon_input_file: str) -> dict[str, Any]:
     """
     Read dielectric permittivity (epsilon) data and lattice vectors from an HDF5 file.
 
@@ -266,7 +267,7 @@ def read_epsilon_file(epsilon_input_file: str) -> dict[str, any]:
     }
 
 
-def convert_epsilon(filename: str, md: mpb.MPBData) -> dict[str, any]:
+def convert_epsilon(filename: str, md: mpb.MPBData) -> dict[str, Any]:
     """
     Convert dielectric function data from an HDF5 file to a convenient format
     with positions in lattice and Cartesian coordinates.
@@ -320,8 +321,7 @@ def convert_epsilon(filename: str, md: mpb.MPBData) -> dict[str, any]:
     with h5py.File(filename, "r") as f:
         if "data" not in f or "lattice vectors" not in f:
             raise KeyError(
-                f"File '{filename}' must contain 'data' and "
-                "'lattice vectors' datasets."
+                f"File '{filename}' must contain 'data' and 'lattice vectors' datasets."
             )
         epsilon_data = f["data"][()]  # type: ignore
         lattice_vectors = f["lattice vectors"][()].tolist()  # type: ignore
@@ -642,7 +642,7 @@ def marker_size(n: float) -> float:
 
 def draw_arrow(
     ax: Axes,
-    r0: list[float],
+    r0: Sequence[float],
     angle: float,
     color: str = "r",
     label: str | None = None,
@@ -716,7 +716,7 @@ def draw_arrow(
 
     ax.text(
         *label_pos,
-        label,
+        label if label is not None else "",
         color=color,
         fontsize=fontsize,
         ha="center",
@@ -730,7 +730,7 @@ def draw_arrow(
 # ------------------------------------------------------------------------------
 
 
-def unit_dip(a: float) -> float:
+def unit_dip(a: float) -> float | np.ndarray:
     """
     Compute the dipolar unit for a given lattice parameter.
 
@@ -810,7 +810,9 @@ def mpb2hz(omega_in: float | np.ndarray, a: float) -> float | np.ndarray:
     return omega_in * C_LIGHT / a
 
 
-def free_spontaneous_emission(omega_0: float, dip_strength: float, a: float) -> float:
+def free_spontaneous_emission(
+    omega_0: float, dip_strength: float, a: float
+) -> float | np.ndarray:
     """
     Compute the free-space spontaneous emission rate Gamma_0 of an emitter.
 

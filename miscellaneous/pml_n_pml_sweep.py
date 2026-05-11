@@ -13,16 +13,16 @@ reasonable. Avoid N_PML > N_CELLS // 2.
 """
 
 # Standard library
-from scipy.sparse.linalg import expm_multiply
+import matplotlib.pyplot as plt
 
 # Third-party
 import numpy as np
-import matplotlib.pyplot as plt
 import pythtb as tb
+from scipy.sparse.linalg import expm_multiply
 
 # Local
-import src as mf
-
+import emitter_crystal_coupling as mf
+from emitter_crystal_coupling.constants import C_LIGHT
 
 # ------------------------------------------------------------------------------
 # Fixed simulation parameters (matching kimble.py)
@@ -37,7 +37,7 @@ R_0: list = [0.0, 0.0]
 THETA_1: float = 90 * np.pi / 180
 THETA_2: float = 135 * np.pi / 180
 DIP_STRENGTH: float = 1000  # [Debye]
-P_A: float = mf.unit_dip(a=LAT_PARAM)
+P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 
 LAT: list = [[1, 0], [0, 1]]
@@ -124,7 +124,7 @@ idxs = np.arange(len(couplings[0]))
 gamma_0 = mf.free_spontaneous_emission(
     omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
 )
-_t_conv = LAT_PARAM / mf.constants.C_LIGHT * gamma_0
+_t_conv = LAT_PARAM / C_LIGHT * gamma_0
 t_f_internal = T_F / _t_conv
 ts_norm = _t_conv * np.linspace(0.0, t_f_internal, T_STEPS, endpoint=True)
 
@@ -148,10 +148,11 @@ for n_pml in N_PML_VALUES:
         H, _ = mf.make_light_matter_Hamiltonian(
             tb_model=finite_model,
             omega_0s=omega_0,
-            gr0s_rs=[[list(coupling), list(idxs)]],
+            gr0s_rs=[(list(coupling), list(idxs))],
             pml_dampings=pml_dampings,
         )
         if psi_0 is None:
+            assert H.shape is not None
             psi_0 = np.zeros(H.shape[0])
             psi_0[0] = 1
         psi_t = expm_multiply(-1j * H, psi_0, 0.0, t_f_internal, T_STEPS, endpoint=True)

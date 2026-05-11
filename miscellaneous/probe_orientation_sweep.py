@@ -10,22 +10,23 @@ same PML settings, same time units (1/Γ₀), same TB model.
 NOTE: run mpb_field_computation.py at EXCITED_R and PROBE_R before executing.
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import pythtb as tb
 from scipy.sparse.linalg import expm_multiply
 
-import src as mf
+import emitter_crystal_coupling as mf
+from emitter_crystal_coupling.constants import C_LIGHT
 
 # %% Parameters (matching kimble.py)
 
 LAT_PARAM: float = 300e-9  # lattice parameter [m]
 DIP_STRENGTH: float = 7000  # dipole moment [Debye] — same for both emitters
-P_A: float = mf.unit_dip(a=LAT_PARAM)
+P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 
 BAND_IDX: int = 0
-N_K: int = 101
+N_K: int = 81
 
 EXCITED_R: list = [0, 0]
 EXCITED_THETA: float = 90 * np.pi / 180
@@ -36,7 +37,7 @@ EXCITED_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
 PROBE_R: list = [-5, 5]
 PROBE_DIP_STRENGTH: float = DIP_STRENGTH  # [Debye]
 N_THETAS: int = 21
-PROBE_THETAS: np.ndarray = np.linspace(40, 50, N_THETAS) * np.pi / 180
+PROBE_THETAS: np.ndarray = np.linspace(40, 60, N_THETAS) * np.pi / 180
 
 # Current kimble.py probe orientation — shown as reference on the plot
 KIMBLE_PROBE_THETA: float = np.deg2rad(45)
@@ -45,8 +46,9 @@ LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
 N_CELLS: int = 41
 N_PML: int = 8
-GAMMA_MAX: float = 3e-2
+GAMMA_MAX: float = 3e-2  # [c/a]
 
+# in units of [c/a]
 J_0: float = 0.07755639
 J_1: float = -0.01993698
 J_2: float = 0.00053966
@@ -55,7 +57,7 @@ K_PATH: list = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 N_K_PATH: int = 100
 
 T_F: float = 1e-2  # end time [1/Γ₀]
-T_STEPS: int = 50
+T_STEPS: int = 100
 
 
 # %% Helper
@@ -83,6 +85,37 @@ tb_evals = infinite_model.solve_all(k_vec)
 omega_0 = mf.safe_sqrt(tb_evals[BAND_IDX][np.isclose(k_dist, k_node[1])]).item()
 print(f"omega_0 = {omega_0:.6f} c/a")
 
+# %% Band structure plot
+
+K_LABELS = [r"$\Gamma$", "X", "M", r"$\Gamma$"]
+
+fig_bs, ax_bs = plt.subplots()
+ax_bs.plot(k_dist, mf.safe_sqrt(tb_evals[BAND_IDX]), color="r", linestyle="--")
+ax_bs.hlines(
+    omega_0,
+    xmin=k_dist[0],
+    xmax=k_dist[-1],
+    color="k",
+    linestyle="--",
+    alpha=0.5,
+    label=rf"$\omega_0 = {omega_0:.4f}$ $c/a$",
+)
+ax_bs.set(
+    xlim=(k_node[0], k_node[-1]),
+    xticks=k_node,
+    xticklabels=K_LABELS,
+    ylabel=r"$\omega \, [c/a]$",
+    title="TB band structure",
+)
+ax_bs.grid(axis="x")
+ax_bs.legend()
+fig_bs.tight_layout()
+fig_bs.savefig(
+    "../figures/miscellaneous/tb_bandstructure_probe_orientation_sweep.png",
+    bbox_inches="tight",
+)
+plt.show()
+
 temporal_model = infinite_model.cut_piece(N_CELLS, fin_dir=0, glue_edgs=False)
 finite_model = temporal_model.cut_piece(N_CELLS, fin_dir=1, glue_edgs=False)
 _, _, rs_finite = mf.build_finite_grid(N_CELLS)
@@ -94,13 +127,13 @@ indexes = np.arange(len(rs_finite))
 gamma_0 = mf.free_spontaneous_emission(
     omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
 )
-_t_conv = LAT_PARAM / mf.constants.C_LIGHT * gamma_0
+_t_conv = LAT_PARAM / C_LIGHT * gamma_0
 t_f_internal = T_F / _t_conv
 ts_norm = np.linspace(0.0, T_F, T_STEPS, endpoint=True)
 
 # %% Load excited emitter fields and compute couplings
 
-data_excited = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{EXCITED_R}.pkl")
+data_excited = mf.load(f"../data/kimble/fields/{N_K}_meshgrid_at_{EXCITED_R}.pkl")
 omega_ks_n = np.asarray(data_excited["freqs"])
 fr0_n_ks = np.asarray(data_excited["Eks"])[0]
 ks = np.asarray(data_excited["kpts"])
@@ -115,7 +148,7 @@ excited_coupling = mf.compute_real_space_coupling(
 
 # %% Load probe fields (orientation-independent, reused for every angle)
 
-data_probe = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{PROBE_R}.pkl")
+data_probe = mf.load(f"../data/kimble/fields/{N_K}_meshgrid_at_{PROBE_R}.pkl")
 omega_ks_probe = np.asarray(data_probe["freqs"])
 fr0_probe = np.asarray(data_probe["Eks"])[0]
 ks_probe = np.asarray(data_probe["kpts"])
@@ -141,12 +174,13 @@ for i, probe_theta in enumerate(PROBE_THETAS):
         tb_model=finite_model,
         omega_0s=[omega_0, omega_0],
         gr0s_rs=[
-            [list(excited_coupling), list(indexes)],
-            [list(probe_coupling), list(indexes)],
+            (list(excited_coupling), list(indexes)),
+            (list(probe_coupling), list(indexes)),
         ],
         pml_dampings=pml_dampings,
     )
 
+    assert H.shape is not None
     psi0 = np.zeros(H.shape[0])
     psi0[0] = 1
     psit = expm_multiply(-1j * H, psi0, 0.0, t_f_internal, T_STEPS, endpoint=True)
@@ -194,7 +228,7 @@ ax.legend()
 
 fig.tight_layout()
 fig.savefig(
-    f"./figures/miscellaneous/probe_orientation_sweep_at_{PROBE_R}.png",
+    f"../figures/miscellaneous/probe_orientation_sweep_at_{PROBE_R}.png",
     bbox_inches="tight",
 )
 plt.show()

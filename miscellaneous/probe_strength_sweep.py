@@ -9,18 +9,21 @@ Parameters and conventions match kimble.py exactly.
 NOTE: run mpb_field_computation.py at EXCITED_R and PROBE_R before executing.
 """
 
-import numpy as np
+from typing import Optional
+
 import matplotlib.pyplot as plt
+import numpy as np
 import pythtb as tb
 from scipy.sparse.linalg import expm_multiply
 
-import src as mf
+import emitter_crystal_coupling as mf
+from emitter_crystal_coupling.constants import C_LIGHT
 
 # %% Parameters (matching kimble.py)
 
-LAT_PARAM: float = 300e-9          # lattice parameter [m]
-DIP_STRENGTH: float = 50           # excited emitter dipole [Debye]
-P_A: float = mf.unit_dip(a=LAT_PARAM)
+LAT_PARAM: float = 300e-9  # lattice parameter [m]
+DIP_STRENGTH: float = 50  # excited emitter dipole [Debye]
+P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 
 BAND_IDX: int = 0
@@ -49,11 +52,12 @@ J_2: float = 0.00053966
 K_PATH: list = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 N_K_PATH: int = 100
 
-T_F: float = 2e-5   # end time [1/Γ₀]
+T_F: float = 2e-5  # end time [1/Γ₀]
 T_STEPS: int = 50
 
 
 # %% Helper
+
 
 def compute_pml_dampings(
     rs: np.ndarray, n_cells: int, n_pml: int, gamma_max: float
@@ -88,7 +92,7 @@ indexes = np.arange(len(rs_finite))
 gamma_0 = mf.free_spontaneous_emission(
     omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
 )
-_t_conv = LAT_PARAM / mf.constants.C_LIGHT * gamma_0
+_t_conv = LAT_PARAM / C_LIGHT * gamma_0
 t_f_internal = T_F / _t_conv
 ts_norm = np.linspace(0.0, T_F, T_STEPS, endpoint=True)
 
@@ -131,7 +135,7 @@ base_probe_coupling = mf.compute_real_space_coupling(
 # results[i] = (Ce_sq, Cprobe_sq) arrays of shape (T_STEPS,)
 # i = probe dipole strength index
 
-results = [None] * len(PROBE_DIP_VALUES)
+results: list[Optional[tuple[np.ndarray, np.ndarray]]] = [None] * len(PROBE_DIP_VALUES)
 
 for i, dip_val in enumerate(PROBE_DIP_VALUES):
     probe_coupling = (dip_val / P_A) * base_probe_coupling
@@ -140,12 +144,13 @@ for i, dip_val in enumerate(PROBE_DIP_VALUES):
         tb_model=finite_model,
         omega_0s=[omega_0, probe_detuning],
         gr0s_rs=[
-            [list(excited_coupling), list(indexes)],
-            [list(probe_coupling), list(indexes)],
+            (list(excited_coupling), list(indexes)),
+            (list(probe_coupling), list(indexes)),
         ],
         pml_dampings=pml_dampings,
     )
 
+    assert H.shape is not None
     psi0 = np.zeros(H.shape[0])
     psi0[0] = 1
     psit = expm_multiply(-1j * H, psi0, 0.0, t_f_internal, T_STEPS, endpoint=True)
@@ -155,20 +160,23 @@ for i, dip_val in enumerate(PROBE_DIP_VALUES):
         np.abs(psit[:, 1]) ** 2,  # |C_probe(t)|^2
     )
 
-    print(
-        f"dip={dip_val} D → "
-        f"max probe pop = {results[i][1].max():.4e}"
-    )
+    res_i = results[i]
+    assert res_i is not None
+    print(f"dip={dip_val} D → max probe pop = {res_i[1].max():.4e}")
 
 # %% Time-evolution plot (1×2): cols = Ce^2 / Cprobe^2
 
 cmap = plt.get_cmap("plasma")
-sweep_colors = [cmap(i / (len(PROBE_DIP_VALUES) - 1)) for i in range(len(PROBE_DIP_VALUES))]
+sweep_colors = [
+    cmap(i / (len(PROBE_DIP_VALUES) - 1)) for i in range(len(PROBE_DIP_VALUES))
+]
 
 fig, (ax_e, ax_p) = plt.subplots(1, 2, sharex=True)
 
 for i, (dip_val, color) in enumerate(zip(PROBE_DIP_VALUES, sweep_colors)):
-    ce_sq, cp_sq = results[i]
+    res_i = results[i]
+    assert res_i is not None
+    ce_sq, cp_sq = res_i
     label = rf"${dip_val}$ D"
     ax_e.plot(ts_norm, ce_sq, color=color, label=label)
     ax_p.plot(ts_norm, cp_sq, color=color, label=label)
@@ -198,17 +206,19 @@ plt.show()
 
 # %% Summary plot: max probe population vs. probe dipole strength
 
-max_pops = [results[i][1].max() for i in range(len(PROBE_DIP_VALUES))]
+max_pops = [r[1].max() for r in results if r is not None]
 
 fig, ax = plt.subplots()
 
 ax.plot(PROBE_DIP_VALUES, max_pops, "o-", color="k", lw=1.5, ms=5)
-ax.axvline(DIP_STRENGTH, color="gray", ls="--", lw=1, label=rf"excited = {DIP_STRENGTH} D")
+ax.axvline(
+    DIP_STRENGTH, color="gray", ls="--", lw=1, label=rf"excited = {DIP_STRENGTH} D"
+)
 ax.set(
     xlabel=r"Probe dipole strength [Debye]",
     ylabel=r"$\max_t \, |C_{\rm probe}(t)|^2$",
     title=rf"$\theta_{{\rm exc}} = {np.rad2deg(EXCITED_THETA):.0f}$°, "
-          rf"$\theta_{{\rm probe}} = {np.rad2deg(PROBE_THETA):.0f}$°",
+    rf"$\theta_{{\rm probe}} = {np.rad2deg(PROBE_THETA):.0f}$°",
 )
 ax.legend()
 

@@ -7,18 +7,19 @@ the angle that maximises the probe population.
 NOTE: run mpb_field_computation.py for each desired N_K before executing.
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import pythtb as tb
 from scipy.sparse.linalg import expm_multiply
 
-import src as mf
+import emitter_crystal_coupling as mf
+from emitter_crystal_coupling.constants import C_LIGHT
 
 # %% Parameters (matching kimble.py / probe_orientation_sweep.py)
 
-LAT_PARAM: float = 300e-9
-DIP_STRENGTH: float = 50
-P_A: float = mf.unit_dip(a=LAT_PARAM)
+LAT_PARAM: float = 300e-9  # [m]
+DIP_STRENGTH: float = 7000  # [D]
+P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 
 BAND_IDX: int = 0
@@ -43,6 +44,7 @@ N_CELLS: int = 41
 N_PML: int = 8
 GAMMA_MAX: float = 3e-2
 
+# in units of [c/a]
 J_0: float = 0.07755639
 J_1: float = -0.01993698
 J_2: float = 0.00053966
@@ -50,7 +52,7 @@ J_2: float = 0.00053966
 K_PATH: list = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 N_K_PATH: int = 100
 
-T_F: float = 2e-5
+T_F: float = 1e-2  # [Γ₀⁻¹]
 T_STEPS: int = 50
 
 
@@ -93,7 +95,7 @@ def build_tb_variant(j2):
     gamma_0 = mf.free_spontaneous_emission(
         omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
     )
-    t_f_internal = T_F / (LAT_PARAM / mf.constants.C_LIGHT * gamma_0)
+    t_f_internal = T_F / (LAT_PARAM / C_LIGHT * gamma_0)
 
     return finite, omega_0, t_f_internal
 
@@ -104,7 +106,7 @@ def build_tb_variant(j2):
 results = {label: {} for label in TB_VARIANTS}
 
 for label, j2 in TB_VARIANTS.items():
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"TB variant: {label}")
     finite_model, omega_0, t_f_internal = build_tb_variant(j2)
     print(f"  omega_0 = {omega_0:.6f} c/a")
@@ -143,12 +145,13 @@ for label, j2 in TB_VARIANTS.items():
                 tb_model=finite_model,
                 omega_0s=[omega_0, omega_0],
                 gr0s_rs=[
-                    [list(excited_coupling), list(indexes)],
-                    [list(probe_coupling), list(indexes)],
+                    (list(excited_coupling), list(indexes)),
+                    (list(probe_coupling), list(indexes)),
                 ],
                 pml_dampings=pml_dampings,
             )
 
+            assert H.shape is not None
             psi0 = np.zeros(H.shape[0])
             psi0[0] = 1
             psit = expm_multiply(

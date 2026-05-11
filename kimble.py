@@ -28,20 +28,22 @@ emitter positions. If not, run `./miscellaneous/mpb_field_computation.py` first.
 """
 
 # Standard library
-from scipy.sparse.linalg import expm_multiply  # time-dependent Schrödinger equation
+import matplotlib as mpl
+import matplotlib.colors as colors
+import matplotlib.patches as mpl_patches
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mpl_ticker
+import meep as mp  # photonic crystal simulation
 
 # Third-party
 import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.colors as colors
-import meep as mp  # photonic crystal simulation
-from meep import mpb  # MPB eigensolver interface
 import pythtb as tb  # tight-binding model
+from meep import mpb  # MPB eigensolver interface
+from scipy.sparse.linalg import expm_multiply  # time-dependent Schrödinger equation
 
 # Local
-import src as mf
-
+import emitter_crystal_coupling as mf
+from emitter_crystal_coupling.constants import C_LIGHT
 
 # ------------------------------------------------------------------------------
 # Matplotlib configuration
@@ -90,7 +92,7 @@ configure_matplotlib()
 LAT_PARAM: float = 300e-9  # lattice parameter [m]
 N_BANDS: int = 2
 BAND_IDX: int = 0  # band index (0-based)
-N_K: int = 64  # k-points per direction in Monkhorst-Pack grid
+N_K: int = 81  # k-points per direction in Monkhorst-Pack grid
 EPSILON_INPUT_FILE: str = "data/kimble/epsilon.h5"
 # NOTE: N_K is also used to identify the file where the fields are stored.
 
@@ -98,23 +100,23 @@ EPSILON_INPUT_FILE: str = "data/kimble/epsilon.h5"
 THETA_1: float = 90 * np.pi / 180  # emitter 1 orientation [rad]
 THETA_2: float = 135 * np.pi / 180  # emitter 2 orientation [rad]
 DIP_STRENGTH: float = 50  # dipole moment strength [Debye]
-P_A: float = mf.unit_dip(a=LAT_PARAM)
+P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 N_EMITTERS: int = 1  # emitters per simulation
-R_0: list = [0.0, 0.0]  # emitter position(s) in lattice units
+R_0: list[float] = [0, 0]  # emitter position(s) in lattice units
 # NOTE: Two simulations are run in total, one per orientation.
 # NOTE: A list of positions is also accepted by R_0.
 
 # Derived emitter quantities
-THETAS: list = [THETA_1, THETA_2]
-DIPOLES: list = [
+THETAS: list[float] = [THETA_1, THETA_2]
+DIPOLES: list[np.ndarray] = [
     DIP_STRENGTH_NORM * np.array([np.cos(theta), np.sin(theta), 0]) for theta in THETAS
 ]
-DIP_COLORS: list = ["#1f77b4", "#ff7f0e"]  # one color per dipole orientation
+DIP_COLORS: list[str] = ["#1f77b4", "#ff7f0e"]  # one color per dipole orientation
 
 # Tight-binding model
-LAT: list = [[1, 0], [0, 1]]
-ORB: list = [[0, 0]]  # orbital position in lattice units
+LAT: list[list[int]] = [[1, 0], [0, 1]]
+ORB: list[list[int]] = [[0, 0]]  # orbital position in lattice units
 N_CELLS: int = 41  # unit cells per direction
 N_PML: int = 8  # absorbing layer thickness [unit cells per edge]
 GAMMA_MAX: float = 3e-2  # maximum damping rate at the hard wall [c/a]
@@ -124,8 +126,8 @@ J_1: float = -0.01993698
 J_2: float = 0.00053966
 
 # Brillouin zone path for band structure
-K_PATH: list = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
-K_LABELS: list = [r"$\Gamma$", r"X", r"M", r"$\Gamma$"]
+K_PATH: list[list[float]] = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
+K_LABELS: list[str] = [r"$\Gamma$", r"X", r"M", r"$\Gamma$"]
 N_K_PATH: int = 100  # number of k-points along the high-symmetry path
 
 # Real-space grid
@@ -139,7 +141,7 @@ SNAP_IDX: int = 100  # snapshot index for field plots (0 to T_STEPS)
 
 # Probe emitter
 NEW_N_EMITTERS: int = 2
-NEW_R: list = [-5, 5]
+NEW_R: list[float] = [-5, 5]
 NEW_THETA: float = np.deg2rad(45)
 NEW_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
     [np.cos(NEW_THETA), np.sin(NEW_THETA), 0]
@@ -180,7 +182,7 @@ print_simulation_summary()
 # ------------------------------------------------------------------------------
 
 
-def plot_dielectric_function(r_0: list) -> None:
+def plot_dielectric_function(r_0: list[float]) -> None:
     """
     Plot the dielectric function ε(r) of the photonic crystal with emitter dipoles.
 
@@ -306,7 +308,7 @@ def compute_mpb_bands(k_vec: np.ndarray) -> np.ndarray:
         Mode frequencies in units of c/a.
     """
     geometry_lattice = mp.Lattice(
-        size=LATTICE_SIZE,
+        size=mp.Vector3(*LATTICE_SIZE),
         basis1=LATTICE_VECS[0],
         basis2=LATTICE_VECS[1],
     )
@@ -317,6 +319,7 @@ def compute_mpb_bands(k_vec: np.ndarray) -> np.ndarray:
         k_points=mf.array_to_Vector3(k_vec),
     )
     ms.run_te()
+    assert ms.all_freqs is not None
     return ms.all_freqs
 
 
@@ -372,7 +375,7 @@ def plot_band_structure(
 # Run band structure computation
 infinite_model = build_tight_binding_model()
 k_vec, k_dist, k_node = infinite_model.k_path(K_PATH, N_K_PATH, report=False)
-tb_evals = infinite_model.solve_all(k_vec)
+tb_evals: np.ndarray = np.asarray(infinite_model.solve_all(k_vec))
 
 omega_0 = compute_detuning_frequency(tb_evals, k_dist, k_node)
 print(f"Detuning frequency at X point: {omega_0:.6f} (c/a)")
@@ -385,7 +388,7 @@ plot_band_structure(k_dist, k_node, tb_evals, mpb_freqs, omega_0)
 # ------------------------------------------------------------------------------
 
 
-def load_field_data(n_k: int, r_0: list) -> dict:
+def load_field_data(n_k: int, r_0: list[float]) -> dict:
     """
     Load precomputed MPB fields, frequencies, and k-points from disk.
 
@@ -416,7 +419,7 @@ def compute_coupling_grid(
     omega_ks_n: np.ndarray,
     ks: np.ndarray,
     n_r: int,
-) -> tuple[list, np.ndarray, np.ndarray]:
+) -> tuple[list[np.ndarray], np.ndarray, np.ndarray]:
     """
     Compute the real-space coupling g_r(r_0) on a square lattice grid.
 
@@ -458,10 +461,10 @@ def compute_coupling_grid(
 
 
 def plot_real_space_coupling(
-    gr0_rs_list: list,
+    gr0_rs_list: list[np.ndarray],
     xs: np.ndarray,
     ys: np.ndarray,
-    r_0: list,
+    r_0: list[float],
 ) -> None:
     """
     Plot and save |g_r(r_0)| for each dipole orientation.
@@ -562,7 +565,7 @@ def compute_and_plot_ldos(
     omega_ks_n: np.ndarray,
     fr0_n_ks: np.ndarray,
     omega_0: float,
-    r_0: list,
+    r_0: list[float],
 ) -> None:
     """
     Compute and plot the LDOS at the emitter position for each dipole orientation.
@@ -634,12 +637,15 @@ def compute_and_plot_isofrequency(model: tb.tb_model, omega_0: float) -> None:
     k_x_grid, k_y_grid = np.meshgrid(k_x, k_y, indexing="ij")
 
     ks_grid_flat = np.column_stack((k_x_grid.ravel(), k_y_grid.ravel()))
-    tb_evals_grid = np.array([model.solve_one(k)[BAND_IDX] for k in ks_grid_flat])
+    tb_evals_grid = np.array(
+        [np.asarray(model.solve_one(k))[BAND_IDX] for k in ks_grid_flat]
+    )
     omega_grid = mf.safe_sqrt(tb_evals_grid).reshape(N_K_PATH, N_K_PATH)
 
     fig, ax = plt.subplots()
     c = ax.contourf(k_x_grid, k_y_grid, omega_grid, levels=12)
     cbar = fig.colorbar(c, ax=ax, label=r"$\omega_\mathbf{k} a/c$")
+    assert isinstance(cbar.formatter, mpl_ticker.ScalarFormatter)
     cbar.formatter.set_powerlimits((0, 0))
     ax.contour(
         k_x_grid, k_y_grid, omega_grid, levels=[omega_0], colors="k", linewidths=2
@@ -729,7 +735,7 @@ def compute_time_evolution(
     t_f: float,
     t_steps: int,
     pml_dampings: np.ndarray | None = None,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list[np.ndarray]]:
     """
     Build the light-matter Hamiltonians and compute the time evolution.
 
@@ -796,8 +802,8 @@ def compute_time_evolution(
         )
 
     idxs = np.arange(len(couplings[0]))
-    interaction_1 = [[list(couplings[0]), list(idxs)]]
-    interaction_2 = [[list(couplings[1]), list(idxs)]]
+    interaction_1 = [(list(couplings[0]), list(idxs))]
+    interaction_2 = [(list(couplings[1]), list(idxs))]
 
     H_1, omega_sites_1 = mf.make_light_matter_Hamiltonian(
         tb_model=finite_model,
@@ -812,6 +818,7 @@ def compute_time_evolution(
         pml_dampings=pml_dampings,
     )
 
+    assert H_1.shape is not None and H_2.shape is not None
     if H_1.shape != H_2.shape:
         raise ValueError(
             f"Hamiltonians have different shapes: {H_1.shape} vs {H_2.shape}."
@@ -830,7 +837,7 @@ def plot_emitter_time_evolution(
     ts: np.ndarray,
     psi_t_1: np.ndarray,
     psi_t_2: np.ndarray,
-    r_0: list,
+    r_0: list[float],
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Plot and save the emitter population and entanglement entropy over time.
@@ -898,11 +905,56 @@ def plot_emitter_time_evolution(
     ax2.set(ylabel=r"$S(t)$")
 
     lines = [l1, l4]
-    ax.legend(lines, [line.get_label() for line in lines])
+    ax.legend(lines, [str(line.get_label()) for line in lines])
 
     fig.savefig(f"./figures/kimble/emitter_timeevolution_entropy_at_{r_0}.svg")
     plt.close(fig)
     return S_t_1, S_t_2
+
+
+def plot_quadrant_entropy(
+    ts: np.ndarray,
+    S_1: np.ndarray,
+    S_2: np.ndarray,
+    r_0: list[float],
+) -> None:
+    """Plot and save the quadrant directional entropy vs time for both dipole orientations."""
+    fig, ax = plt.subplots()
+
+    ax.plot(
+        ts[1:],
+        S_1[1:],
+        color=DIP_COLORS[0],
+        lw=3,
+        label=rf"$\theta = {np.rad2deg(THETA_1):.0f}$°",
+    )
+    ax.plot(
+        ts[1:],
+        S_2[1:],
+        color=DIP_COLORS[1],
+        lw=2,
+        alpha=0.9,
+        label=rf"$\theta = {np.rad2deg(THETA_2):.0f}$°",
+    )
+
+    trans = ax.get_yaxis_transform()
+    for val, label, ls in [
+        (np.log(4), r"$\ln 4$", "--"),
+        (np.log(2), r"$\ln 2$", ":"),
+    ]:
+        ax.axhline(val, color="gray", lw=1, ls=ls, zorder=0)
+        ax.text(0.98, val, f" {label}", color="gray", fontsize=9,
+                va="bottom", ha="right", transform=trans)
+
+    ax.set(
+        xlabel=r"$t\Gamma_0$",
+        ylabel=r"$S_{\rm dir}(t)$",
+        ylim=(0, np.log(4) * 1.2),
+    )
+    ax.legend(loc="lower right")
+
+    fig.savefig(f"./figures/kimble/quadrant_entropy_at_{r_0}.svg")
+    plt.close(fig)
 
 
 def plot_bath_snapshot(
@@ -912,7 +964,7 @@ def plot_bath_snapshot(
     psi_t_2: np.ndarray,
     snap_idx: int,
     n_emitters: int,
-    r_0: list,
+    r_0: list[float],
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Plot and save bath population snapshots at a given time index.
@@ -961,7 +1013,7 @@ def plot_bath_snapshot(
         )
         pml_boundary = N_CELLS // 2 - N_PML + 0.5
         ax.add_patch(
-            mpl.patches.Rectangle(
+            mpl_patches.Rectangle(
                 (-pml_boundary, -pml_boundary),
                 2 * pml_boundary,
                 2 * pml_boundary,
@@ -977,7 +1029,7 @@ def plot_bath_snapshot(
             label=rf"$|C_\mathbf{{R}}(t)|^2 \; [\times 10^{{{exp}}}]$",
             pad=0.1,
         )
-        cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+        cbar.formatter = mpl_ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
         cbar.update_ticks()
         ax.set(
             xlabel=r"$x/a$",
@@ -999,11 +1051,13 @@ xs_finite, ys_finite, rs_finite = mf.build_finite_grid(N_CELLS)
 pml_dampings = compute_pml_dampings(rs_finite, N_CELLS, N_PML, GAMMA_MAX)
 
 # Compute time evolution
-gamma_0 = mf.free_spontaneous_emission(
-    omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
+gamma_0: float = float(
+    mf.free_spontaneous_emission(
+        omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
+    )
 )
 # Convert input times from 1/Γ₀ to a/c for internal use
-_t_conv = LAT_PARAM / mf.constants.C_LIGHT * gamma_0
+_t_conv = LAT_PARAM / C_LIGHT * gamma_0
 T_0 /= _t_conv
 T_F /= _t_conv
 NEW_T_F /= _t_conv
@@ -1066,15 +1120,7 @@ Cr_t_2 = psi_t_2[:, N_EMITTERS:]
 S_1, p_1 = mf.quadrant_entropy(rs_finite[:, 0], rs_finite[:, 1], Cr_t_1)
 S_2, p_2 = mf.quadrant_entropy(rs_finite[:, 0], rs_finite[:, 1], Cr_t_2)
 
-check_1 = np.allclose(S_1[1:], np.log(4), atol=1e-3)
-check_2 = np.allclose(S_2[1:], np.log(2), atol=1e-3)
-
-print(
-    rf"Is $S_{{dir}}$ equal to $\log(4)$ for $\theta = {np.rad2deg(THETA_1):.0f}º$? {check_1}, $S_1 = {S_1}$."
-)
-print(
-    rf"Is $S_{{dir}}$ equal to $\log(2)$ for $\theta = {np.rad2deg(THETA_2):.0f}º$? {check_2}, $S_2 = {S_2}$."
-)
+plot_quadrant_entropy(ts_norm, S_1, S_2, R_0)
 
 # ------------------------------------------------------------------------------
 # Probe emitter: directional emission and concurrence
@@ -1087,7 +1133,7 @@ def compute_probe_emitter_evolution(
     fr0_n_ks: np.ndarray,
     ks: np.ndarray,
     rs: np.ndarray,
-    couplings: list,
+    couplings: list[np.ndarray],
     omega_0: float,
     pml_dampings: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray, float]:
@@ -1143,12 +1189,12 @@ def compute_probe_emitter_evolution(
     idxs = np.arange(len(couplings[0]))
 
     new_interaction_1 = [
-        [list(couplings[0]), list(idxs)],
-        [list(new_coupling), list(idxs)],
+        (list(couplings[0]), list(idxs)),
+        (list(new_coupling), list(idxs)),
     ]
     new_interaction_2 = [
-        [list(couplings[1]), list(idxs)],
-        [list(new_coupling), list(idxs)],
+        (list(couplings[1]), list(idxs)),
+        (list(new_coupling), list(idxs)),
     ]
 
     new_H_1, _ = mf.make_light_matter_Hamiltonian(
@@ -1164,10 +1210,10 @@ def compute_probe_emitter_evolution(
         pml_dampings=pml_dampings,
     )
 
+    assert new_H_1.shape is not None
     new_psi_0 = np.zeros(new_H_1.shape[0])
     new_psi_0[0] = 1
 
-    new_ts = np.linspace(T_0, NEW_T_F, T_STEPS, endpoint=True)
     new_psi_t_1 = expm_multiply(
         -1j * new_H_1, new_psi_0, T_0, NEW_T_F, T_STEPS, endpoint=True
     )
@@ -1183,7 +1229,7 @@ def plot_probe_bath_snapshot(
     pos_y: np.ndarray,
     new_psi_t_1: np.ndarray,
     new_psi_t_2: np.ndarray,
-    r_0: list,
+    r_0: list[float],
 ) -> None:
     """
     Plot bath population snapshots for the two-emitter system.
@@ -1216,7 +1262,7 @@ def plot_probe_bath_snapshot(
         mf.draw_arrow(ax, r_0, theta, DIP_COLORS[i - 1], length=5, arrow_offset=0.5)
         pml_boundary = N_CELLS // 2 - N_PML + 0.5
         ax.add_patch(
-            mpl.patches.Rectangle(
+            mpl_patches.Rectangle(
                 (-pml_boundary, -pml_boundary),
                 2 * pml_boundary,
                 2 * pml_boundary,
@@ -1231,7 +1277,7 @@ def plot_probe_bath_snapshot(
             ax=ax,
             label=rf"$|C_\mathbf{{r}}(t)|^2 \; [\times 10^{{{exp}}}]$",
         )
-        cbar.formatter = mpl.ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
+        cbar.formatter = mpl_ticker.FuncFormatter(lambda x, _: f"{x / 10**exp:.1f}")
         cbar.update_ticks()
         ax.set(
             xlabel=r"$x/a$",
@@ -1252,7 +1298,7 @@ def plot_probe_time_evolution(
     ts: np.ndarray,
     new_psi_t_1: np.ndarray,
     new_psi_t_2: np.ndarray,
-    r_0: list,
+    r_0: list[float],
 ) -> None:
     """
     Plot emitter populations and concurrence for the two-emitter system.

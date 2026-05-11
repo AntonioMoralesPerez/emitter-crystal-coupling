@@ -9,12 +9,12 @@ NOTE: use the file `mpb_field_computation.py` for obtaining the fields before
 executing this file.
 """
 
-import numpy as np
-
 # some imports for plotting utilities
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mpl_ticker
+import numpy as np
 
-import src as mf  # our package functions to work with
+import emitter_crystal_coupling as mf  # our package functions to work with
 
 # %% Define the main constants and parameters for the current simulation
 NK = 101  # number of points per direction for the Monkhorst-Pack grid
@@ -26,7 +26,7 @@ DIP_STRENGTH = 7000  # [D]
 P_DIMLESS = DIP_STRENGTH / mf.unit_dip(a=LAT_PARAM)
 
 # Position of the quantum emitter in units of the lattice constant 'a'
-R0 = [0, 0]
+R0 = [0.0, 0.0]
 
 BAND_INDEX = 0  # index of the band to consider (0-based)
 
@@ -97,6 +97,7 @@ ax.set(
     aspect="equal",
 )
 cbar = fig.colorbar(sc, ax=ax, label=r"$|g_\mathbf{r}(\mathbf{r}_0)|$")
+assert isinstance(cbar.formatter, mpl_ticker.ScalarFormatter)
 cbar.formatter.set_powerlimits((0, 0))
 
 fig.tight_layout()

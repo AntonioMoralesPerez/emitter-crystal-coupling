@@ -9,25 +9,25 @@ for it. This way it can be computed isolated (or even on a cluster) and then use
 the result within our formalism.
 """
 
-import numpy as np
 import meep as mp  # needed for the numerical simulation of the photonic crystal
+import numpy as np
 from meep import mpb  # same case as the previous package
 
-import src as mf  # our package functions to work with
+import emitter_crystal_coupling as mf  # our package functions to work with
 
 # %% Define the main constants and parameters for the current simulation
 NUM_BANDS = 1
 
-EPSILON_INPUT_FILE = "data/kimble/epsilon.h5"
-DIRNAME_OUTPUT = "data/kimble/fields/"  # directory to save outputs
+EPSILON_INPUT_FILE = "../data/kimble/epsilon.h5"
+DIRNAME_OUTPUT = "../data/kimble/fields/"  # directory to save outputs
 
-NK = 101  # number of points per direction for the Monkhorst-Pack grid
+NK = 81  # number of points per direction for the Monkhorst-Pack grid
 
 # Positions of the quantum emitters in units of the lattice constant 'a'.
 # Sample every emitter position within the SAME MPB run so all u_k(r) share a
 # consistent k-dependent global phase (gauge). One file per position is then
 # saved, sliced from this single run.
-R0_LIST = [[0, 0], [-5, 5]]
+R0_LIST = [[0, 0], [-5, 5], [5, 5], [-10, 10], [-15, 15], [-20, 20]]
 
 # ------------------------------------------------------------------------------
 
@@ -75,7 +75,7 @@ geometry_lattice = mp.Lattice(
 # ------------------------------------------------------------------------------
 ms = mpb.ModeSolver(
     num_bands=NUM_BANDS,
-    resolution=mp.Vector3(*resolution),
+    resolution=int(resolution[0]),
     epsilon_input_file=EPSILON_INPUT_FILE,
     geometry_lattice=geometry_lattice,
     k_points=k_points,
