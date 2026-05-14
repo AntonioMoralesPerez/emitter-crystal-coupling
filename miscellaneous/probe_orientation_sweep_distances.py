@@ -2,8 +2,8 @@
 Probe orientation sweep at increasing diagonal distances.
 
 Sweeps the probe orientation around 45 deg at probe positions
-[-5, 5], [-10, 10], [-15, 15], [-20, 20] (all on the same y = -x diagonal
-ray from the source [0, 0], theta_exc = 90 deg).
+[-15, 15], [-20, 20], [-25, 25], [-30, 30] (all on the same y = -x
+diagonal ray from the source [0, 0], theta_exc = 90 deg).
 
 Goal: distinguish two scenarios for the optimum-orientation shift away
 from 45 deg:
@@ -48,15 +48,15 @@ EXCITED_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
     [np.cos(EXCITED_THETA), np.sin(EXCITED_THETA), 0]
 )
 
-PROBE_RS: list = [[-5, 5], [-10, 10], [-15, 15], [-20, 20]]
+PROBE_RS: list = [[-15, 15], [-20, 20], [-25, 25], [-30, 30]]
 PROBE_DIP_STRENGTH: float = DIP_STRENGTH
 
-N_THETAS: int = 21
-PROBE_THETAS: np.ndarray = np.linspace(35, 60, N_THETAS) * np.pi / 180
+PROBE_THETAS: np.ndarray = np.arange(43.0, 47.0 + 1e-9, 0.5) * np.pi / 180
+N_THETAS: int = len(PROBE_THETAS)
 
 LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
-N_CELLS: int = 51  # larger than default to fit r_probe = [-20, 20] with PML margin
+N_CELLS: int = 101  # half-width 50: r_probe = [-30, 30] sits 12 cells past PML edge (~0.5 lambda)
 N_PML: int = 8
 GAMMA_MAX: float = 3e-2
 
@@ -67,7 +67,7 @@ J_2: float = 0.00053966
 K_PATH: list = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 N_K_PATH: int = 100
 
-T_F: float = 1e-2  # [1/Gamma_0] — same for every probe distance
+T_F: float = 3e-2  # [1/Gamma_0] — generous margin for peak settling at r_probe up to [-30, 30]
 T_STEPS: int = 120
 
 
@@ -101,6 +101,15 @@ finite_model = temporal_model.cut_piece(N_CELLS, fin_dir=1, glue_edgs=False)
 _, _, rs_finite = mf.build_finite_grid(N_CELLS)
 pml_dampings = compute_pml_dampings(rs_finite, N_CELLS, N_PML, GAMMA_MAX)
 indexes = np.arange(len(rs_finite))
+
+# Sanity check: every probe (and the source) must sit strictly outside the PML.
+_half = N_CELLS // 2
+for _r in [EXCITED_R, *PROBE_RS]:
+    _margin = _half - max(abs(_r[0]), abs(_r[1]))
+    assert _margin > N_PML, (
+        f"Position {_r} is inside (or too close to) the PML: "
+        f"margin {_margin} <= N_PML {N_PML}. Increase N_CELLS."
+    )
 
 # %% Time conversion
 
@@ -213,29 +222,22 @@ fig.savefig(
 )
 plt.show()
 
-# %% Plot: theta_max vs k * r_p
-#
-# k is the vacuum wave-vector magnitude k = omega_0 / c. In our units
-# omega is in c/a, so k * a = omega_0. The near-field / far-field
-# crossover is expected near k * r_p = 1.
-
-K_RES_A: float = omega_0  # k * a = omega_0 / c * a = omega_0 (in c/a units)
+# %% Plot: theta_max vs r_p / a
 
 fig2, ax2 = plt.subplots(figsize=(5.5, 4))
-k_rs = [K_RES_A * results[tuple(r)]["dist"] for r in PROBE_RS]
+r_ps = [results[tuple(r)]["dist"] for r in PROBE_RS]
 theta_maxs = [results[tuple(r)]["theta_max"] for r in PROBE_RS]
-ax2.plot(k_rs, theta_maxs, "o-", color="k", lw=1.4, ms=6)
+ax2.plot(r_ps, theta_maxs, "o-", color="k", lw=1.4, ms=6)
 ax2.axhline(45, color="gray", ls=":", lw=1, label="naive 45°")
-ax2.axvline(1, color="C3", ls="--", lw=1, label=r"$k \cdot r_p = 1$")
 ax2.set(
-    xlabel=r"$|\mathbf{k}_0|\, |\mathbf{r}_{\rm probe}|$",
+    xlabel=r"$|\mathbf{r}_{\rm probe}| / a$",
     ylabel=r"$\theta_{\max}$ [deg]",
-    title=r"Optimum orientation vs. $k \cdot r_p$ (along $y=-x$)",
+    title=r"Optimum orientation vs. $r_p / a$ (along $y=-x$)",
 )
 ax2.legend()
 fig2.tight_layout()
 fig2.savefig(
-    "../figures/miscellaneous/probe_orientation_theta_max_vs_kr.png",
+    "../figures/miscellaneous/probe_orientation_theta_max_vs_distance.png",
     bbox_inches="tight",
 )
 plt.show()

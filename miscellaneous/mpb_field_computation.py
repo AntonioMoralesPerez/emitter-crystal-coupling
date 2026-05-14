@@ -43,7 +43,16 @@ DIRNAME_OUTPUT = "../data/kimble/fields/"
 
 # %% Emitter positions [units of lattice constant a].
 # All positions sampled in the same MPB run for a consistent gauge.
-R0_LIST = [[0, 0], [-5, 5], [5, 5], [-10, 10], [-15, 15], [-20, 20]]
+R0_LIST = [
+    [0, 0],
+    [-5, 5],
+    [5, 5],
+    [-10, 10],
+    [-15, 15],
+    [-20, 20],
+    [-25, 25],
+    [-30, 30],
+]
 
 # ------------------------------------------------------------------------------
 # Summary
