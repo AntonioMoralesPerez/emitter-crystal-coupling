@@ -213,22 +213,29 @@ fig.savefig(
 )
 plt.show()
 
-# %% Plot: theta_max vs distance
+# %% Plot: theta_max vs k * r_p
+#
+# k is the vacuum wave-vector magnitude k = omega_0 / c. In our units
+# omega is in c/a, so k * a = omega_0. The near-field / far-field
+# crossover is expected near k * r_p = 1.
+
+K_RES_A: float = omega_0  # k * a = omega_0 / c * a = omega_0 (in c/a units)
 
 fig2, ax2 = plt.subplots(figsize=(5.5, 4))
-dists = [results[tuple(r)]["dist"] for r in PROBE_RS]
+k_rs = [K_RES_A * results[tuple(r)]["dist"] for r in PROBE_RS]
 theta_maxs = [results[tuple(r)]["theta_max"] for r in PROBE_RS]
-ax2.plot(dists, theta_maxs, "o-", color="k", lw=1.4, ms=6)
+ax2.plot(k_rs, theta_maxs, "o-", color="k", lw=1.4, ms=6)
 ax2.axhline(45, color="gray", ls=":", lw=1, label="naive 45°")
+ax2.axvline(1, color="C3", ls="--", lw=1, label=r"$k \cdot r_p = 1$")
 ax2.set(
-    xlabel=r"$|\mathbf{r}_{\rm probe}| / a$",
+    xlabel=r"$|\mathbf{k}_0|\, |\mathbf{r}_{\rm probe}|$",
     ylabel=r"$\theta_{\max}$ [deg]",
-    title="Optimum orientation vs. probe distance (along $y=-x$)",
+    title=r"Optimum orientation vs. $k \cdot r_p$ (along $y=-x$)",
 )
 ax2.legend()
 fig2.tight_layout()
 fig2.savefig(
-    "../figures/miscellaneous/probe_orientation_theta_max_vs_distance.png",
+    "../figures/miscellaneous/probe_orientation_theta_max_vs_kr.png",
     bbox_inches="tight",
 )
 plt.show()
