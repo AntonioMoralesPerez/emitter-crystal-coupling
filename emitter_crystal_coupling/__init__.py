@@ -23,6 +23,7 @@ __all__ = [
     "compute_real_space_coupling",
     "compute_ldos",
     "make_light_matter_Hamiltonian",
+    "evolve_diagonalisation",
     "binary_entropy",
     "quadrant_entropy",
     "compute_fr0rs",
@@ -59,6 +60,9 @@ from .coupling import compute_real_space_coupling, compute_ldos
 
 # Hamiltonian
 from .hamiltonian import make_light_matter_Hamiltonian
+
+# Time evolution
+from .time_evolution import evolve_diagonalisation
 
 # Entropy
 from .entropy import binary_entropy, quadrant_entropy

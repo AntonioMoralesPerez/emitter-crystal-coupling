@@ -11,7 +11,6 @@ import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 import numpy as np
 import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf
 from emitter_crystal_coupling.constants import C_LIGHT
@@ -199,12 +198,12 @@ _T_F_ac = T_F / _t_conv  # [a/c]
 
 ts_norm = np.linspace(T_0, T_F, T_STEPS, endpoint=True)  # [1/Γ₀]
 
-assert hamiltonians[0].shape is not None
 psi0 = np.zeros(hamiltonians[0].shape[0])
 psi0[0] = 1
 
+_times_ac = np.linspace(_T_0_ac, _T_F_ac, T_STEPS)
 psits = [
-    expm_multiply(-1j * hamiltonian, psi0, _T_0_ac, _T_F_ac, T_STEPS, endpoint=True)
+    mf.evolve_diagonalisation(hamiltonian, psi0, _times_ac)
     for hamiltonian in hamiltonians
 ]
 

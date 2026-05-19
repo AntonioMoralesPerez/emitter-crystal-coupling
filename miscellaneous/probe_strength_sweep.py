@@ -14,7 +14,6 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf
 from emitter_crystal_coupling.constants import C_LIGHT
@@ -150,10 +149,9 @@ for i, dip_val in enumerate(PROBE_DIP_VALUES):
         pml_dampings=pml_dampings,
     )
 
-    assert H.shape is not None
     psi0 = np.zeros(H.shape[0])
     psi0[0] = 1
-    psit = expm_multiply(-1j * H, psi0, 0.0, t_f_internal, T_STEPS, endpoint=True)
+    psit = mf.evolve_diagonalisation(H, psi0, np.linspace(0.0, t_f_internal, T_STEPS))
 
     results[i] = (
         np.abs(psit[:, 0]) ** 2,  # |C_excited(t)|^2

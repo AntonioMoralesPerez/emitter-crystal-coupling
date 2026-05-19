@@ -11,7 +11,6 @@ emitter positions is performed.
 import matplotlib.pyplot as plt
 import numpy as np
 import pythtb as tb  # for easy simulation of the tight-binding model
-from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf  # our package functions to work with
 
@@ -195,13 +194,13 @@ hamiltonians = [
 
 tvals = np.linspace(T0, TF, T_STEPS)
 
-assert hamiltonians[0].shape is not None
 psi0 = np.zeros(hamiltonians[0].shape[0])
 psi0[0] = 1
 
 # Compute time evolution
+_times = np.linspace(T0, TF, T_STEPS)
 psits = [
-    expm_multiply(-1j * hamiltonian, psi0, T0, TF, T_STEPS, endpoint=True)
+    mf.evolve_diagonalisation(hamiltonian, psi0, _times)
     for hamiltonian in hamiltonians
 ]
 

@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pythtb as tb
 from scipy.sparse import bmat, csr_matrix, diags
-from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf
 
@@ -146,7 +145,7 @@ for i, g in enumerate(G_VALUES):
     assert H.shape is not None
     psi0 = np.zeros(H.shape[0])
     psi0[0] = 1
-    psit = expm_multiply(-1j * H, psi0, T_0, T_F, T_STEPS, endpoint=True)
+    psit = mf.evolve_diagonalisation(H, psi0, ts)
 
     ce_sq = np.abs(psit[:, 0]) ** 2
     cp_sq = np.abs(psit[:, 1]) ** 2

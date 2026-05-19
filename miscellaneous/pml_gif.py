@@ -12,7 +12,6 @@ import matplotlib.patches as mpl_patches
 import matplotlib.pyplot as plt
 import numpy as np
 import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf
 from emitter_crystal_coupling.constants import C_LIGHT
@@ -127,10 +126,9 @@ def run_evolution(dampings):
             gr0s_rs=[(list(gr0_rs), idxs)],
             pml_dampings=dampings,
         )
-        assert H.shape is not None
         psi_0 = np.zeros(H.shape[0])
         psi_0[0] = 1
-        results.append(expm_multiply(-1j * H, psi_0, t_0, t_f, T_STEPS, endpoint=True))
+        results.append(mf.evolve_diagonalisation(H, psi_0, np.linspace(t_0, t_f, T_STEPS)))
     return results
 
 

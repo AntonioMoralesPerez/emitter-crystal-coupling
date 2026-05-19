@@ -4,7 +4,6 @@ from typing import cast
 import numpy as np
 import pythtb as tb
 from scipy.linalg import eigh
-from scipy.sparse import bmat, csr_matrix, diags
 
 
 def make_light_matter_Hamiltonian(
@@ -14,7 +13,7 @@ def make_light_matter_Hamiltonian(
     pml_dampings: np.ndarray | None = None,
     check_hermitian: bool = True,
     atol: float = 1e-10,
-) -> tuple[csr_matrix, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Construct the total light-matter Hamiltonian for the system, in units of c/a.
 
@@ -40,13 +39,13 @@ def make_light_matter_Hamiltonian(
         Automatically set to False when ``pml_dampings`` is provided.
         Default is True.
     atol : float, optional
-        Absolute tolerance for numerical precision and hermiticity checks.
+        Absolute tolerance for the hermiticity check.
         Default is 1e-10.
 
     Returns
     -------
-    H : scipy.sparse.csr_matrix
-        Full light-matter Hamiltonian in units of c/a.
+    H : np.ndarray, shape (dim_h, dim_h)
+        Full light-matter Hamiltonian in units of c/a (dense, complex).
     omegas : np.ndarray
         Bath mode frequencies, defined as
         ``omegas = sqrt(clip(tb_evals, 0, None))``,
@@ -58,7 +57,6 @@ def make_light_matter_Hamiltonian(
         If ``omega_0s`` length does not match the number of emitters.
         If ``g_vals`` and ``bath_idx`` shapes do not match for any emitter.
         If ``bath_idx`` contains out-of-range indices for any emitter.
-        If the final Hamiltonian has an unexpected shape.
         If the final Hamiltonian is not Hermitian (when ``check_hermitian=True``).
 
     Notes
@@ -73,8 +71,12 @@ def make_light_matter_Hamiltonian(
     - ``H_e`` is a diagonal matrix of emitter detuning frequencies ``omega_0s``.
     - ``H_b = sqrt(Theta)``, with ``Theta`` the tight-binding Hamiltonian. The
       square root is taken in the eigenbasis: ``Theta = U diag(tb_evals) U†``,
-      so ``H_b = U diag(sqrt(tb_evals)) U†``.
+      so ``H_b = (U * omegas) @ U.conj().T``.
     - ``H_int`` is the coupling block connecting each emitter to the bath orbitals.
+
+    The result is dense because ``H_b`` is dense (eigenvectors of a 2-D TB
+    Hamiltonian mix every site). Time-evolution paths that previously used
+    ``scipy.sparse.linalg.expm_multiply`` still accept this dense form.
     """
     # --------------------------------------------------------------------------
     # Dimensions
@@ -113,18 +115,25 @@ def make_light_matter_Hamiltonian(
         theta[j, i] += np.conjugate(val)
 
     # --------------------------------------------------------------------------
-    # 2. Diagonalize Theta and form H_b = sqrt(Theta)
+    # 2. Diagonalize Theta and form mode frequencies
     # --------------------------------------------------------------------------
     tb_evals, u_mat = eigh(theta)
     omegas = np.sqrt(np.clip(tb_evals, 0.0, None))
 
-    h_bath = u_mat @ np.diag(omegas) @ u_mat.conj().T
-    h_bath[np.abs(h_bath) < atol] = 0.0
-    h_bath_csr = csr_matrix(h_bath)
+    # --------------------------------------------------------------------------
+    # 3. Assemble full H directly into a dense array
+    # --------------------------------------------------------------------------
+    H = np.zeros((dim_h, dim_h), dtype=complex)
 
-    # --------------------------------------------------------------------------
-    # 2b. Absorbing boundary layer (PML)
-    # --------------------------------------------------------------------------
+    # Emitter block
+    H[np.arange(n_emitters), np.arange(n_emitters)] = np.asarray(
+        omega_0s_list, dtype=complex
+    )
+
+    # Bath block: H_b = (U * omegas) @ U† (one matmul, no diag() allocation).
+    H[n_emitters:, n_emitters:] = (u_mat * omegas) @ u_mat.conj().T
+
+    # Absorbing boundary layer (PML)
     if pml_dampings is not None:
         pml_dampings = np.asarray(pml_dampings, dtype=float)
         if pml_dampings.shape != (n_orbitals,):
@@ -132,29 +141,11 @@ def make_light_matter_Hamiltonian(
                 f"`pml_dampings` must have shape ({n_orbitals},), "
                 f"got {pml_dampings.shape}."
             )
-        pml_diag = diags(
-            pml_dampings, offsets=0, shape=(n_orbitals, n_orbitals), format="csr"
-        )
-        h_bath_csr = h_bath_csr - 1j * pml_diag
+        bath_diag = np.arange(n_emitters, dim_h)
+        H[bath_diag, bath_diag] -= 1j * pml_dampings
         check_hermitian = False
 
-    # --------------------------------------------------------------------------
-    # 3. Emitter block H_e
-    # --------------------------------------------------------------------------
-    h_emitter = diags(
-        np.asarray(omega_0s_list, dtype=complex),
-        offsets=0,
-        shape=(n_emitters, n_emitters),
-        format="csr",
-    )
-
-    # --------------------------------------------------------------------------
-    # 4. Coupling block H_int, shape (n_emitters, n_orbitals)
-    # --------------------------------------------------------------------------
-    coupling_vals = []
-    i_coupling = []
-    j_coupling = []
-
+    # Coupling block H_int (and its conjugate transpose)
     for emitter_idx, (g_vals, bath_idx) in enumerate(gr0s_rs):
         g_vals = np.asarray(g_vals, dtype=complex)
         bath_idx = np.asarray(bath_idx, dtype=int)
@@ -164,52 +155,22 @@ def make_light_matter_Hamiltonian(
                 f"Emitter {emitter_idx}: `g_vals` and `bath_idx` must have the same shape, "
                 f"got {g_vals.shape} and {bath_idx.shape}."
             )
-        if bath_idx.min(initial=0) < 0 or bath_idx.max(initial=-1) >= n_orbitals:
+        if bath_idx.size and (
+            bath_idx.min() < 0 or bath_idx.max() >= n_orbitals
+        ):
             raise ValueError(
                 f"Emitter {emitter_idx}: `bath_idx` out of range [0, {n_orbitals - 1}]."
             )
 
-        i_coupling.append(np.full_like(bath_idx, emitter_idx))
-        j_coupling.append(bath_idx)
-        coupling_vals.append(g_vals)
-
-    if coupling_vals:
-        i_coupling = np.hstack(i_coupling)
-        j_coupling = np.hstack(j_coupling)
-        coupling_vals = np.hstack(coupling_vals)
-    else:
-        i_coupling = np.array([], dtype=int)
-        j_coupling = np.array([], dtype=int)
-        coupling_vals = np.array([], dtype=complex)
-
-    h_int = csr_matrix(
-        (coupling_vals, (i_coupling, j_coupling)),
-        shape=(n_emitters, n_orbitals),
-        dtype=complex,
-    )
+        col = n_emitters + bath_idx
+        H[emitter_idx, col] = g_vals
+        H[col, emitter_idx] = g_vals.conj()
 
     # --------------------------------------------------------------------------
-    # 5. Full Hamiltonian
+    # 4. Consistency checks
     # --------------------------------------------------------------------------
-    H = cast(
-        csr_matrix,
-        bmat(
-            [[h_emitter, h_int], [h_int.getH(), h_bath_csr]],
-            format="csr",
-        ),
-    )
-
-    # --------------------------------------------------------------------------
-    # 6. Consistency checks
-    # --------------------------------------------------------------------------
-    if H.shape != (dim_h, dim_h):
-        raise ValueError(
-            f"Incorrect Hamiltonian shape {H.shape}, expected ({dim_h}, {dim_h})."
-        )
-
     if check_hermitian:
-        diff = H - H.getH()
-        max_dev = np.max(np.abs(diff.data)) if diff.nnz else 0.0
+        max_dev = float(np.max(np.abs(H - H.conj().T)))
         if max_dev > atol:
             raise ValueError(
                 f"`H` is not Hermitian (max deviation {max_dev:.2e}, tolerance {atol:.2e})."

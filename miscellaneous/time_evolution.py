@@ -20,7 +20,6 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mpl_ticker
 import numpy as np
 import pythtb as tb  # for easy simulation of the tight-binding model
-from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf  # our package functions to work with
 from emitter_crystal_coupling.constants import C_LIGHT
@@ -150,11 +149,10 @@ H_total, omega_sites = mf.make_light_matter_Hamiltonian(
 )
 
 # %% Compute time evolution (single excited emitter)
-assert H_total.shape is not None
 psi0 = np.zeros(H_total.shape[0])
 psi0[0] = 1
 
-psit = expm_multiply(-1j * H_total, psi0, T0, TF, T_STEPS, endpoint=True)
+psit = mf.evolve_diagonalisation(H_total, psi0, np.linspace(T0, TF, T_STEPS))
 
 # ---------------------------------------------------------------------------- #
 # Probe emitter at [0, 0]
@@ -193,14 +191,12 @@ new_Hs = [
 ]
 
 # Initial state: only the excited emitter populated
-assert new_Hs[0].shape is not None
 new_psi0 = np.zeros(new_Hs[0].shape[0])
 new_psi0[0] = 1
 
 # Compute time evolutions for both probe orientations
-new_psits = [
-    expm_multiply(-1j * H, new_psi0, T0, NEW_TF, T_STEPS, endpoint=True) for H in new_Hs
-]
+_new_times = np.linspace(T0, NEW_TF, T_STEPS)
+new_psits = [mf.evolve_diagonalisation(H, new_psi0, _new_times) for H in new_Hs]
 
 # ---------------------------------------------------------------------------- #
 # Prepare data to be plotted

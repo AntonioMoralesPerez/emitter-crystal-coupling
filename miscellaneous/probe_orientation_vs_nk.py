@@ -10,7 +10,6 @@ NOTE: run mpb_field_computation.py for each desired N_K before executing.
 import matplotlib.pyplot as plt
 import numpy as np
 import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf
 from emitter_crystal_coupling.constants import C_LIGHT
@@ -151,11 +150,10 @@ for label, j2 in TB_VARIANTS.items():
                 pml_dampings=pml_dampings,
             )
 
-            assert H.shape is not None
             psi0 = np.zeros(H.shape[0])
             psi0[0] = 1
-            psit = expm_multiply(
-                -1j * H, psi0, 0.0, t_f_internal, T_STEPS, endpoint=True
+            psit = mf.evolve_diagonalisation(
+                H, psi0, np.linspace(0.0, t_f_internal, T_STEPS)
             )
             pops[i] = np.max(np.abs(psit[:, 1]) ** 2)
 

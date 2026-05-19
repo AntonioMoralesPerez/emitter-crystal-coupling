@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 # Third-party
 import numpy as np
 import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
 
 # Local
 import emitter_crystal_coupling as mf
@@ -116,7 +115,7 @@ couplings = [
 ]
 idxs = np.arange(len(couplings[0]))
 
-# Time axis (convert T_F from 1/Γ₀ to a/c for expm_multiply, then back for plot)
+# Time axis (convert T_F from 1/Γ₀ to a/c for the time evolution, then back for plot)
 gamma_0 = mf.free_spontaneous_emission(
     omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
 )
@@ -147,10 +146,9 @@ for gamma_max in GAMMA_MAX_VALUES:
             pml_dampings=pml_dampings,
         )
         if psi_0 is None:
-            assert H.shape is not None
             psi_0 = np.zeros(H.shape[0])
             psi_0[0] = 1
-        psi_t = expm_multiply(-1j * H, psi_0, 0.0, t_f_internal, T_STEPS, endpoint=True)
+        psi_t = mf.evolve_diagonalisation(H, psi_0, np.linspace(0.0, t_f_internal, T_STEPS))
         pops.append(np.abs(psi_t[:, 0]) ** 2)
 
     results.append(pops)

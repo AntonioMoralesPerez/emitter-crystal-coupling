@@ -25,7 +25,6 @@ import matplotlib.ticker as mpl_ticker
 # Third-party
 import numpy as np
 import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
 
 # Local
 import emitter_crystal_coupling as mf
@@ -394,12 +393,12 @@ def compute_time_evolution(
         pml_dampings=pml_dampings,
     )
 
-    assert H_1.shape is not None
-    psi_0 = np.zeros(H_1.shape[0])
+    psi_0 = np.zeros(H_1.shape[0], dtype=complex)
     psi_0[0] = 1
 
-    psi_t_1 = expm_multiply(-1j * H_1, psi_0, t_0, t_f, t_steps, endpoint=True)
-    psi_t_2 = expm_multiply(-1j * H_2, psi_0, t_0, t_f, t_steps, endpoint=True)
+    times = np.linspace(t_0, t_f, t_steps)
+    psi_t_1 = mf.evolve_diagonalisation(H_1, psi_0, times)
+    psi_t_2 = mf.evolve_diagonalisation(H_2, psi_0, times)
 
     return psi_t_1, psi_t_2, couplings
 
@@ -607,16 +606,12 @@ def compute_probe_emitter_evolution(
         pml_dampings=pml_dampings,
     )
 
-    assert new_H_1.shape is not None
-    new_psi_0 = np.zeros(new_H_1.shape[0])
+    new_psi_0 = np.zeros(new_H_1.shape[0], dtype=complex)
     new_psi_0[0] = 1
 
-    new_psi_t_1 = expm_multiply(
-        -1j * new_H_1, new_psi_0, t_0, t_f, t_steps, endpoint=True
-    )
-    new_psi_t_2 = expm_multiply(
-        -1j * new_H_2, new_psi_0, t_0, t_f, t_steps, endpoint=True
-    )
+    times = np.linspace(t_0, t_f, t_steps)
+    new_psi_t_1 = mf.evolve_diagonalisation(new_H_1, new_psi_0, times)
+    new_psi_t_2 = mf.evolve_diagonalisation(new_H_2, new_psi_0, times)
 
     return new_psi_t_1, new_psi_t_2
 

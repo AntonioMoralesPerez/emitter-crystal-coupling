@@ -39,7 +39,6 @@ import meep as mp  # photonic crystal simulation
 import numpy as np
 import pythtb as tb  # tight-binding model
 from meep import mpb  # MPB eigensolver interface
-from scipy.sparse.linalg import expm_multiply  # time-dependent Schrödinger equation
 
 # Local
 import emitter_crystal_coupling as mf
@@ -120,7 +119,7 @@ EPSILON_INPUT_FILE: str = f"./data/kimble/{RESOLUTION}-epsilon.h5"
 # Emitter parameters
 THETA_1: float = 90 * np.pi / 180  # emitter 1 orientation [rad]
 THETA_2: float = 135 * np.pi / 180  # emitter 2 orientation [rad]
-DIP_STRENGTH: float = 50  # dipole moment strength [Debye]
+DIP_STRENGTH: float = 7000  # dipole moment strength [Debye]
 P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 N_EMITTERS: int = 1  # emitters per simulation
@@ -138,7 +137,7 @@ DIP_COLORS: list[str] = ["#1f77b4", "#ff7f0e"]  # one color per dipole orientati
 # Tight-binding model
 LAT: list[list[int]] = [[1, 0], [0, 1]]
 ORB: list[list[int]] = [[0, 0]]  # orbital position in lattice units
-N_CELLS: int = 41  # unit cells per direction
+N_CELLS: int = 35  # unit cells per direction
 N_PML: int = 8  # absorbing layer thickness [unit cells per edge]
 GAMMA_MAX: float = 3e-2  # maximum damping rate at the hard wall [c/a]
 # Hopping coefficients up to 2nd nearest neighbours [units: (c/a)²]
@@ -156,9 +155,9 @@ N_R: int = 13  # number of grid points per direction
 
 # Time evolution [units: 1/Γ₀]
 T_0: float = 0  # start time
-T_F: float = 5e-5  # end time
-T_STEPS: int = 200  # number of time steps
-SNAP_IDX: int = 100  # snapshot index for field plots (0 to T_STEPS)
+T_F: float = 5e-2  # end time
+T_STEPS: int = 100  # number of time steps
+SNAP_IDX: int = 60  # snapshot index for field plots (0 to T_STEPS)
 
 # Probe emitter
 NEW_N_EMITTERS: int = 2
@@ -169,7 +168,7 @@ NEW_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
 )
 NEW_DIP_COLOR: str = "#2ca02c"
 NEW_T_F: float = T_F  # [1/Γ₀]
-NEW_SNAP_IDX: int = 50
+NEW_SNAP_IDX: int = 30
 # NOTE: NEW_SNAP_IDX is taken around the time the bath excitation hits
 #       the probe emitter. If a different position is chosen, this value
 #       may need to be adjusted.
@@ -857,17 +856,17 @@ def compute_time_evolution(
         pml_dampings=pml_dampings,
     )
 
-    assert H_1.shape is not None and H_2.shape is not None
     if H_1.shape != H_2.shape:
         raise ValueError(
             f"Hamiltonians have different shapes: {H_1.shape} vs {H_2.shape}."
         )
 
-    psi_0 = np.zeros(H_1.shape[0])
+    psi_0 = np.zeros(H_1.shape[0], dtype=complex)
     psi_0[0] = 1
 
-    psi_t_1 = expm_multiply(-1j * H_1, psi_0, t_0, t_f, t_steps, endpoint=True)
-    psi_t_2 = expm_multiply(-1j * H_2, psi_0, t_0, t_f, t_steps, endpoint=True)
+    times = np.linspace(t_0, t_f, t_steps)
+    psi_t_1 = mf.evolve_diagonalisation(H_1, psi_0, times)
+    psi_t_2 = mf.evolve_diagonalisation(H_2, psi_0, times)
 
     return psi_t_1, psi_t_2, omega_sites_1, omega_sites_2, couplings
 
@@ -1248,16 +1247,12 @@ def compute_probe_emitter_evolution(
         pml_dampings=pml_dampings,
     )
 
-    assert new_H_1.shape is not None
-    new_psi_0 = np.zeros(new_H_1.shape[0])
+    new_psi_0 = np.zeros(new_H_1.shape[0], dtype=complex)
     new_psi_0[0] = 1
 
-    new_psi_t_1 = expm_multiply(
-        -1j * new_H_1, new_psi_0, T_0, NEW_T_F, T_STEPS, endpoint=True
-    )
-    new_psi_t_2 = expm_multiply(
-        -1j * new_H_2, new_psi_0, T_0, NEW_T_F, T_STEPS, endpoint=True
-    )
+    new_times = np.linspace(T_0, NEW_T_F, T_STEPS)
+    new_psi_t_1 = mf.evolve_diagonalisation(new_H_1, new_psi_0, new_times)
+    new_psi_t_2 = mf.evolve_diagonalisation(new_H_2, new_psi_0, new_times)
 
     return new_psi_t_1, new_psi_t_2, new_omega_0
 

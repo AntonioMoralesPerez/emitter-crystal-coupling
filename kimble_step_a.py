@@ -24,7 +24,6 @@ import matplotlib.ticker as mpl_ticker
 # Third-party
 import numpy as np
 import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
 
 # Local
 import emitter_crystal_coupling as mf
@@ -359,10 +358,9 @@ def compute_time_evolution(
         gr0s_rs=[([g], [idx])],
         pml_dampings=pml_dampings,
     )
-    assert H.shape is not None
-    psi_0 = np.zeros(H.shape[0])
+    psi_0 = np.zeros(H.shape[0], dtype=complex)
     psi_0[0] = 1
-    return expm_multiply(-1j * H, psi_0, t_0, t_f, t_steps, endpoint=True)
+    return mf.evolve_diagonalisation(H, psi_0, np.linspace(t_0, t_f, t_steps))
 
 
 def plot_emitter_time_evolution(
@@ -497,10 +495,9 @@ def compute_probe_emitter_evolution(
         gr0s_rs=[([g], [idx_main]), ([g_probe], [idx_probe])],
         pml_dampings=pml_dampings,
     )
-    assert H.shape is not None
-    psi_0 = np.zeros(H.shape[0])
+    psi_0 = np.zeros(H.shape[0], dtype=complex)
     psi_0[0] = 1
-    return expm_multiply(-1j * H, psi_0, t_0, t_f, t_steps, endpoint=True)
+    return mf.evolve_diagonalisation(H, psi_0, np.linspace(t_0, t_f, t_steps))
 
 
 def plot_probe_bath_snapshot(

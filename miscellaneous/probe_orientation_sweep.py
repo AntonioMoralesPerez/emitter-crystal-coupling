@@ -13,7 +13,6 @@ NOTE: run mpb_field_computation.py at EXCITED_R and PROBE_R before executing.
 import matplotlib.pyplot as plt
 import numpy as np
 import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf
 from emitter_crystal_coupling.constants import C_LIGHT
@@ -34,7 +33,7 @@ EXCITED_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
     [np.cos(EXCITED_THETA), np.sin(EXCITED_THETA), 0]
 )
 
-PROBE_R: list = [-5, 5]
+PROBE_R: list = [-15, 15]
 PROBE_DIP_STRENGTH: float = DIP_STRENGTH  # [Debye]
 N_THETAS: int = 21
 PROBE_THETAS: np.ndarray = np.linspace(40, 60, N_THETAS) * np.pi / 180
@@ -44,7 +43,7 @@ KIMBLE_PROBE_THETA: float = np.deg2rad(45)
 
 LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
-N_CELLS: int = 41
+N_CELLS: int = 55
 N_PML: int = 8
 GAMMA_MAX: float = 3e-2  # [c/a]
 
@@ -180,10 +179,9 @@ for i, probe_theta in enumerate(PROBE_THETAS):
         pml_dampings=pml_dampings,
     )
 
-    assert H.shape is not None
     psi0 = np.zeros(H.shape[0])
     psi0[0] = 1
-    psit = expm_multiply(-1j * H, psi0, 0.0, t_f_internal, T_STEPS, endpoint=True)
+    psit = mf.evolve_diagonalisation(H, psi0, np.linspace(0.0, t_f_internal, T_STEPS))
     max_probe_pops[i] = np.max(np.abs(psit[:, 1]) ** 2)
 
     print(
