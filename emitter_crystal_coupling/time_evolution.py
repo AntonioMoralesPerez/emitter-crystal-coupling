@@ -52,10 +52,10 @@ def evolve_diagonalisation(
     coefficients are obtained with ``np.linalg.solve(V, ψ₀)`` rather than
     ``V.conj().T @ ψ₀``.
     """
-    H_dense = H.toarray() if sparse.issparse(H) else np.asarray(H)
+    H_dense = H.toarray() if sparse.issparse(H) else np.asarray(H)  # type: ignore
     times = np.asarray(times)
 
-    lam, V = scipy.linalg.eig(H_dense)
+    lam, V = scipy.linalg.eig(H_dense)  # type: ignore
     c = np.linalg.solve(V, psi0)
     phase = np.exp(-1j * np.outer(lam, times))
     return (V @ (phase * c[:, None])).T
