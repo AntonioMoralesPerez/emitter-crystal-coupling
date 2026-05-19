@@ -27,6 +27,7 @@ LAT_PARAM: float = 30e-9  # lattice parameter [m]
 N_BANDS: int = 2
 BAND_IDX: int = 0
 N_K: int = 64
+RESOLUTION: int = 64  # must match the precomputed field files
 R_0: list = [0.0, 0.0]
 
 THETA_1: float = 90 * np.pi / 180
@@ -98,7 +99,9 @@ _, _, rs_finite = mf.build_finite_grid(N_CELLS)
 # Load field data and compute couplings (independent of PML — done once)
 # ------------------------------------------------------------------------------
 
-fields_data = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{R_0}.pkl")
+fields_data = mf.load(
+    f"./data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{R_0}.pkl"
+)
 omega_ks_n = np.asarray(fields_data["freqs"])
 ks = np.asarray(fields_data["kpts"])
 fr0_n_ks = np.asarray(fields_data["Eks"])[0]

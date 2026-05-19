@@ -11,8 +11,8 @@ across positions. Outputs:
     spatial resolution, written via MPB's `output_epsilon`. Consumed by
     `kimble.py` and other scripts that rebuild a ModeSolver from
     `epsilon_input_file=`.
-  - `./data/kimble/fields/{NK}_meshgrid_at_{r0}.pkl`: one pickle per emitter
-    position with frequencies, k-points, and E_{n,k}(r0).
+  - `./data/kimble/fields/res_{RESOLUTION}/nk_{NK}/meshgrid_at_{r0}.pkl`: one
+    pickle per emitter position with frequencies, k-points, and E_{n,k}(r0).
 
 Run from the `miscellaneous/` directory.
 """
@@ -33,13 +33,12 @@ LATTICE_VECS = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
 # %% MPB simulation parameters
 NUM_BANDS = 1
 NK = 81  # k-points per direction (Monkhorst-Pack)
-RESOLUTION = 128  # spatial grid points per lattice unit
-TOLERANCE = 1e-12  # eigensolver tolerance
+RESOLUTION = 64  # spatial grid points per lattice unit
 
 # %% Output paths
 EPSILON_OUTPUT_DIR = "../data/kimble/"
 EPSILON_OUTPUT_FILE = f"{EPSILON_OUTPUT_DIR}{RESOLUTION}-epsilon.h5"
-DIRNAME_OUTPUT = "../data/kimble/fields/"
+DIRNAME_OUTPUT = f"../data/kimble/fields/res_{RESOLUTION}/nk_{NK}/"
 
 # %% Emitter positions [units of lattice constant a].
 # All positions sampled in the same MPB run for a consistent gauge.
@@ -60,7 +59,6 @@ R0_LIST = [
 print(f"\nNumber of bands      = {NUM_BANDS}")
 print(f"Resolution           = {RESOLUTION}")
 print(f"k-grid (NK × NK)     = {NK} × {NK}")
-print(f"Tolerance            = {TOLERANCE:g}")
 print(f"Lattice size         = {LATTICE_SIZE}")
 print(f"Lattice vectors      = {LATTICE_VECS}")
 print(f"Cylinder radius      = {RADIUS:.6f} a")
@@ -108,7 +106,6 @@ ms = mpb.ModeSolver(
     geometry=geometry,
     geometry_lattice=geometry_lattice,
     k_points=k_points,
-    tolerance=TOLERANCE,
 )
 
 # Map all k-points into the first Brillouin zone (important for symmetry)
@@ -191,7 +188,7 @@ for i, R0 in enumerate(R0_LIST):
     }
     mf.save(
         output,
-        filename=f"{NK}_meshgrid_at_{list(R0)}.pkl",
+        filename=f"meshgrid_at_{list(R0)}.pkl",
         dirname=DIRNAME_OUTPUT,
     )
 

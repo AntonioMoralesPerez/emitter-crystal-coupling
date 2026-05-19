@@ -26,6 +26,7 @@ N_PML: int = 8
 GAMMA_MAX: float = 3e-2
 
 N_K = 101
+RESOLUTION = 64  # must match the precomputed field files
 
 # angles for the dipole moments of the quantum emitters and its dimensionless value
 THETAS = np.linspace(90, 140, 6) * np.pi / 180
@@ -61,7 +62,9 @@ DIPOLES = [
 # Load the fields and k-points from the MPB calculation
 # ---------------------------------------------------------------------------- #
 
-data = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{R_0}.pkl")
+data = mf.load(
+    f"./data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{R_0}.pkl"
+)
 
 omega_ks_n = np.asarray(data["freqs"])  # (Nk, Nb)
 ks = np.asarray(data["kpts"])  # (Nk, 3)

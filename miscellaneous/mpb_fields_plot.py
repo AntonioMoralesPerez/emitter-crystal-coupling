@@ -9,7 +9,8 @@ Three sections:
   3. Unit-cell profile — field structure inside the first unit cell summed over k.
 
 Run from the `miscellaneous/` directory. Requires precomputed MPB fields in
-`data/kimble/fields/`. If absent, run `mpb_field_computation.py` first.
+`data/kimble/fields/res_{RESOLUTION}/nk_{NK}/`. If absent, run
+`mpb_field_computation.py` first.
 """
 
 # some imports for plotting utilities
@@ -22,6 +23,7 @@ import emitter_crystal_coupling as mf  # our package functions to work with
 
 # %% Define the main constants and parameters for the current simulation
 NK = 81  # number of points per direction for the Monkhorst-Pack grid
+RESOLUTION = 64  # must match the precomputed field files
 
 # Position of the quantum emitter in units of the lattice constant 'a'
 # list of positions are also allowed
@@ -35,7 +37,9 @@ BAND_INDEX = 0  # index of the band to consider (0-based)
 
 # Load the fields and k-points from the MPB calculation
 # This file was generated previously
-data = mf.load(f"../data/kimble/fields/{NK}_meshgrid_at_{R0}.pkl")
+data = mf.load(
+    f"../data/kimble/fields/res_{RESOLUTION}/nk_{NK}/meshgrid_at_{R0}.pkl"
+)
 
 # Extract relevant quantities
 Eks = np.asarray(data["Eks"])  # Electric fields, shape: (Nr, Nb, Nk, 3)

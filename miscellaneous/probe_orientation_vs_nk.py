@@ -34,7 +34,8 @@ PROBE_DIP_STRENGTH: float = DIP_STRENGTH
 
 PROBE_THETAS: np.ndarray = np.linspace(40, 60, 13) * np.pi / 180
 
-FIELDS_DIR: str = "./data/kimble/fields/"
+RESOLUTION: int = 64  # must match the precomputed field files
+FIELDS_DIR: str = f"./data/kimble/fields/res_{RESOLUTION}"
 NK_VALUES: list = [61, 71, 81, 91]
 
 LAT: list = [[1, 0], [0, 1]]
@@ -113,7 +114,9 @@ for label, j2 in TB_VARIANTS.items():
     for nk in NK_VALUES:
         print(f"\n  N_K = {nk} ({'even' if nk % 2 == 0 else 'odd'})")
 
-        data_excited = mf.load(f"{FIELDS_DIR}{nk}_meshgrid_at_{EXCITED_R}.pkl")
+        data_excited = mf.load(
+            f"{FIELDS_DIR}/nk_{nk}/meshgrid_at_{EXCITED_R}.pkl"
+        )
         excited_coupling = mf.compute_real_space_coupling(
             fr0_n_ks=np.asarray(data_excited["Eks"])[0],
             dipole_moment=EXCITED_DIPOLE,
@@ -122,7 +125,9 @@ for label, j2 in TB_VARIANTS.items():
             rs=rs_finite,
         )[BAND_IDX, :]
 
-        data_probe = mf.load(f"{FIELDS_DIR}{nk}_meshgrid_at_{PROBE_R}.pkl")
+        data_probe = mf.load(
+            f"{FIELDS_DIR}/nk_{nk}/meshgrid_at_{PROBE_R}.pkl"
+        )
         omega_ks_probe = np.asarray(data_probe["freqs"])
         fr0_probe = np.asarray(data_probe["Eks"])[0]
         ks_probe = np.asarray(data_probe["kpts"])

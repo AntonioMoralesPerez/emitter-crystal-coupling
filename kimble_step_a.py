@@ -71,6 +71,7 @@ LAT_PARAM: float = 300e-9  # lattice parameter [m]
 N_BANDS: int = 2
 BAND_IDX: int = 0
 N_K: int = 64
+RESOLUTION: int = 64  # must match the precomputed field/epsilon files
 
 # Emitter — single orientation used only to extract G from MPB fields
 THETA: float = 90 * np.pi / 180  # [rad]
@@ -241,7 +242,9 @@ compute_and_plot_isofrequency(infinite_model, omega_0)
 # This is the fairest comparison: G matches the dominant coupling scale that the
 # real emitter achieves at DIP_STRENGTH = 7000 D.
 
-fields_data = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{R_0}.pkl")
+fields_data = mf.load(
+    f"./data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{R_0}.pkl"
+)
 omega_ks_n = np.asarray(fields_data["freqs"])  # (Nk, Nb)
 ks = np.asarray(fields_data["kpts"])  # (Nk, 3)
 fr0_n_ks = np.asarray(fields_data["Eks"])[0]  # (Nb, Nk, 3)

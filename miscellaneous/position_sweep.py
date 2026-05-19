@@ -25,6 +25,7 @@ TOLERANCE = 1e-12  # tolerance for the MPB calculations
 N_CELLS = 41  # number of unit cells in each direction
 
 NK = 64  # number of points per direction for the Monkhorst-Pack grid
+RESOLUTION = 64  # must match the precomputed field files
 
 # angles for the dipole moments of the quantum emitters and its dimensionless value
 THETA = 130 * np.pi / 180
@@ -60,7 +61,10 @@ TIME_INDEX = 30  # time index to consider for the field snapshots
 
 # Load the fields and k-points from the MPB calculation
 # This file was generated previously
-datas = [mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_{R0}.pkl") for R0 in R0_LIST]
+datas = [
+    mf.load(f"./data/kimble/fields/res_{RESOLUTION}/nk_{NK}/meshgrid_at_{R0}.pkl")
+    for R0 in R0_LIST
+]
 
 # Extract relevant quantities
 omegas = [np.asarray(data["freqs"]) for data in datas]

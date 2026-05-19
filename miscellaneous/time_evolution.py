@@ -39,6 +39,7 @@ N_PML = 8  # absorbing layer thickness [unit cells per edge]
 GAMMA_MAX = 3e-2  # maximum damping rate at the hard wall [c/a]
 
 NK = 64  # number of k-points per direction for the Monkhorst-Pack grid
+RESOLUTION = 64  # must match the precomputed field files
 
 # Excited emitter parameters
 THETA = 60 * np.pi / 180  # orientation [rad]
@@ -128,7 +129,9 @@ dist = np.minimum(dist_x, dist_y)
 pml_dampings = np.where(dist < N_PML, GAMMA_MAX * ((N_PML - dist) / N_PML) ** 2, 0.0)
 
 # %% Load field data for the excited emitter at R0=[-4.5, 4.5]
-data = mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_{R0}.pkl")
+data = mf.load(
+    f"./data/kimble/fields/res_{RESOLUTION}/nk_{NK}/meshgrid_at_{R0}.pkl"
+)
 omegas = np.asarray(data["freqs"])  # (Nk, Nb)
 Eks = np.asarray(data["Eks"])  # (Nr, Nb, Nk, 3)
 kpts = np.asarray(data["kpts"])  # (Nk, 3)
@@ -159,7 +162,9 @@ psit = mf.evolve_diagonalisation(H_total, psi0, np.linspace(T0, TF, T_STEPS))
 # ---------------------------------------------------------------------------- #
 
 # Load field data for the probe at PROBE_R=[0.0, 0.0]
-probe_data = mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_{PROBE_R}.pkl")
+probe_data = mf.load(
+    f"./data/kimble/fields/res_{RESOLUTION}/nk_{NK}/meshgrid_at_{PROBE_R}.pkl"
+)
 probe_omegas = np.asarray(probe_data["freqs"])
 probe_Eks = np.asarray(probe_data["Eks"])
 probe_kpts = np.asarray(probe_data["kpts"])

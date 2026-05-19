@@ -18,6 +18,7 @@ import emitter_crystal_coupling as mf  # our package functions to work with
 
 # %% Define the main constants and parameters for the current simulation
 NK = 101  # number of points per direction for the Monkhorst-Pack grid
+RESOLUTION = 64  # must match the precomputed field files
 
 # angles for the dipole moments of the quantum emitters and its dimensionless value
 THETA = np.deg2rad(90)
@@ -36,7 +37,9 @@ BAND_INDEX = 0  # index of the band to consider (0-based)
 
 # Load the fields and k-points from the MPB calculation
 # This file was generated previously
-data = mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_{R0}.pkl")
+data = mf.load(
+    f"./data/kimble/fields/res_{RESOLUTION}/nk_{NK}/meshgrid_at_{R0}.pkl"
+)
 
 # Extract relevant quantities
 omegas = np.asarray(data["freqs"])  # Frequencies (Nk, Nb)

@@ -72,6 +72,7 @@ LAT_PARAM: float = 300e-9  # lattice parameter [m]
 N_BANDS: int = 2
 BAND_IDX: int = 0
 N_K: int = 64
+RESOLUTION: int = 64  # must match the precomputed field/epsilon files
 
 # Emitter parameters
 THETA_1: float = 90 * np.pi / 180  # [rad]
@@ -224,7 +225,9 @@ compute_and_plot_isofrequency(infinite_model, omega_0)
 
 def load_field_data(n_k: int, r_0: list) -> dict:
     """Load precomputed MPB fields, frequencies, and k-points from disk."""
-    return mf.load(f"./data/kimble/fields/{n_k}_meshgrid_at_{r_0}.pkl")
+    return mf.load(
+        f"./data/kimble/fields/res_{RESOLUTION}/nk_{n_k}/meshgrid_at_{r_0}.pkl"
+    )
 
 
 def compute_coupling_grid(

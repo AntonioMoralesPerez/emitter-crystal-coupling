@@ -26,6 +26,7 @@ P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 
 BAND_IDX: int = 0
 N_K: int = 64
+RESOLUTION: int = 64  # must match the precomputed field files
 
 EMITTER_R: list = [0.0, 0.0]
 N_THETAS: int = 13
@@ -83,7 +84,9 @@ tvals_norm = np.linspace(0.0, T_F, T_STEPS, endpoint=True)
 
 # %% Load emitter fields
 
-data = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{EMITTER_R}.pkl")
+data = mf.load(
+    f"./data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{EMITTER_R}.pkl"
+)
 omega_ks_n = np.asarray(data["freqs"])
 fr0_n_ks = np.asarray(data["Eks"])[0]
 ks = np.asarray(data["kpts"])

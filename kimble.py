@@ -434,7 +434,9 @@ def load_field_data(n_k: int, r_0: list[float]) -> dict:
     -----
     All quantities are in MPB internal units.
     """
-    return mf.load(f"./data/kimble/fields/{n_k}_meshgrid_at_{r_0}.pkl")
+    return mf.load(
+        f"./data/kimble/fields/res_{RESOLUTION}/nk_{n_k}/meshgrid_at_{r_0}.pkl"
+    )
 
 
 def compute_coupling_grid(

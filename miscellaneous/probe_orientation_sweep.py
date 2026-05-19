@@ -26,6 +26,7 @@ DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 
 BAND_IDX: int = 0
 N_K: int = 81
+RESOLUTION: int = 64  # must match the precomputed field files
 
 EXCITED_R: list = [0, 0]
 EXCITED_THETA: float = 90 * np.pi / 180
@@ -132,7 +133,9 @@ ts_norm = np.linspace(0.0, T_F, T_STEPS, endpoint=True)
 
 # %% Load excited emitter fields and compute couplings
 
-data_excited = mf.load(f"../data/kimble/fields/{N_K}_meshgrid_at_{EXCITED_R}.pkl")
+data_excited = mf.load(
+    f"../data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{EXCITED_R}.pkl"
+)
 omega_ks_n = np.asarray(data_excited["freqs"])
 fr0_n_ks = np.asarray(data_excited["Eks"])[0]
 ks = np.asarray(data_excited["kpts"])
@@ -147,7 +150,9 @@ excited_coupling = mf.compute_real_space_coupling(
 
 # %% Load probe fields (orientation-independent, reused for every angle)
 
-data_probe = mf.load(f"../data/kimble/fields/{N_K}_meshgrid_at_{PROBE_R}.pkl")
+data_probe = mf.load(
+    f"../data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{PROBE_R}.pkl"
+)
 omega_ks_probe = np.asarray(data_probe["freqs"])
 fr0_probe = np.asarray(data_probe["Eks"])[0]
 ks_probe = np.asarray(data_probe["kpts"])

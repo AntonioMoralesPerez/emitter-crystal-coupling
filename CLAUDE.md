@@ -17,7 +17,7 @@ pip install -e ".[dev]"   # includes pytest and ipykernel
 python kimble.py
 ```
 
-Requires precomputed MPB field data in `data/kimble/fields/`. If absent, run first:
+Requires precomputed MPB field data in `data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/`. If absent, run first:
 ```bash
 cd miscellaneous && python mpb_field_computation.py
 ```
@@ -31,7 +31,7 @@ No test suite exists yet (`pytest` is listed as a dev dependency but there are n
 The physics pipeline flows through three stages:
 
 **1. Field computation** (`miscellaneous/mpb_field_computation.py`)  
-MPB computes the photonic crystal eigenmodes on a Monkhorst–Pack k-grid at specified emitter positions. Results are serialized to `data/kimble/fields/{N_K}_meshgrid_at_{r_0}.pkl` — one file per (grid size, position) pair. All positions are computed in a single MPB run to share a consistent k-dependent gauge.
+MPB computes the photonic crystal eigenmodes on a Monkhorst–Pack k-grid at specified emitter positions. Results are serialized to `data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{r_0}.pkl` — one file per (resolution, grid size, position) tuple. All positions are computed in a single MPB run to share a consistent k-dependent gauge.
 
 **2. Core library** (`emitter_crystal_coupling/`)  
 - `coupling.py` — Computes `g_{n,k}(r_0)` (reciprocal-space) and `g_{n,R}(r_0)` (real-space via DFT over k-points), and LDOS via Lorentzian broadening.
