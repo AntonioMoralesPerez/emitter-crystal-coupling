@@ -532,7 +532,6 @@ def plot_real_space_coupling(
         fig.colorbar(
             sc,
             ax=ax,
-            label=r"$\mathcal{G}_\mathbf{R}(\mathbf{r}_0)$",
             shrink=0.6,
             aspect=20,
         )
@@ -1199,7 +1198,7 @@ psi_t_list_high, _ = compute_time_evolution(
     fr0_n_ks=fr0_n_ks,
     ks=ks,
     rs=rs_finite,
-    omega_0=omega_0,
+    omega_0=omega_X,
     dipoles=[DIPOLE_90_HIGH],
     t_0=t_0_ac,
     t_f=t_f_ac_high,
@@ -1453,6 +1452,9 @@ def plot_probe_time_evolution(
     ]
     C_max = max(C_ts[0].max(), C_ts[1].max())
 
+    _all_pops = np.concatenate([mod_Ce_excited_sq[0], mod_Ce_excited_sq[1]])
+    _pop_min = _all_pops[_all_pops > 0].min()
+
     for i, theta in enumerate(THETAS):
         fig, ax = plt.subplots(figsize=FIGSIZE_TIME_EVOL)
         ax.plot(ts, mod_Ce_excited_sq[i], c=DIP_COLORS[i])
@@ -1461,8 +1463,6 @@ def plot_probe_time_evolution(
         ax2 = ax.twinx()
         ax2.plot(ts, C_ts[i], c=MY_RED, ls="--")
 
-        _all_pops = mod_Ce_excited_sq[i]
-        _pop_min = _all_pops[_all_pops > 0].min()
         ax.set(
             xlabel=r"$t\Gamma_0$",
             ylabel=r"$|C_e(t)|^2$",
