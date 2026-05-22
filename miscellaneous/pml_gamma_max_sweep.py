@@ -23,22 +23,22 @@ from emitter_crystal_coupling.constants import C_LIGHT
 # Fixed simulation parameters (matching kimble.py)
 # ------------------------------------------------------------------------------
 
-LAT_PARAM: float = 30e-9  # lattice parameter [m]
+LAT_PARAM: float = 300e-9  # lattice parameter [m]
 N_BANDS: int = 2
 BAND_IDX: int = 0
-N_K: int = 64
+N_K: int = 81
 RESOLUTION: int = 64  # must match the precomputed field files
-R_0: list = [0.0, 0.0]
+R_0: list = [0, 0]
 
 THETA_1: float = 90 * np.pi / 180
 THETA_2: float = 135 * np.pi / 180
-DIP_STRENGTH: float = 1000  # [Debye]
+DIP_STRENGTH: float = 4300  # [Debye]
 P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 
 LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
-N_CELLS: int = 41
+N_CELLS: int = 60
 
 J_0: float = 0.07755639
 J_1: float = -0.01993698
@@ -49,10 +49,10 @@ N_K_PATH: int = 100
 
 T_0: float = 0  # [1/Γ₀]
 T_F: float = 5e-2  # [1/Γ₀]
-T_STEPS: int = 100
+T_STEPS: int = 200
 
 # --- Sweep parameters ---
-N_PML: int = 8  # fixed PML thickness [unit cells]
+N_PML: int = 20  # fixed PML thickness [unit cells]
 GAMMA_MAX_VALUES: list = [1e-3, 3e-3, 5e-3, 1e-2, 3e-2, 5e-2, 1e-1]
 
 THETAS: list = [THETA_1, THETA_2]
@@ -100,7 +100,7 @@ _, _, rs_finite = mf.build_finite_grid(N_CELLS)
 # ------------------------------------------------------------------------------
 
 fields_data = mf.load(
-    f"./data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{R_0}.pkl"
+    f"../data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{R_0}.pkl"
 )
 omega_ks_n = np.asarray(fields_data["freqs"])
 ks = np.asarray(fields_data["kpts"])
@@ -151,7 +151,9 @@ for gamma_max in GAMMA_MAX_VALUES:
         if psi_0 is None:
             psi_0 = np.zeros(H.shape[0])
             psi_0[0] = 1
-        psi_t = mf.evolve_diagonalisation(H, psi_0, np.linspace(0.0, t_f_internal, T_STEPS))
+        psi_t = mf.evolve_diagonalisation(
+            H, psi_0, np.linspace(0.0, t_f_internal, T_STEPS)
+        )
         pops.append(np.abs(psi_t[:, 0]) ** 2)
 
     results.append(pops)
@@ -185,6 +187,6 @@ for j, (theta, ax, dip_color) in enumerate(zip(THETAS, axs, DIP_COLORS)):
     ax.legend()
 
 fig.suptitle(rf"$\Gamma_\mathrm{{max}}$ sweep, $N_\mathrm{{PML}} = {N_PML}$")
-fig.savefig(f"./figures/miscellaneous/pml_gamma_max_sweep_N_PML_{N_PML}.png")
+fig.savefig(f"../figures/miscellaneous/pml_gamma_max_sweep_N_PML_{N_PML}.png")
 plt.close(fig)
-print(f"Saved ./figures/miscellaneous/pml_gamma_max_sweep_N_PML_{N_PML}.png")
+print(f"Saved ../figures/miscellaneous/pml_gamma_max_sweep_N_PML_{N_PML}.png")

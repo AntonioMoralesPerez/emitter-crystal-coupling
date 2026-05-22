@@ -21,7 +21,7 @@ __all__ = [
     "free_spontaneous_emission",
     "monkhorst_pack_sampling",
     "compute_real_space_coupling",
-    "compute_ldos",
+    "compute_decay_rate",
     "make_light_matter_Hamiltonian",
     "evolve_diagonalisation",
     "binary_entropy",
@@ -55,8 +55,8 @@ from .mpb_fields import compute_fr0rs
 # Sampling
 from .monkhorst_pack import monkhorst_pack_sampling
 
-# Coupling and LDOS
-from .coupling import compute_real_space_coupling, compute_ldos
+# Coupling and decay rate
+from .coupling import compute_real_space_coupling, compute_decay_rate
 
 # Hamiltonian
 from .hamiltonian import make_light_matter_Hamiltonian

@@ -25,7 +25,8 @@ def evolve_diagonalisation(
     H: np.ndarray | sparse.spmatrix,
     psi0: np.ndarray,
     times: Sequence[float] | np.ndarray,
-) -> np.ndarray:
+    return_cond: bool = False,
+) -> np.ndarray | tuple[np.ndarray, float]:
     """
     Time-evolve ψ₀ under H by full diagonalisation.
 
@@ -40,11 +41,18 @@ def evolve_diagonalisation(
     times : (T,) array-like
         Times at which to evaluate ψ(t), in units consistent with H
         (i.e. a/c if H is in c/a).
+    return_cond : bool, optional
+        If True, also return ``cond(V)``, useful as a sanity check on
+        the numerical noise floor (the error in ``ψ(t)`` from the solve
+        scales with ``cond(V) · ε_mach``). Default is False.
 
     Returns
     -------
     psi_t : (T, n) np.ndarray
         ψ(t_i) for each t_i in ``times``.
+    cond_V : float, optional
+        Condition number of the right-eigenvector matrix. Only returned
+        when ``return_cond=True``.
 
     Notes
     -----
@@ -58,4 +66,8 @@ def evolve_diagonalisation(
     lam, V = scipy.linalg.eig(H_dense)  # type: ignore
     c = np.linalg.solve(V, psi0)
     phase = np.exp(-1j * np.outer(lam, times))
-    return (V @ (phase * c[:, None])).T
+    psi_t = (V @ (phase * c[:, None])).T
+
+    if return_cond:
+        return psi_t, float(np.linalg.cond(V))
+    return psi_t

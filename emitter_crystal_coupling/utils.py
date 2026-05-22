@@ -888,7 +888,7 @@ def build_finite_grid(n_cells: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]
     """
     if n_cells % 2 == 0:
         xs = np.arange(-n_cells / 2, n_cells / 2, 1)
-        ys = np.arange(-n_cells / 2, n_cells / 2 + 1, 1)
+        ys = np.arange(-n_cells / 2, n_cells / 2, 1)
     else:
         xs = np.arange(-(n_cells // 2), n_cells // 2 + 1, 1)
         ys = np.arange(-(n_cells // 2), n_cells // 2 + 1, 1)

@@ -6,7 +6,7 @@ A Python library for computing emitter–bath coupling, time evolution, and enta
 
 ### `emitter_crystal_coupling/`
 Core physics library. Provides:
-- **`coupling.py`** — reciprocal- and real-space emitter–bath coupling $g_{n,k}(\mathbf{r}_0)$, $g_{n,\mathbf{R}}(\mathbf{r}_0)$, and LDOS computation.
+- **`coupling.py`** — reciprocal- and real-space emitter–bath coupling $g_{n,k}(\mathbf{r}_0)$, $g_{n,\mathbf{R}}(\mathbf{r}_0)$, and decay rate $\Gamma(\omega)$ computation.
 - **`hamiltonian.py`** — construction of the full light–matter Hamiltonian.
 - **`entropy.py`** — binary entropy and quadrant-resolved Shannon entropy.
 - **`monkhorst_pack.py`** — Monkhorst–Pack $k$-point sampling.
@@ -18,7 +18,7 @@ Core physics library. Provides:
 Example script demonstrating the library on a 2D photonic crystal:
 1. Dielectric function of the photonic crystal.
 2. Tight-binding vs. MPB band structure and isofrequency contour.
-3. Real-space coupling $g_\mathbf{R}(\mathbf{r}_0)$ and LDOS at the emitter position.
+3. Real-space coupling $g_\mathbf{R}(\mathbf{r}_0)$ and decay rate $\Gamma(\omega)$ at the emitter position.
 4. Time evolution of emitter population and entanglement entropy.
 5. Bath-mediated directional emission and concurrence for a two-emitter system.
 

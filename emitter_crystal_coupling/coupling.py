@@ -132,7 +132,7 @@ def compute_real_space_coupling(
     return gr0_n_rs
 
 
-def compute_ldos(
+def compute_decay_rate(
     omegas: np.ndarray,
     omega_ks: np.ndarray,
     fr0_ks: np.ndarray,
@@ -141,13 +141,14 @@ def compute_ldos(
     const: float = K_CONST,
 ) -> np.ndarray:
     """
-    Compute the local density of states (LDOS) at a given emitter position
-    using Lorentzian broadening.
+    Compute the frequency-resolved spontaneous-emission decay rate Γ(ω) at a
+    given emitter position via Fermi's golden rule, using Lorentzian broadening
+    for the Dirac delta.
 
     Parameters
     ----------
     omegas : np.ndarray
-        Frequencies at which to evaluate the LDOS in units of c/a.
+        Frequencies at which to evaluate Γ in units of c/a.
         Can be a scalar or 1D array.
     omega_ks : np.ndarray, shape (Nk,)
         Frequencies of the modes in units of c/a.
@@ -164,8 +165,8 @@ def compute_ldos(
 
     Returns
     -------
-    ldos : float or np.ndarray
-        LDOS evaluated at the frequencies `omegas`.
+    gamma : float or np.ndarray
+        Decay rate evaluated at the frequencies `omegas`, in units of c/a.
         Returns a scalar if `omegas` is a scalar, otherwise an array of shape (N_omega,).
 
     Raises
@@ -176,9 +177,9 @@ def compute_ldos(
 
     Notes
     -----
-    The LDOS is approximated as:
+    Fermi's golden rule gives:
 
-        LDOS(ω) = Σ_k |g_k(r_0)|^2 δ(ω − ω_k)
+        Γ(ω) = 2π Σ_k |g_k(r_0)|^2 δ(ω − ω_k)
 
     where the Dirac delta is replaced by a Lorentzian kernel of width η.
     The computation uses the relation:
@@ -215,7 +216,7 @@ def compute_ldos(
     delta = omegas[:, np.newaxis] - omega_ks[np.newaxis, :]
     lorentzian = (1 / np.pi) * eta / (delta**2 + eta**2)
 
-    # LDOS: sum over k-points, shape: (N_omega,)
-    ldos = np.sum(prefactor * overlaps * lorentzian, axis=1)
+    # Γ(ω) = 2π Σ_k |g_k|^2 δ_η(ω - ω_k), shape: (N_omega,)
+    gamma = 2 * np.pi * np.sum(prefactor * overlaps * lorentzian, axis=1)
 
-    return ldos[0] if is_scalar else ldos
+    return gamma[0] if is_scalar else gamma
