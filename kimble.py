@@ -250,8 +250,8 @@ def plot_dielectric_function(r_0: list[float]) -> None:
             length=0.7,
             label_offset=0.17,
             arrow_offset=0.07,
-            lw=1,
-            mutation_scale=5,
+            lw=1.8,
+            mutation_scale=10,
             fontsize=7,
         )
 
@@ -542,8 +542,8 @@ def plot_real_space_coupling(
             color=DIP_COLORS[i - 1],
             length=4,
             arrow_offset=0.4,
-            lw=0.8,
-            mutation_scale=5,
+            lw=1.8,
+            mutation_scale=10,
         )
         ax.set(
             xlabel=r"$x/a$",
@@ -552,6 +552,124 @@ def plot_real_space_coupling(
         )
         fig.savefig(
             f"./figures/kimble/G_r({r_0})_for_theta_{np.rad2deg(theta):.0f}deg.svg"
+        )
+        plt.close(fig)
+
+
+def compute_kspace_coupling_grid(
+    fr0_n_ks: np.ndarray,
+    omega_ks_n: np.ndarray,
+) -> list[np.ndarray]:
+    """
+    Compute the reciprocal-space coupling g_k(r_0) for each dipole orientation.
+
+    Parameters
+    ----------
+    fr0_n_ks : np.ndarray, shape (Nb, Nk, 3)
+        Electric field profile at the emitter position.
+    omega_ks_n : np.ndarray, shape (Nk, Nb)
+        Mode frequencies in units of c/a.
+
+    Returns
+    -------
+    gk0_ks_list : list of np.ndarray, each shape (Nk,)
+        Reciprocal-space coupling for each dipole orientation, restricted to
+        the band of interest.
+    """
+    return [
+        mf.compute_reciprocal_space_coupling(
+            fr0_n_ks=fr0_n_ks,
+            dipole_moment=dipole,
+            omega_ks_n=omega_ks_n,
+        )[BAND_IDX, :]
+        for dipole in DIPOLES
+    ]
+
+
+def plot_reciprocal_space_coupling(
+    gk0_ks_list: list[np.ndarray],
+    ks: np.ndarray,
+    tb_model: tb.tb_model,
+    omega_X: float,
+    r_0: list[float],
+) -> None:
+    """
+    Plot and save |g_k(r_0)| over the first Brillouin zone for each dipole
+    orientation. Overlays the ω = ω_X isofrequency contour evaluated on a
+    dense TB grid (same construction as ``compute_and_plot_isofrequency``).
+
+    Parameters
+    ----------
+    gk0_ks_list : list of np.ndarray, each shape (Nk,)
+        Reciprocal-space coupling for each dipole orientation.
+    ks : np.ndarray, shape (Nk, 3)
+        k-point coordinates in Cartesian units (with the 2π factor absorbed,
+        i.e. units of 1/a). The MP grid is reshaped to (N_K, N_K) for
+        ``pcolormesh``; this relies on MP ordering being preserved.
+    tb_model : tb.tb_model
+        Infinite periodic tight-binding model, used to evaluate the
+        isofrequency contour on a dense ``N_K_PATH × N_K_PATH`` grid.
+    omega_X : float
+        X-point frequency at which to draw the isofrequency contour.
+    r_0 : list
+        Emitter position in lattice units, used in the filename.
+    """
+    # MP grid uses indexing="ij": axis 0 = kx (slowest), axis 1 = ky.
+    # Divide by 2π so axes read k a / (2π), matching the isofrequency plot.
+    kx_grid = ks[:, 0].reshape(N_K, N_K) / (2 * np.pi)
+    ky_grid = ks[:, 1].reshape(N_K, N_K) / (2 * np.pi)
+
+    # Dense TB grid for the isofrequency contour (matches
+    # `compute_and_plot_isofrequency`).
+    kx_dense = np.linspace(-0.5, 0.5, N_K_PATH)
+    ky_dense = np.linspace(-0.5, 0.5, N_K_PATH)
+    kx_dense_grid, ky_dense_grid = np.meshgrid(kx_dense, ky_dense, indexing="ij")
+    ks_dense_flat = np.column_stack((kx_dense_grid.ravel(), ky_dense_grid.ravel()))
+    tb_evals_dense = np.array(
+        [np.asarray(tb_model.solve_one(k))[BAND_IDX] for k in ks_dense_flat]
+    )
+    omega_dense = mf.safe_sqrt(tb_evals_dense).reshape(N_K_PATH, N_K_PATH)
+
+    cbar_max = max(np.abs(g).max() for g in gk0_ks_list)
+
+    for i, theta in enumerate(THETAS, start=1):
+        fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE_CBAR)
+        sc = ax.pcolormesh(
+            kx_grid,
+            ky_grid,
+            np.abs(gk0_ks_list[i - 1]).reshape(N_K, N_K),
+            vmin=0,
+            vmax=cbar_max,
+        )
+        fig.colorbar(sc, ax=ax, shrink=0.6, aspect=20, pad=-0.25)
+        # ω = ω_X isofrequency contour on the dense TB grid.
+        ax.contour(
+            kx_dense_grid,
+            ky_dense_grid,
+            omega_dense,
+            levels=[omega_X],
+            colors="k",
+            linewidths=0.8,
+        )
+        # Dipole orientation marker, centred at the Γ-point. The BZ spans
+        # [-0.5, 0.5] in these axes, so length/offset are scaled accordingly.
+        mf.draw_arrow(
+            ax,
+            [0, 0],
+            theta,
+            color=DIP_COLORS[i - 1],
+            length=0.5,
+            arrow_offset=0.02,
+            lw=1.8,
+            mutation_scale=10,
+        )
+        ax.set(
+            xlabel=r"$k_x a/2\pi$",
+            ylabel=r"$k_y a/2\pi$",
+            aspect="equal",
+        )
+        fig.savefig(
+            f"./figures/kimble/G_k({r_0})_for_theta_{np.rad2deg(theta):.0f}deg.svg"
         )
         plt.close(fig)
 
@@ -565,6 +683,10 @@ fr0_n_ks = np.asarray(fields_data["Eks"])[0]  # shape: (Nb, Nk, 3)
 
 gr0_rs_list, xs_small, ys_small = compute_coupling_grid(fr0_n_ks, omega_ks_n, ks, N_R)
 plot_real_space_coupling(gr0_rs_list, xs_small, ys_small, R_0)
+
+# Reciprocal-space coupling plot (single band, shared linear colour scale)
+gk0_ks_list = compute_kspace_coupling_grid(fr0_n_ks, omega_ks_n)
+plot_reciprocal_space_coupling(gk0_ks_list, ks, infinite_model, omega_X, R_0)
 
 # ------------------------------------------------------------------------------
 # Coupling diagnostics: effective g(R=r_0, r_0) vs toy-model G/|J_1| ratio
@@ -671,12 +793,23 @@ def compute_and_plot_decay_rate(
     # noise; the discrepancy is then sub-grid and irrelevant for the plot.
     omega_0 = float(omegas[np.argmax(gamma_list[0])])
 
+    # Free-space rate Γ₀(ω_0) at the emitter resonance, converted from rad/s to
+    # c/a units to match `gamma_list`. The ratio is dipole-strength independent
+    # (both Γ and Γ₀ scale as |p|²).
+    gamma_0_si = float(
+        mf.free_spontaneous_emission(
+            omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
+        )
+    )
+    gamma_0_ca = gamma_0_si * LAT_PARAM / C_LIGHT
+    gamma_list_norm = [g / gamma_0_ca for g in gamma_list]
+
     fig, ax = plt.subplots(figsize=FIGSIZE_WIDE)
     # First orientation as a solid line, second as open circle markers on top.
     # Subsampling avoids crowding the line with markers.
     ax.plot(
         omegas,
-        gamma_list[0],
+        gamma_list_norm[0],
         color=DIP_COLORS[0],
         linewidth=1,
         label=rf"${np.degrees(THETAS[0]):.0f}$°",
@@ -684,7 +817,7 @@ def compute_and_plot_decay_rate(
     _step = max(1, len(omegas) // 25)
     ax.scatter(
         omegas[::_step],
-        gamma_list[1][::_step],
+        gamma_list_norm[1][::_step],
         facecolors="none",
         edgecolors=DIP_COLORS[1],
         s=15,
@@ -696,7 +829,7 @@ def compute_and_plot_decay_rate(
     ax.legend()
     ax.set(
         xlabel=r"$\omega \, [c/a]$",
-        ylabel=r"$\Gamma(\omega) \, [c/a]$",
+        ylabel=r"$\Gamma(\omega) / \Gamma_0$",
     )
     fig.savefig(f"./figures/kimble/decay_rate_at_{r_0}.svg")
     plt.close(fig)
@@ -1074,7 +1207,7 @@ def plot_bath_snapshot(
 
     for i, (theta, z) in enumerate(zip(THETAS, [z1, z2])):
         fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE_CBAR)
-        sc = ax.pcolormesh(pos_x, pos_y, z, vmin=0, vmax=cbar_max)
+        sc = ax.pcolormesh(pos_x, pos_y, z, vmin=0, vmax=cbar_max, rasterized=True)
         mf.draw_arrow(
             ax,
             r_0,
@@ -1082,8 +1215,8 @@ def plot_bath_snapshot(
             color=DIP_COLORS[i],
             length=17.5,
             arrow_offset=1.75,
-            lw=0.8,
-            mutation_scale=5,
+            lw=1.8,
+            mutation_scale=10,
         )
         pml_boundary = N_CELLS // 2 - N_PML + 0.5
         ax.add_patch(
@@ -1216,6 +1349,10 @@ positions = mf.find_positions(finite_model._orb, finite_model._lat)
 pos_x = np.unique(positions[:, 0]) - N_CELLS // 2
 pos_y = np.unique(positions[:, 1]) - N_CELLS // 2
 
+print(
+    f"\nBath snapshot taken at t·Γ₀ = {ts_norm[SNAP_IDX]:.4f} "
+    f"(index {SNAP_IDX} of {len(ts_norm)})"
+)
 z1, z2, pos_x, pos_y = plot_bath_snapshot(
     pos_x, pos_y, psi_t_1, psi_t_2, SNAP_IDX, N_EMITTERS, R_0
 )
@@ -1363,7 +1500,7 @@ def plot_probe_bath_snapshot(
 
     for i, (theta, z) in enumerate(zip(THETAS, [new_z1, new_z2]), start=1):
         fig, ax = plt.subplots(figsize=FIGSIZE_SQUARE_CBAR)
-        sc = ax.pcolormesh(pos_x, pos_y, z, vmin=0, vmax=cbar_max)
+        sc = ax.pcolormesh(pos_x, pos_y, z, vmin=0, vmax=cbar_max, rasterized=True)
         mf.draw_arrow(
             ax,
             NEW_R,
@@ -1371,8 +1508,8 @@ def plot_probe_bath_snapshot(
             NEW_DIP_COLOR,
             length=5,
             arrow_offset=0.5,
-            lw=0.8,
-            mutation_scale=5,
+            lw=1.8,
+            mutation_scale=10,
         )
         mf.draw_arrow(
             ax,
@@ -1381,8 +1518,8 @@ def plot_probe_bath_snapshot(
             DIP_COLORS[i - 1],
             length=5,
             arrow_offset=0.5,
-            lw=0.8,
-            mutation_scale=5,
+            lw=1.8,
+            mutation_scale=10,
         )
         pml_boundary = N_CELLS // 2 - N_PML + 0.5
         ax.add_patch(
@@ -1498,5 +1635,9 @@ new_psi_t_1, new_psi_t_2, new_omega_0 = compute_probe_emitter_evolution(
 new_ts = np.linspace(t_0_ac, new_t_f_ac, T_STEPS, endpoint=True)
 new_ts_norm = _t_conv * new_ts
 
+print(
+    f"\nProbe bath snapshot taken at t·Γ₀ = {new_ts_norm[NEW_SNAP_IDX]:.4f} "
+    f"(index {NEW_SNAP_IDX} of {len(new_ts_norm)})"
+)
 plot_probe_bath_snapshot(pos_x, pos_y, new_psi_t_1, new_psi_t_2, R_0)
 plot_probe_time_evolution(new_ts_norm, new_psi_t_1, new_psi_t_2, R_0)

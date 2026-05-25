@@ -34,6 +34,77 @@ def pad_to_3d(array: np.ndarray) -> np.ndarray:
     return array
 
 
+def compute_reciprocal_space_coupling(
+    fr0_n_ks: np.ndarray,
+    dipole_moment: np.ndarray,
+    omega_ks_n: np.ndarray,
+    const: float = K_CONST,
+) -> np.ndarray:
+    """
+    Compute the reciprocal-space coupling g_{n,k}(r_0) between a quantum emitter
+    at position r_0 and the photonic Bloch modes.
+
+    Parameters
+    ----------
+    fr0_n_ks : np.ndarray, shape (Nb, Nk, 3)
+        Electric field profile at the emitter position for each mode.
+        First dimension indexes bands, second indexes k-points, third is vector
+        components.
+    dipole_moment : np.ndarray, shape (3,)
+        Dipole moment vector normalized by the dipole unit.
+    omega_ks_n : np.ndarray, shape (Nk, Nb)
+        Mode frequencies in units of c/a.
+    const : float, optional
+        Prefactor constant in the definition of g_{n,k}(r_0).
+        Default is `K_CONST`.
+
+    Returns
+    -------
+    gr0_n_ks : np.ndarray, shape (Nb, Nk)
+        Reciprocal-space coupling g_{n,k}(r_0) for each band and k-point.
+
+    Raises
+    ------
+    ValueError
+        If `fr0_n_ks` does not have 3 vector components in its last dimension.
+        If `dipole_moment` is not a 3-component vector.
+        If `omega_ks_n` does not have shape (Nk, Nb).
+
+    Notes
+    -----
+    The mode-resolved coupling is defined as:
+
+        g_{n,k}(r_0) = -i * const * sqrt(ω_{n,k} / (2 N_k)) * (p·f_{n,k}(r_0))
+
+    where N_k is the number of k-points, p is the dipole moment, and f_{n,k}(r_0)
+    is the electric field profile at the emitter position.
+    """
+    n_bands, n_kpoints, n_components = fr0_n_ks.shape
+
+    # Input validation
+    if n_components != 3:
+        raise ValueError(
+            f"Last dimension of `fr0_n_ks` must be 3 (vector components), got {n_components}."
+        )
+    if dipole_moment.shape != (3,):
+        raise ValueError(
+            f"Dipole moment must be a 3-component vector, got shape {dipole_moment.shape}."
+        )
+    if omega_ks_n.shape != (n_kpoints, n_bands):
+        raise ValueError(
+            f"`omega_ks_n` must have shape (Nk, Nb)=({n_kpoints}, {n_bands}), got {omega_ks_n.shape}."
+        )
+
+    # Compute dipole · field, shape: (Nb, Nk)
+    dipole_times_field = np.einsum("i,bki->bk", dipole_moment, fr0_n_ks)
+
+    # Compute prefactor, shape: (Nb, Nk)
+    prefactor = (-1j * const * np.sqrt(omega_ks_n / (2 * n_kpoints))).T
+
+    # Reciprocal-space coupling g_{n,k}(r_0), shape: (Nb, Nk)
+    return prefactor * dipole_times_field
+
+
 def compute_real_space_coupling(
     fr0_n_ks: np.ndarray,
     dipole_moment: np.ndarray,
@@ -80,56 +151,32 @@ def compute_real_space_coupling(
 
     Notes
     -----
-    The mode-resolved coupling is defined as:
-
-        g_{n,k}(r_0) = -i * const * sqrt(ω_{n,k} / (2 N_k)) * (p·f_{n,k}(r_0))
-
-    where N_k is the number of k-points, p is the dipole moment, and f_{n,k}(r_0)
-    is the electric field profile at the emitter position.
-
-    The real-space coupling is then computed as:
+    The real-space coupling is computed as:
 
         g_{n,r}(r_0) = 1/sqrt(N_k) Σ_k g_{n,k}(r_0) * exp(-i k·r)
+
+    where g_{n,k}(r_0) is given by `compute_reciprocal_space_coupling`.
     """
     ks = pad_to_3d(ks)  # (Nk, 3)
     rs = pad_to_3d(rs)  # (Nr, 3)
 
-    n_bands, n_kpoints, n_components = fr0_n_ks.shape
+    n_kpoints = fr0_n_ks.shape[1]
 
-    # Input validation
-    if n_components != 3:
-        raise ValueError(
-            f"Last dimension of `fr0_n_ks` must be 3 (vector components), got {n_components}."
-        )
-    if dipole_moment.shape != (3,):
-        raise ValueError(
-            f"Dipole moment must be a 3-component vector, got shape {dipole_moment.shape}."
-        )
-    if omega_ks_n.shape != (n_kpoints, n_bands):
-        raise ValueError(
-            f"`omega_ks_n` must have shape (Nk, Nb)=({n_kpoints}, {n_bands}), got {omega_ks_n.shape}."
-        )
     if ks.shape[0] != n_kpoints:
         raise ValueError(
             f"Number of k-points in `ks` ({ks.shape[0]}) does not match Nk={n_kpoints}."
         )
 
-    # Compute dipole · field, shape: (Nb, Nk)
-    dipole_times_field = np.einsum("i,bki->bk", dipole_moment, fr0_n_ks)
-
-    # Compute prefactor, shape: (Nb, Nk)
-    prefactor = (-1j * const * np.sqrt(omega_ks_n / (2 * n_kpoints))).T
-
-    # Compute reciprocal-space coupling g_{n,k}(r_0), shape: (Nb, Nk)
-    gr0_n_ks = prefactor * dipole_times_field
+    # Reciprocal-space coupling g_{n,k}(r_0), shape: (Nb, Nk)
+    gr0_n_ks = compute_reciprocal_space_coupling(
+        fr0_n_ks, dipole_moment, omega_ks_n, const=const
+    )
 
     # Fourier factor: 1/sqrt(Nk) * exp(-i k·r), shape: (Nk, Nr)
     exponential_factor = np.exp(-1j * np.dot(ks, rs.T)) / np.sqrt(n_kpoints)
 
     # Sum over k-points via matrix multiplication, shape: (Nb, Nr)
-    gr0_n_rs = np.dot(gr0_n_ks, exponential_factor)
-
-    return gr0_n_rs
+    return np.dot(gr0_n_ks, exponential_factor)
 
 
 def compute_decay_rate(
@@ -194,29 +241,30 @@ def compute_decay_rate(
     omegas = np.atleast_1d(omegas)
 
     (n_kpoints,) = omega_ks.shape
-    (n_omegas,) = omegas.shape
 
     # Input validation
     if fr0_ks.shape != (n_kpoints, 3):
         raise ValueError(
             f"`fr0_ks` must have shape (Nk, 3)=({n_kpoints}, 3), got {fr0_ks.shape}."
         )
-    if dipole_moment.shape != (3,):
-        raise ValueError(
-            f"`dipole_moment` must be a 3-component vector, got shape {dipole_moment.shape}."
-        )
 
-    # Dipole-field overlap |p·f|^2, shape: (Nk,)
-    overlaps = np.abs(np.einsum("ki,i->k", fr0_ks, dipole_moment)) ** 2
+    # Promote to single-band shapes expected by the k-space coupling routine,
+    # call it, then squeeze the band axis back out.
+    gk_single_band = compute_reciprocal_space_coupling(
+        fr0_n_ks=fr0_ks[np.newaxis, :, :],
+        dipole_moment=dipole_moment,
+        omega_ks_n=omega_ks[:, np.newaxis],
+        const=const,
+    )[0]  # shape: (Nk,)
 
-    # Prefactor from g_k definition, shape: (Nk,)
-    prefactor = const**2 * omega_ks / (2 * n_kpoints)
+    # |g_k|^2, shape: (Nk,)
+    g_squared = np.abs(gk_single_band) ** 2
 
     # Lorentzian kernel via broadcasting, shape: (N_omega, Nk)
     delta = omegas[:, np.newaxis] - omega_ks[np.newaxis, :]
     lorentzian = (1 / np.pi) * eta / (delta**2 + eta**2)
 
     # Γ(ω) = 2π Σ_k |g_k|^2 δ_η(ω - ω_k), shape: (N_omega,)
-    gamma = 2 * np.pi * np.sum(prefactor * overlaps * lorentzian, axis=1)
+    gamma = 2 * np.pi * np.sum(g_squared * lorentzian, axis=1)
 
     return gamma[0] if is_scalar else gamma

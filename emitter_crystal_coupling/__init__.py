@@ -21,6 +21,7 @@ __all__ = [
     "free_spontaneous_emission",
     "monkhorst_pack_sampling",
     "compute_real_space_coupling",
+    "compute_reciprocal_space_coupling",
     "compute_decay_rate",
     "make_light_matter_Hamiltonian",
     "evolve_diagonalisation",
@@ -56,7 +57,11 @@ from .mpb_fields import compute_fr0rs
 from .monkhorst_pack import monkhorst_pack_sampling
 
 # Coupling and decay rate
-from .coupling import compute_real_space_coupling, compute_decay_rate
+from .coupling import (
+    compute_real_space_coupling,
+    compute_reciprocal_space_coupling,
+    compute_decay_rate,
+)
 
 # Hamiltonian
 from .hamiltonian import make_light_matter_Hamiltonian
