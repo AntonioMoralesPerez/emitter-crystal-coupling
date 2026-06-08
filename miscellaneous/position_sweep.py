@@ -11,7 +11,6 @@ emitter positions is performed.
 import matplotlib.pyplot as plt
 import numpy as np
 import pythtb as tb  # for easy simulation of the tight-binding model
-from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf  # our package functions to work with
 
@@ -26,6 +25,7 @@ TOLERANCE = 1e-12  # tolerance for the MPB calculations
 N_CELLS = 41  # number of unit cells in each direction
 
 NK = 64  # number of points per direction for the Monkhorst-Pack grid
+RESOLUTION = 64  # must match the precomputed field files
 
 # angles for the dipole moments of the quantum emitters and its dimensionless value
 THETA = 130 * np.pi / 180
@@ -61,7 +61,10 @@ TIME_INDEX = 30  # time index to consider for the field snapshots
 
 # Load the fields and k-points from the MPB calculation
 # This file was generated previously
-datas = [mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_{R0}.pkl") for R0 in R0_LIST]
+datas = [
+    mf.load(f"./data/kimble/fields/res_{RESOLUTION}/nk_{NK}/meshgrid_at_{R0}.pkl")
+    for R0 in R0_LIST
+]
 
 # Extract relevant quantities
 omegas = [np.asarray(data["freqs"]) for data in datas]
@@ -195,13 +198,13 @@ hamiltonians = [
 
 tvals = np.linspace(T0, TF, T_STEPS)
 
-assert hamiltonians[0].shape is not None
 psi0 = np.zeros(hamiltonians[0].shape[0])
 psi0[0] = 1
 
 # Compute time evolution
+_times = np.linspace(T0, TF, T_STEPS)
 psits = [
-    expm_multiply(-1j * hamiltonian, psi0, T0, TF, T_STEPS, endpoint=True)
+    mf.evolve_diagonalisation(hamiltonian, psi0, _times)
     for hamiltonian in hamiltonians
 ]
 

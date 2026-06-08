@@ -25,7 +25,6 @@ import matplotlib.ticker as mpl_ticker
 # Third-party
 import numpy as np
 import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
 
 # Local
 import emitter_crystal_coupling as mf
@@ -73,6 +72,7 @@ LAT_PARAM: float = 300e-9  # lattice parameter [m]
 N_BANDS: int = 2
 BAND_IDX: int = 0
 N_K: int = 64
+RESOLUTION: int = 64  # must match the precomputed field/epsilon files
 
 # Emitter parameters
 THETA_1: float = 90 * np.pi / 180  # [rad]
@@ -225,7 +225,9 @@ compute_and_plot_isofrequency(infinite_model, omega_0)
 
 def load_field_data(n_k: int, r_0: list) -> dict:
     """Load precomputed MPB fields, frequencies, and k-points from disk."""
-    return mf.load(f"./data/kimble/fields/{n_k}_meshgrid_at_{r_0}.pkl")
+    return mf.load(
+        f"./data/kimble/fields/res_{RESOLUTION}/nk_{n_k}/meshgrid_at_{r_0}.pkl"
+    )
 
 
 def compute_coupling_grid(
@@ -394,12 +396,12 @@ def compute_time_evolution(
         pml_dampings=pml_dampings,
     )
 
-    assert H_1.shape is not None
-    psi_0 = np.zeros(H_1.shape[0])
+    psi_0 = np.zeros(H_1.shape[0], dtype=complex)
     psi_0[0] = 1
 
-    psi_t_1 = expm_multiply(-1j * H_1, psi_0, t_0, t_f, t_steps, endpoint=True)
-    psi_t_2 = expm_multiply(-1j * H_2, psi_0, t_0, t_f, t_steps, endpoint=True)
+    times = np.linspace(t_0, t_f, t_steps)
+    psi_t_1 = mf.evolve_diagonalisation(H_1, psi_0, times)
+    psi_t_2 = mf.evolve_diagonalisation(H_2, psi_0, times)
 
     return psi_t_1, psi_t_2, couplings
 
@@ -607,16 +609,12 @@ def compute_probe_emitter_evolution(
         pml_dampings=pml_dampings,
     )
 
-    assert new_H_1.shape is not None
-    new_psi_0 = np.zeros(new_H_1.shape[0])
+    new_psi_0 = np.zeros(new_H_1.shape[0], dtype=complex)
     new_psi_0[0] = 1
 
-    new_psi_t_1 = expm_multiply(
-        -1j * new_H_1, new_psi_0, t_0, t_f, t_steps, endpoint=True
-    )
-    new_psi_t_2 = expm_multiply(
-        -1j * new_H_2, new_psi_0, t_0, t_f, t_steps, endpoint=True
-    )
+    times = np.linspace(t_0, t_f, t_steps)
+    new_psi_t_1 = mf.evolve_diagonalisation(new_H_1, new_psi_0, times)
+    new_psi_t_2 = mf.evolve_diagonalisation(new_H_2, new_psi_0, times)
 
     return new_psi_t_1, new_psi_t_2
 

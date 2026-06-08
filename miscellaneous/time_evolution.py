@@ -20,7 +20,6 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mpl_ticker
 import numpy as np
 import pythtb as tb  # for easy simulation of the tight-binding model
-from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf  # our package functions to work with
 from emitter_crystal_coupling.constants import C_LIGHT
@@ -32,27 +31,27 @@ EPSILON_INPUT_FILE = "data/kimble/epsilon.h5"
 COMPUTEFIELDS = False  # tells the code to compute the fields using MPB or not
 DIRNAME_OUTPUT = "data/kimble/"  # directory to save outputs
 
-TOLERANCE = 1e-12  # tolerance for the MPB calculations
 
 LAT_PARAM = 300e-9  # lattice parameter [m]
 N_CELLS = 41  # number of unit cells per direction
-N_PML = 8  # absorbing layer thickness [unit cells per edge]
-GAMMA_MAX = 3e-2  # maximum damping rate at the hard wall [c/a]
+N_PML = 10  # absorbing layer thickness [unit cells per edge]
+GAMMA_MAX = 1e-2  # maximum damping rate at the hard wall [c/a]
 
-NK = 64  # number of k-points per direction for the Monkhorst-Pack grid
+NK = 81  # number of k-points per direction for the Monkhorst-Pack grid
+RESOLUTION = 64  # must match the precomputed field files
 
 # Excited emitter parameters
-THETA = 60 * np.pi / 180  # orientation [rad]
+THETA = 90 * np.pi / 180  # orientation [rad]
 DIP_STRENGTH = 50  # dipole moment strength [Debye]
 P_A = mf.unit_dip(a=LAT_PARAM)  # unit dipole moment [Debye]
-R0 = [-4.5, 4.5]  # position in lattice units
+R0 = [0, 0]  # position in lattice units
 dipole = (DIP_STRENGTH / P_A) * np.array([np.cos(THETA), np.sin(THETA), 0])
 
 # Probe emitter parameters
-PROBE_R = [0.0, 0.0]
+PROBE_R = [-10, 10]
 PROBE_THETA_1 = 90 * np.pi / 180
 PROBE_THETA_2 = 135 * np.pi / 180
-PROBE_DIP_STRENGTH = 100  # [Debye]
+PROBE_DIP_STRENGTH = 50  # [Debye]
 probe_thetas = [PROBE_THETA_1, PROBE_THETA_2]
 probe_dipoles = [
     (PROBE_DIP_STRENGTH / P_A) * np.array([np.cos(t), np.sin(t), 0])
@@ -75,8 +74,8 @@ K_PATH = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 
 # Time evolution [units: 1/Γ₀]
 T0_PHYS = 0
-TF_PHYS = 5e-5
-NEW_TF_PHYS = 5e-5
+TF_PHYS = 5e-1
+NEW_TF_PHYS = 5e-1
 T_STEPS = 100
 TIME_INDEX = 50  # snapshot index for the single-emitter bath plot
 NEW_TIME_INDEX = 25  # snapshot index for the two-emitter bath plot
@@ -129,7 +128,7 @@ dist = np.minimum(dist_x, dist_y)
 pml_dampings = np.where(dist < N_PML, GAMMA_MAX * ((N_PML - dist) / N_PML) ** 2, 0.0)
 
 # %% Load field data for the excited emitter at R0=[-4.5, 4.5]
-data = mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_{R0}.pkl")
+data = mf.load(f"../data/kimble/fields/res_{RESOLUTION}/nk_{NK}/meshgrid_at_{R0}.pkl")
 omegas = np.asarray(data["freqs"])  # (Nk, Nb)
 Eks = np.asarray(data["Eks"])  # (Nr, Nb, Nk, 3)
 kpts = np.asarray(data["kpts"])  # (Nk, 3)
@@ -150,18 +149,19 @@ H_total, omega_sites = mf.make_light_matter_Hamiltonian(
 )
 
 # %% Compute time evolution (single excited emitter)
-assert H_total.shape is not None
 psi0 = np.zeros(H_total.shape[0])
 psi0[0] = 1
 
-psit = expm_multiply(-1j * H_total, psi0, T0, TF, T_STEPS, endpoint=True)
+psit = mf.evolve_diagonalisation(H_total, psi0, np.linspace(T0, TF, T_STEPS))
 
 # ---------------------------------------------------------------------------- #
 # Probe emitter at [0, 0]
 # ---------------------------------------------------------------------------- #
 
 # Load field data for the probe at PROBE_R=[0.0, 0.0]
-probe_data = mf.load(f"./data/kimble/fields/{NK}_meshgrid_at_{PROBE_R}.pkl")
+probe_data = mf.load(
+    f"../data/kimble/fields/res_{RESOLUTION}/nk_{NK}/meshgrid_at_{PROBE_R}.pkl"
+)
 probe_omegas = np.asarray(probe_data["freqs"])
 probe_Eks = np.asarray(probe_data["Eks"])
 probe_kpts = np.asarray(probe_data["kpts"])
@@ -193,14 +193,12 @@ new_Hs = [
 ]
 
 # Initial state: only the excited emitter populated
-assert new_Hs[0].shape is not None
 new_psi0 = np.zeros(new_Hs[0].shape[0])
 new_psi0[0] = 1
 
 # Compute time evolutions for both probe orientations
-new_psits = [
-    expm_multiply(-1j * H, new_psi0, T0, NEW_TF, T_STEPS, endpoint=True) for H in new_Hs
-]
+_new_times = np.linspace(T0, NEW_TF, T_STEPS)
+new_psits = [mf.evolve_diagonalisation(H, new_psi0, _new_times) for H in new_Hs]
 
 # ---------------------------------------------------------------------------- #
 # Prepare data to be plotted
@@ -231,7 +229,7 @@ ax.set(
 fig.tight_layout()
 plt.show()
 fig.savefig(
-    f"./figures/miscellaneous/emitter_decay_at_{R0}_theta_{np.rad2deg(THETA):.0f}deg.png"
+    f"../figures/miscellaneous/emitter_decay_at_{R0}_theta_{np.rad2deg(THETA):.0f}deg.png"
 )
 
 # ---------------------------------------------------------------------------- #
@@ -253,7 +251,7 @@ cbar.formatter.set_powerlimits((0, 0))
 
 fig.tight_layout()
 plt.show()
-fig.savefig(f"./figures/miscellaneous/{R0}_bath_population.png")
+fig.savefig(f"../figures/miscellaneous/{R0}_bath_population.png")
 
 # ---------------------------------------------------------------------------- #
 # Plot 3: Probe coupling strength for each probe orientation
@@ -286,7 +284,7 @@ for i, (pv, ptheta, color) in enumerate(zip(probe_values, probe_thetas, probe_co
 
 fig.tight_layout()
 plt.show()
-fig.savefig(f"./figures/miscellaneous/{PROBE_R}_coupling_check.png")
+fig.savefig(f"../figures/miscellaneous/{PROBE_R}_coupling_check.png")
 
 # ---------------------------------------------------------------------------- #
 # Plot 4: Two-emitter time evolution (excited at R0, probe at PROBE_R)
@@ -308,4 +306,4 @@ for i, (ptheta, color) in enumerate(zip(probe_thetas, probe_colors)):
 
 fig.tight_layout()
 plt.show()
-fig.savefig(f"./figures/miscellaneous/emit_pop_at_{PROBE_R}_exciting_at_{R0}.png")
+fig.savefig(f"../figures/miscellaneous/emit_pop_at_{PROBE_R}_exciting_at_{R0}.png")

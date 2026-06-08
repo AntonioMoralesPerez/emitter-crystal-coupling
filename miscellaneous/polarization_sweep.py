@@ -11,7 +11,6 @@ import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 import numpy as np
 import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf
 from emitter_crystal_coupling.constants import C_LIGHT
@@ -27,6 +26,7 @@ N_PML: int = 8
 GAMMA_MAX: float = 3e-2
 
 N_K = 101
+RESOLUTION = 64  # must match the precomputed field files
 
 # angles for the dipole moments of the quantum emitters and its dimensionless value
 THETAS = np.linspace(90, 140, 6) * np.pi / 180
@@ -62,7 +62,9 @@ DIPOLES = [
 # Load the fields and k-points from the MPB calculation
 # ---------------------------------------------------------------------------- #
 
-data = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{R_0}.pkl")
+data = mf.load(
+    f"./data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{R_0}.pkl"
+)
 
 omega_ks_n = np.asarray(data["freqs"])  # (Nk, Nb)
 ks = np.asarray(data["kpts"])  # (Nk, 3)
@@ -199,12 +201,12 @@ _T_F_ac = T_F / _t_conv  # [a/c]
 
 ts_norm = np.linspace(T_0, T_F, T_STEPS, endpoint=True)  # [1/Γ₀]
 
-assert hamiltonians[0].shape is not None
 psi0 = np.zeros(hamiltonians[0].shape[0])
 psi0[0] = 1
 
+_times_ac = np.linspace(_T_0_ac, _T_F_ac, T_STEPS)
 psits = [
-    expm_multiply(-1j * hamiltonian, psi0, _T_0_ac, _T_F_ac, T_STEPS, endpoint=True)
+    mf.evolve_diagonalisation(hamiltonian, psi0, _times_ac)
     for hamiltonian in hamiltonians
 ]
 

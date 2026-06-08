@@ -27,7 +27,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf
 from emitter_crystal_coupling.constants import C_LIGHT
@@ -41,6 +40,7 @@ DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 
 BAND_IDX: int = 0
 N_K: int = 81
+RESOLUTION: int = 64  # must match the precomputed field files
 
 EXCITED_R: list = [0, 0]
 EXCITED_THETA: float = 90 * np.pi / 180
@@ -121,7 +121,9 @@ t_f_internal = T_F / _t_conv
 
 # %% Excited-emitter coupling (computed once)
 
-data_excited = mf.load(f"../data/kimble/fields/{N_K}_meshgrid_at_{EXCITED_R}.pkl")
+data_excited = mf.load(
+    f"../data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{EXCITED_R}.pkl"
+)
 omega_ks_n = np.asarray(data_excited["freqs"])
 fr0_n_ks = np.asarray(data_excited["Eks"])[0]
 ks = np.asarray(data_excited["kpts"])
@@ -143,7 +145,9 @@ for probe_r in PROBE_RS:
 
     print(f"\n--- probe at {probe_r} (|r| = {dist:.2f}), T_F = {T_F:.3e} 1/Gamma_0 ---")
 
-    data_probe = mf.load(f"../data/kimble/fields/{N_K}_meshgrid_at_{probe_r}.pkl")
+    data_probe = mf.load(
+        f"../data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{probe_r}.pkl"
+    )
     omega_ks_probe = np.asarray(data_probe["freqs"])
     fr0_probe = np.asarray(data_probe["Eks"])[0]
     ks_probe = np.asarray(data_probe["kpts"])
@@ -171,10 +175,9 @@ for probe_r in PROBE_RS:
             pml_dampings=pml_dampings,
         )
 
-        assert H.shape is not None
         psi0 = np.zeros(H.shape[0])
         psi0[0] = 1
-        psit = expm_multiply(-1j * H, psi0, 0.0, t_f_internal, T_STEPS, endpoint=True)
+        psit = mf.evolve_diagonalisation(H, psi0, np.linspace(0.0, t_f_internal, T_STEPS))
         max_pops[i] = np.max(np.abs(psit[:, 1]) ** 2)
 
     max_idx = int(np.argmax(max_pops))

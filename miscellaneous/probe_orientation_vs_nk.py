@@ -10,7 +10,6 @@ NOTE: run mpb_field_computation.py for each desired N_K before executing.
 import matplotlib.pyplot as plt
 import numpy as np
 import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf
 from emitter_crystal_coupling.constants import C_LIGHT
@@ -35,7 +34,8 @@ PROBE_DIP_STRENGTH: float = DIP_STRENGTH
 
 PROBE_THETAS: np.ndarray = np.linspace(40, 60, 13) * np.pi / 180
 
-FIELDS_DIR: str = "./data/kimble/fields/"
+RESOLUTION: int = 64  # must match the precomputed field files
+FIELDS_DIR: str = f"./data/kimble/fields/res_{RESOLUTION}"
 NK_VALUES: list = [61, 71, 81, 91]
 
 LAT: list = [[1, 0], [0, 1]]
@@ -114,7 +114,9 @@ for label, j2 in TB_VARIANTS.items():
     for nk in NK_VALUES:
         print(f"\n  N_K = {nk} ({'even' if nk % 2 == 0 else 'odd'})")
 
-        data_excited = mf.load(f"{FIELDS_DIR}{nk}_meshgrid_at_{EXCITED_R}.pkl")
+        data_excited = mf.load(
+            f"{FIELDS_DIR}/nk_{nk}/meshgrid_at_{EXCITED_R}.pkl"
+        )
         excited_coupling = mf.compute_real_space_coupling(
             fr0_n_ks=np.asarray(data_excited["Eks"])[0],
             dipole_moment=EXCITED_DIPOLE,
@@ -123,7 +125,9 @@ for label, j2 in TB_VARIANTS.items():
             rs=rs_finite,
         )[BAND_IDX, :]
 
-        data_probe = mf.load(f"{FIELDS_DIR}{nk}_meshgrid_at_{PROBE_R}.pkl")
+        data_probe = mf.load(
+            f"{FIELDS_DIR}/nk_{nk}/meshgrid_at_{PROBE_R}.pkl"
+        )
         omega_ks_probe = np.asarray(data_probe["freqs"])
         fr0_probe = np.asarray(data_probe["Eks"])[0]
         ks_probe = np.asarray(data_probe["kpts"])
@@ -151,11 +155,10 @@ for label, j2 in TB_VARIANTS.items():
                 pml_dampings=pml_dampings,
             )
 
-            assert H.shape is not None
             psi0 = np.zeros(H.shape[0])
             psi0[0] = 1
-            psit = expm_multiply(
-                -1j * H, psi0, 0.0, t_f_internal, T_STEPS, endpoint=True
+            psit = mf.evolve_diagonalisation(
+                H, psi0, np.linspace(0.0, t_f_internal, T_STEPS)
             )
             pops[i] = np.max(np.abs(psit[:, 1]) ** 2)
 

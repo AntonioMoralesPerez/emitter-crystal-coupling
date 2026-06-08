@@ -24,7 +24,6 @@ import matplotlib.ticker as mpl_ticker
 # Third-party
 import numpy as np
 import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
 
 # Local
 import emitter_crystal_coupling as mf
@@ -72,6 +71,7 @@ LAT_PARAM: float = 300e-9  # lattice parameter [m]
 N_BANDS: int = 2
 BAND_IDX: int = 0
 N_K: int = 64
+RESOLUTION: int = 64  # must match the precomputed field/epsilon files
 
 # Emitter — single orientation used only to extract G from MPB fields
 THETA: float = 90 * np.pi / 180  # [rad]
@@ -242,7 +242,9 @@ compute_and_plot_isofrequency(infinite_model, omega_0)
 # This is the fairest comparison: G matches the dominant coupling scale that the
 # real emitter achieves at DIP_STRENGTH = 7000 D.
 
-fields_data = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{R_0}.pkl")
+fields_data = mf.load(
+    f"./data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{R_0}.pkl"
+)
 omega_ks_n = np.asarray(fields_data["freqs"])  # (Nk, Nb)
 ks = np.asarray(fields_data["kpts"])  # (Nk, 3)
 fr0_n_ks = np.asarray(fields_data["Eks"])[0]  # (Nb, Nk, 3)
@@ -359,10 +361,9 @@ def compute_time_evolution(
         gr0s_rs=[([g], [idx])],
         pml_dampings=pml_dampings,
     )
-    assert H.shape is not None
-    psi_0 = np.zeros(H.shape[0])
+    psi_0 = np.zeros(H.shape[0], dtype=complex)
     psi_0[0] = 1
-    return expm_multiply(-1j * H, psi_0, t_0, t_f, t_steps, endpoint=True)
+    return mf.evolve_diagonalisation(H, psi_0, np.linspace(t_0, t_f, t_steps))
 
 
 def plot_emitter_time_evolution(
@@ -497,10 +498,9 @@ def compute_probe_emitter_evolution(
         gr0s_rs=[([g], [idx_main]), ([g_probe], [idx_probe])],
         pml_dampings=pml_dampings,
     )
-    assert H.shape is not None
-    psi_0 = np.zeros(H.shape[0])
+    psi_0 = np.zeros(H.shape[0], dtype=complex)
     psi_0[0] = 1
-    return expm_multiply(-1j * H, psi_0, t_0, t_f, t_steps, endpoint=True)
+    return mf.evolve_diagonalisation(H, psi_0, np.linspace(t_0, t_f, t_steps))
 
 
 def plot_probe_bath_snapshot(

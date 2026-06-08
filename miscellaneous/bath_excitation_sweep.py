@@ -14,7 +14,6 @@ NOTE: run mpb_field_computation.py at EMITTER_R before executing.
 import matplotlib.pyplot as plt
 import numpy as np
 import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
 
 import emitter_crystal_coupling as mf
 from emitter_crystal_coupling.constants import C_LIGHT
@@ -27,6 +26,7 @@ P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 
 BAND_IDX: int = 0
 N_K: int = 64
+RESOLUTION: int = 64  # must match the precomputed field files
 
 EMITTER_R: list = [0.0, 0.0]
 N_THETAS: int = 13
@@ -84,7 +84,9 @@ tvals_norm = np.linspace(0.0, T_F, T_STEPS, endpoint=True)
 
 # %% Load emitter fields
 
-data = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{EMITTER_R}.pkl")
+data = mf.load(
+    f"./data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{EMITTER_R}.pkl"
+)
 omega_ks_n = np.asarray(data["freqs"])
 fr0_n_ks = np.asarray(data["Eks"])[0]
 ks = np.asarray(data["kpts"])
@@ -109,10 +111,9 @@ for i, theta in enumerate(THETAS):
         pml_dampings=pml_dampings,
     )
 
-    assert H.shape is not None
     psi0 = np.zeros(H.shape[0])
     psi0[0] = 1
-    psit = expm_multiply(-1j * H, psi0, 0.0, t_f_internal, T_STEPS, endpoint=True)
+    psit = mf.evolve_diagonalisation(H, psi0, np.linspace(0.0, t_f_internal, T_STEPS))
     z = np.abs(psit[TIME_INDEX, 1:]) ** 2
     zs.append(z.reshape(N_CELLS, N_CELLS))
     print(f"θ = {np.rad2deg(theta):.0f}° done")

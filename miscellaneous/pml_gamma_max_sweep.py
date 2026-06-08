@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 # Third-party
 import numpy as np
 import pythtb as tb
-from scipy.sparse.linalg import expm_multiply
 
 # Local
 import emitter_crystal_coupling as mf
@@ -24,21 +23,22 @@ from emitter_crystal_coupling.constants import C_LIGHT
 # Fixed simulation parameters (matching kimble.py)
 # ------------------------------------------------------------------------------
 
-LAT_PARAM: float = 30e-9  # lattice parameter [m]
+LAT_PARAM: float = 300e-9  # lattice parameter [m]
 N_BANDS: int = 2
 BAND_IDX: int = 0
-N_K: int = 64
-R_0: list = [0.0, 0.0]
+N_K: int = 81
+RESOLUTION: int = 64  # must match the precomputed field files
+R_0: list = [0, 0]
 
 THETA_1: float = 90 * np.pi / 180
 THETA_2: float = 135 * np.pi / 180
-DIP_STRENGTH: float = 1000  # [Debye]
+DIP_STRENGTH: float = 4300  # [Debye]
 P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
 
 LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
-N_CELLS: int = 41
+N_CELLS: int = 60
 
 J_0: float = 0.07755639
 J_1: float = -0.01993698
@@ -49,10 +49,10 @@ N_K_PATH: int = 100
 
 T_0: float = 0  # [1/Γ₀]
 T_F: float = 5e-2  # [1/Γ₀]
-T_STEPS: int = 100
+T_STEPS: int = 200
 
 # --- Sweep parameters ---
-N_PML: int = 8  # fixed PML thickness [unit cells]
+N_PML: int = 20  # fixed PML thickness [unit cells]
 GAMMA_MAX_VALUES: list = [1e-3, 3e-3, 5e-3, 1e-2, 3e-2, 5e-2, 1e-1]
 
 THETAS: list = [THETA_1, THETA_2]
@@ -99,7 +99,9 @@ _, _, rs_finite = mf.build_finite_grid(N_CELLS)
 # Load field data and compute couplings (independent of PML — done once)
 # ------------------------------------------------------------------------------
 
-fields_data = mf.load(f"./data/kimble/fields/{N_K}_meshgrid_at_{R_0}.pkl")
+fields_data = mf.load(
+    f"../data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{R_0}.pkl"
+)
 omega_ks_n = np.asarray(fields_data["freqs"])
 ks = np.asarray(fields_data["kpts"])
 fr0_n_ks = np.asarray(fields_data["Eks"])[0]
@@ -116,7 +118,7 @@ couplings = [
 ]
 idxs = np.arange(len(couplings[0]))
 
-# Time axis (convert T_F from 1/Γ₀ to a/c for expm_multiply, then back for plot)
+# Time axis (convert T_F from 1/Γ₀ to a/c for the time evolution, then back for plot)
 gamma_0 = mf.free_spontaneous_emission(
     omega_0=omega_0, dip_strength=DIP_STRENGTH, a=LAT_PARAM
 )
@@ -147,10 +149,11 @@ for gamma_max in GAMMA_MAX_VALUES:
             pml_dampings=pml_dampings,
         )
         if psi_0 is None:
-            assert H.shape is not None
             psi_0 = np.zeros(H.shape[0])
             psi_0[0] = 1
-        psi_t = expm_multiply(-1j * H, psi_0, 0.0, t_f_internal, T_STEPS, endpoint=True)
+        psi_t = mf.evolve_diagonalisation(
+            H, psi_0, np.linspace(0.0, t_f_internal, T_STEPS)
+        )
         pops.append(np.abs(psi_t[:, 0]) ** 2)
 
     results.append(pops)
@@ -184,6 +187,6 @@ for j, (theta, ax, dip_color) in enumerate(zip(THETAS, axs, DIP_COLORS)):
     ax.legend()
 
 fig.suptitle(rf"$\Gamma_\mathrm{{max}}$ sweep, $N_\mathrm{{PML}} = {N_PML}$")
-fig.savefig(f"./figures/miscellaneous/pml_gamma_max_sweep_N_PML_{N_PML}.png")
+fig.savefig(f"../figures/miscellaneous/pml_gamma_max_sweep_N_PML_{N_PML}.png")
 plt.close(fig)
-print(f"Saved ./figures/miscellaneous/pml_gamma_max_sweep_N_PML_{N_PML}.png")
+print(f"Saved ../figures/miscellaneous/pml_gamma_max_sweep_N_PML_{N_PML}.png")
