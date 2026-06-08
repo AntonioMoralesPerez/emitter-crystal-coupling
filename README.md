@@ -13,6 +13,7 @@ Core physics library. Provides:
 - **`entropy.py`** — binary entropy and quadrant-resolved Shannon entropy.
 - **`monkhorst_pack.py`** — Monkhorst–Pack $k$-point sampling.
 - **`mpb_fields.py`** — discrete inverse Bloch transform of MPB fields.
+- **`time_evolution.py`** — time evolution via dense diagonalisation (`evolve_diagonalisation`).
 - **`utils.py`** — I/O, geometry, unit conversions, and plotting helpers.
 - **`constants.py`** — physical constants.
 
@@ -30,6 +31,12 @@ python kimble.py
 ```
 
 Figures are saved to `figures/kimble/`. Precomputed MPB fields in `data/kimble/` are required — if absent, run `miscellaneous/mpb_field_computation.py` first.
+
+### Step scripts
+Intermediate models forming a comparison ladder up to `kimble.py`, each isolating one change in the bath or coupling:
+- **`kimble_toy.py`** — toy model: emitter coupled to a 2D tight-binding bath ($H_b = \Theta$) via a local coupling $G$.
+- **`kimble_step_a.py`** — switches to the $\sqrt{\Theta}$ bath (real photon frequencies $\omega_k = \sqrt{\varepsilon_k}$) while keeping the local coupling.
+- **`kimble_step_b.py`** — replaces the local coupling with the full MPB real-space coupling $g_\mathbf{R}(\mathbf{r}_0)$, still with a nearest-neighbour bath.
 
 ## Installation
 
@@ -50,3 +57,7 @@ pip install -e .
 ```
 
 ## References
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
