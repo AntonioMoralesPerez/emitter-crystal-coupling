@@ -38,6 +38,7 @@ import meep as mp  # photonic crystal simulation
 # Third-party
 import numpy as np
 import pythtb as tb  # tight-binding model
+from matplotlib.lines import lineStyles
 from meep import mpb  # MPB eigensolver interface
 
 # Local
@@ -648,7 +649,8 @@ def plot_reciprocal_space_coupling(
             ky_dense_grid,
             omega_dense,
             levels=[omega_X],
-            colors="k",
+            colors="r",
+            linestyles="--",
             linewidths=0.8,
         )
         # Dipole orientation marker, centred at the Γ-point. The BZ spans
@@ -723,6 +725,10 @@ for _i, (_theta, _g_rs) in enumerate(zip(THETAS, gr0_rs_list), start=1):
     print(
         f"    DIP_STRENGTH needed  = {_dip_needed:.1f} Debye  (for g_max/√|J_1| = {_TOY_G_OVER_J1})"
     )
+    print(f"    g_max / ω_X          = {_g_max / omega_X:.4e}  (weak coupling: <<1?  p={DIP_STRENGTH:.0f} D)")
+    if _i == 1:  # DIP_STRENGTH_HIGH is only used for the 90° orientation
+        _g_max_high = _g_max * (DIP_STRENGTH_HIGH / DIP_STRENGTH)
+        print(f"    g_max / ω_X          = {_g_max_high / omega_X:.4e}  (weak coupling: <<1?  p={DIP_STRENGTH_HIGH:.0f} D)")
 
 print("-" * 50)
 
