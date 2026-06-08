@@ -1,5 +1,7 @@
 # Atom–light coupling in a 2D photonic crystal
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20592589.svg)](https://doi.org/10.5281/zenodo.20592589)
+
 A Python library for computing emitter–bath coupling, time evolution, and entanglement in 2D photonic crystal systems. `kimble.py` provides a worked example based on the framework of Kimble, H. J., PNAS 116(26), 12743–12751 (2019).
 
 ## Contents

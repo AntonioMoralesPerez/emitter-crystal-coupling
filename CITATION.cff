@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it as below.
+title: Atom–light coupling in a 2D photonic crystal
+authors:
+  - family-names: Morales-Pérez
+    given-names: Antonio
+    orcid: https://orcid.org/0000-0002-1482-6407
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.20592589
+    description: Zenodo archive of this software
+doi: 10.5281/zenodo.20592589
+license: MIT
+repository-code: https://github.com/AntonioMoralesPerez/emitter-crystal-coupling
