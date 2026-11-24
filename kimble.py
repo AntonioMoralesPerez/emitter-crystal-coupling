@@ -38,7 +38,6 @@ import meep as mp  # photonic crystal simulation
 # Third-party
 import numpy as np
 import pythtb as tb  # tight-binding model
-from matplotlib.lines import lineStyles
 from meep import mpb  # MPB eigensolver interface
 
 # Local
@@ -110,6 +109,11 @@ FIGSIZE_TIME_EVOL = (_HALF_COL, _HALF_COL * 0.6)  # time evolution / entropy lin
 # Simulation parameters
 # ------------------------------------------------------------------------------
 
+# All frequencies in this script are angular, ω a/c, so SI formulas (Γ₀, ħω)
+# apply literally. MPB returns ordinary frequencies f·a/c; they are multiplied
+# by 2π where they enter (`load_field_data`, `compute_mpb_bands`), and the
+# frequency-valued constants below are given directly in angular units.
+
 # MPB simulation
 LAT_PARAM: float = 300e-9  # lattice parameter [m]
 N_BANDS: int = 2
@@ -124,7 +128,7 @@ THETA_1: float = 90 * np.pi / 180  # emitter 1 orientation [rad]
 THETA_2: float = 135 * np.pi / 180  # emitter 2 orientation [rad]
 DIP_STRENGTH: float = 50  # default dipole moment strength [Debye]
 DIP_STRENGTH_HIGH: float = (
-    10000  # high dipole moment for strong-coupling comparison [Debye]
+    20000  # high dipole moment for strong-coupling comparison [Debye]
 )
 P_A: float = float(mf.unit_dip(a=LAT_PARAM))
 DIP_STRENGTH_NORM: float = DIP_STRENGTH / P_A
@@ -150,11 +154,11 @@ LAT: list[list[int]] = [[1, 0], [0, 1]]
 ORB: list[list[int]] = [[0, 0]]  # orbital position in lattice units
 N_CELLS: int = 50  # unit cells per direction
 N_PML: int = 10  # absorbing layer thickness [unit cells per edge]
-GAMMA_MAX: float = 1e-2  # maximum damping rate at the hard wall [c/a]
+GAMMA_MAX: float = 0.5  # maximum damping rate at the hard wall [c/a]
 # Hopping coefficients up to 2nd nearest neighbours [units: (c/a)²]
-J_0: float = 0.07755639
-J_1: float = -0.01993698
-J_2: float = 0.00053966
+J_0: float = 3.06180355
+J_1: float = -0.78708042
+J_2: float = 0.02130492
 
 # Brillouin zone path for band structure
 K_PATH: list[list[float]] = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
@@ -166,9 +170,9 @@ N_R: int = 13  # number of grid points per direction
 
 # Time evolution [units: 1/Γ₀]
 T_0: float = 0  # start time
-T_F: float = 3e-2  # end time
-T_STEPS: int = 200  # number of time steps
-SNAP_IDX: int = 5  # snapshot index for field plots (0 to T_STEPS)
+T_F: float = 11  # end time
+T_STEPS: int = 1100  # number of time steps
+SNAP_IDX: int = 3  # snapshot index for field plots (0 to T_STEPS)
 
 # Probe emitter
 NEW_N_EMITTERS: int = 2
@@ -179,7 +183,7 @@ NEW_DIPOLE: np.ndarray = DIP_STRENGTH_NORM * np.array(
 )
 NEW_DIP_COLOR: str = "#2ca02c"
 NEW_T_F: float = T_F  # [1/Γ₀]
-NEW_SNAP_IDX: int = 10
+NEW_SNAP_IDX: int = 6
 # NOTE: NEW_SNAP_IDX is taken around the time the bath excitation hits
 #       the probe emitter. If a different position is chosen, this value
 #       may need to be adjusted.
@@ -303,7 +307,7 @@ def compute_omega_X(
     of states.  Used as a reference frequency on the band-structure plot;
     the emitter detuning ω₀ is taken from the peak of Γ(ω) (see
     `compute_and_plot_decay_rate`), which lies slightly off ω_X (in the
-    current setup, ~0.012 c/a below).
+    current setup, ~0.075 c/a below).
 
     Parameters
     ----------
@@ -342,7 +346,7 @@ def compute_mpb_bands(k_vec: np.ndarray) -> np.ndarray:
     Returns
     -------
     np.ndarray, shape (Nk, Nb)
-        Mode frequencies in units of c/a.
+        Angular mode frequencies ω a/c.
     """
     geometry_lattice = mp.Lattice(
         size=mp.Vector3(*LATTICE_SIZE),
@@ -357,7 +361,7 @@ def compute_mpb_bands(k_vec: np.ndarray) -> np.ndarray:
     )
     ms.run_te()
     assert ms.all_freqs is not None
-    return ms.all_freqs
+    return 2 * np.pi * np.asarray(ms.all_freqs)
 
 
 def plot_band_structure(
@@ -401,7 +405,7 @@ def plot_band_structure(
         xlim=(k_node[0], k_node[-1]),
         xticks=k_node,
         xticklabels=K_LABELS,
-        ylabel=r"$\omega \, [c/a]$",
+        ylabel=r"$\omega a/c$",
         title="TE modes",
     )
     ax.grid(axis="x")
@@ -440,17 +444,20 @@ def load_field_data(n_k: int, r_0: list[float]) -> dict:
     -------
     dict
         Dictionary containing:
-        - ``freqs``: mode frequencies, shape (Nk, Nb).
+        - ``freqs``: angular mode frequencies ω a/c, shape (Nk, Nb).
         - ``Eks``: electric fields, shape (Nr, Nb, Nk, 3).
         - ``kpts``: k-points in Cartesian coordinates, shape (Nk, 3).
 
     Notes
     -----
-    All quantities are in MPB internal units.
+    The pickled MPB frequencies are ordinary (f·a/c) and are converted to
+    angular here; fields and k-points are in MPB internal units.
     """
-    return mf.load(
+    data = mf.load(
         f"./data/kimble/fields/res_{RESOLUTION}/nk_{n_k}/meshgrid_at_{r_0}.pkl"
     )
+    data["freqs"] = 2 * np.pi * np.asarray(data["freqs"])
+    return data
 
 
 def compute_coupling_grid(
@@ -642,7 +649,11 @@ def plot_reciprocal_space_coupling(
             vmin=0,
             vmax=cbar_max,
         )
-        fig.colorbar(sc, ax=ax, shrink=0.6, aspect=20, pad=-0.25)
+        cbar_formatter = mpl_ticker.ScalarFormatter(useMathText=True)
+        cbar_formatter.set_powerlimits((0, 0))
+        fig.colorbar(
+            sc, ax=ax, shrink=0.6, aspect=20, pad=-0.25, format=cbar_formatter
+        )
         # ω = ω_X isofrequency contour on the dense TB grid.
         ax.contour(
             kx_dense_grid,
@@ -725,10 +736,14 @@ for _i, (_theta, _g_rs) in enumerate(zip(THETAS, gr0_rs_list), start=1):
     print(
         f"    DIP_STRENGTH needed  = {_dip_needed:.1f} Debye  (for g_max/√|J_1| = {_TOY_G_OVER_J1})"
     )
-    print(f"    g_max / ω_X          = {_g_max / omega_X:.4e}  (weak coupling: <<1?  p={DIP_STRENGTH:.0f} D)")
+    print(
+        f"    g_max / ω_X          = {_g_max / omega_X:.4e}  (weak coupling: <<1?  p={DIP_STRENGTH:.0f} D)"
+    )
     if _i == 1:  # DIP_STRENGTH_HIGH is only used for the 90° orientation
         _g_max_high = _g_max * (DIP_STRENGTH_HIGH / DIP_STRENGTH)
-        print(f"    g_max / ω_X          = {_g_max_high / omega_X:.4e}  (weak coupling: <<1?  p={DIP_STRENGTH_HIGH:.0f} D)")
+        print(
+            f"    g_max / ω_X          = {_g_max_high / omega_X:.4e}  (weak coupling: <<1?  p={DIP_STRENGTH_HIGH:.0f} D)"
+        )
 
 print("-" * 50)
 
@@ -834,7 +849,7 @@ def compute_and_plot_decay_rate(
     ax.axvline(x=omega_0, color="k", linestyle="--", linewidth=1)
     ax.legend()
     ax.set(
-        xlabel=r"$\omega \, [c/a]$",
+        xlabel=r"$\omega a/c$",
         ylabel=r"$\Gamma(\omega) / \Gamma_0$",
     )
     fig.savefig(f"./figures/kimble/decay_rate_at_{r_0}.svg")
@@ -1071,7 +1086,9 @@ def plot_emitter_time_evolution(
     S_t_low = mf.binary_entropy(mod_Ce_sq_low)
     S_t_high = mf.binary_entropy(mod_Ce_sq_high)
 
-    fig, ax = plt.subplots(figsize=FIGSIZE_TIME_EVOL)
+    # Same figure size as the decay-rate plot so the two axes boxes match in
+    # height when assembled side by side.
+    fig, ax = plt.subplots(figsize=FIGSIZE_WIDE)
     ax.plot(
         ts_low,
         mod_Ce_sq_low,
@@ -1337,7 +1354,7 @@ psi_t_list_high, _ = compute_time_evolution(
     fr0_n_ks=fr0_n_ks,
     ks=ks,
     rs=rs_finite,
-    omega_0=omega_X,
+    omega_0=omega_0,
     dipoles=[DIPOLE_90_HIGH],
     t_0=t_0_ac,
     t_f=t_f_ac_high,
@@ -1542,7 +1559,7 @@ def plot_probe_bath_snapshot(
         cbar = fig.colorbar(
             sc,
             ax=ax,
-            label=rf"$|C_\mathbf{{r}}(t)|^2 \; [\times 10^{{{exp}}}]$",
+            label=rf"$|C_\mathbf{{R}}(t)|^2 \; [\times 10^{{{exp}}}]$",
             shrink=0.6,
             aspect=20,
         )
@@ -1590,8 +1607,8 @@ def plot_probe_time_evolution(
         np.abs(new_psi_t_2[:, 1]) ** 2,
     ]
     C_ts = [
-        2 * np.abs(mod_Ce_excited_sq[0] * np.conj(mod_Ce_probe_sq[0])),
-        2 * np.abs(mod_Ce_excited_sq[1] * np.conj(mod_Ce_probe_sq[1])),
+        2 * np.abs(new_psi_t_1[:, 0] * np.conj(new_psi_t_1[:, 1])),
+        2 * np.abs(new_psi_t_2[:, 0] * np.conj(new_psi_t_2[:, 1])),
     ]
     C_max = max(C_ts[0].max(), C_ts[1].max())
 
@@ -1599,9 +1616,14 @@ def plot_probe_time_evolution(
     _pop_min = _all_pops[_all_pops > 0].min()
 
     for i, theta in enumerate(THETAS):
-        fig, ax = plt.subplots(figsize=FIGSIZE_TIME_EVOL)
+        # Same figure size as the decay-rate plot so the axes boxes match in
+        # height when assembled side by side.
+        fig, ax = plt.subplots(figsize=FIGSIZE_WIDE)
         ax.plot(ts, mod_Ce_excited_sq[i], c=DIP_COLORS[i])
-        ax.plot(ts, mod_Ce_probe_sq[i], c=NEW_DIP_COLOR)
+        # Clip the probe population at the axis floor so the θ₂ case (probe
+        # essentially unexcited) still shows as a flat line at the bottom,
+        # mirroring how its near-zero concurrence renders on the linear axis.
+        ax.plot(ts, np.maximum(mod_Ce_probe_sq[i], _pop_min), c=NEW_DIP_COLOR)
 
         ax2 = ax.twinx()
         ax2.plot(ts, C_ts[i], c=MY_RED, ls="--")
@@ -1610,14 +1632,14 @@ def plot_probe_time_evolution(
             xlabel=r"$t\Gamma_0$",
             ylabel=r"$|C_e(t)|^2$",
             yscale="log",
-            ylim=(_pop_min, 1.5),
+            ylim=(_pop_min * 0.5, 1.5),
         )
         ax2.set_ylabel(r"$C(t)$", color=MY_RED)
         ax2.tick_params(axis="y", colors=MY_RED)
         ax2.spines["right"].set_color(MY_RED)
         pad = C_max * 0.05
         ax2.set_ylim((-pad, C_max + pad))
-        ax2.ticklabel_format(style="sci", axis="y", scilimits=(0, 0))
+        ax2.ticklabel_format(style="sci", axis="y", scilimits=(0, 0), useMathText=True)
 
         fig.savefig(
             f"./figures/kimble/emitter_timeevolution_concurrence_at_{r_0}"

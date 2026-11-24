@@ -10,4 +10,6 @@ EPSILON_0: float = 8.8541878128e-12  # Vacuum permittivity [F/m]
 K_CONST: float = E_CHARGE / np.sqrt(
     C_LIGHT * H_BAR * EPSILON_0
 )  # Dimensionless prefactor
-LORENTZIAN_BROADENING: float = 1e-2  # Broadening factor for LDOS calculations
+# Broadening for LDOS calculations, in angular units ω a/c (the 2π keeps the
+# width fixed relative to the band when frequencies are angular).
+LORENTZIAN_BROADENING: float = 2 * np.pi * 1e-2

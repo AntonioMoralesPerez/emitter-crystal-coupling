@@ -793,19 +793,23 @@ def cm2debye(dip_strength_in: float | np.ndarray) -> float | np.ndarray:
 
 def mpb2hz(omega_in: float | np.ndarray, a: float) -> float | np.ndarray:
     """
-    Convert MPB frequencies (normalized to c/a) to SI units of Hz.
+    Convert frequencies from normalized units of c/a to SI units of 1/s.
+
+    The conversion is a pure c/a scaling, so the input convention carries
+    over: angular input ω·a/c yields rad/s; ordinary-frequency input f·a/c
+    (raw MPB output, where ω = 2πf) yields Hz.
 
     Parameters
     ----------
     omega_in : float or np.ndarray
-        Frequencies from MPB in normalized units of c/a.
+        Frequencies in normalized units of c/a.
     a : float
         Lattice parameter of the crystal in meters.
 
     Returns
     -------
     float or np.ndarray
-        Frequencies in SI units of Hz.
+        Frequencies in SI units of 1/s.
     """
     return omega_in * C_LIGHT / a
 
@@ -819,7 +823,7 @@ def free_spontaneous_emission(
     Parameters
     ----------
     omega_0 : float
-        Resonant frequency of the emitter in units of c/a.
+        Angular resonant frequency of the emitter, ω₀·a/c.
     dip_strength : float
         Dipole moment strength of the emitter in Debyes.
     a : float
