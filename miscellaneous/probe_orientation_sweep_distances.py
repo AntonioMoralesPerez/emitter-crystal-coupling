@@ -58,16 +58,16 @@ LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
 N_CELLS: int = 101  # half-width 50: r_probe = [-30, 30] sits 12 cells past PML edge (~0.5 lambda)
 N_PML: int = 8
-GAMMA_MAX: float = 3e-2
+GAMMA_MAX: float = 2 * np.pi * 3e-2
 
-J_0: float = 0.07755639
-J_1: float = -0.01993698
-J_2: float = 0.00053966
+J_0: float = 3.06180355
+J_1: float = -0.78708042
+J_2: float = 0.02130492
 
 K_PATH: list = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 N_K_PATH: int = 100
 
-T_F: float = 3e-2  # [1/Gamma_0] — generous margin for peak settling at r_probe up to [-30, 30]
+T_F: float = (2 * np.pi) ** 2 * 3e-2  # [1/Gamma_0] — generous margin for peak settling at r_probe up to [-30, 30]
 T_STEPS: int = 120
 
 
@@ -124,7 +124,7 @@ t_f_internal = T_F / _t_conv
 data_excited = mf.load(
     f"../data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{EXCITED_R}.pkl"
 )
-omega_ks_n = np.asarray(data_excited["freqs"])
+omega_ks_n = 2 * np.pi * np.asarray(data_excited["freqs"])
 fr0_n_ks = np.asarray(data_excited["Eks"])[0]
 ks = np.asarray(data_excited["kpts"])
 
@@ -148,7 +148,7 @@ for probe_r in PROBE_RS:
     data_probe = mf.load(
         f"../data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{probe_r}.pkl"
     )
-    omega_ks_probe = np.asarray(data_probe["freqs"])
+    omega_ks_probe = 2 * np.pi * np.asarray(data_probe["freqs"])
     fr0_probe = np.asarray(data_probe["Eks"])[0]
     ks_probe = np.asarray(data_probe["kpts"])
 

@@ -46,17 +46,17 @@ LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
 N_CELLS: int = 55
 N_PML: int = 8
-GAMMA_MAX: float = 3e-2  # [c/a]
+GAMMA_MAX: float = 2 * np.pi * 3e-2  # [c/a]
 
 # in units of [c/a]
-J_0: float = 0.07755639
-J_1: float = -0.01993698
-J_2: float = 0.00053966
+J_0: float = 3.06180355
+J_1: float = -0.78708042
+J_2: float = 0.02130492
 
 K_PATH: list = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 N_K_PATH: int = 100
 
-T_F: float = 1e-2  # end time [1/Γ₀]
+T_F: float = (2 * np.pi) ** 2 * 1e-2  # end time [1/Γ₀]
 T_STEPS: int = 100
 
 
@@ -104,7 +104,7 @@ ax_bs.set(
     xlim=(k_node[0], k_node[-1]),
     xticks=k_node,
     xticklabels=K_LABELS,
-    ylabel=r"$\omega \, [c/a]$",
+    ylabel=r"$\omega a/c$",
     title="TB band structure",
 )
 ax_bs.grid(axis="x")
@@ -136,7 +136,7 @@ ts_norm = np.linspace(0.0, T_F, T_STEPS, endpoint=True)
 data_excited = mf.load(
     f"../data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{EXCITED_R}.pkl"
 )
-omega_ks_n = np.asarray(data_excited["freqs"])
+omega_ks_n = 2 * np.pi * np.asarray(data_excited["freqs"])
 fr0_n_ks = np.asarray(data_excited["Eks"])[0]
 ks = np.asarray(data_excited["kpts"])
 
@@ -153,7 +153,7 @@ excited_coupling = mf.compute_real_space_coupling(
 data_probe = mf.load(
     f"../data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{PROBE_R}.pkl"
 )
-omega_ks_probe = np.asarray(data_probe["freqs"])
+omega_ks_probe = 2 * np.pi * np.asarray(data_probe["freqs"])
 fr0_probe = np.asarray(data_probe["Eks"])[0]
 ks_probe = np.asarray(data_probe["kpts"])
 

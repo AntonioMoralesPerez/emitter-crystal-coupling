@@ -35,7 +35,7 @@ DIRNAME_OUTPUT = "data/kimble/"  # directory to save outputs
 LAT_PARAM = 300e-9  # lattice parameter [m]
 N_CELLS = 41  # number of unit cells per direction
 N_PML = 10  # absorbing layer thickness [unit cells per edge]
-GAMMA_MAX = 1e-2  # maximum damping rate at the hard wall [c/a]
+GAMMA_MAX = 2 * np.pi * 1e-2  # maximum damping rate at the hard wall [c/a]
 
 NK = 81  # number of k-points per direction for the Monkhorst-Pack grid
 RESOLUTION = 64  # must match the precomputed field files
@@ -65,17 +65,17 @@ ORB = [[0, 0]]
 BAND_INDEX = 0
 
 # hopping coefficients [units: (c/a)²]
-TAU_0 = 0.07755639
-TAU_1 = -0.01993698
-TAU_2 = 0.00053966
+TAU_0 = 3.06180355
+TAU_1 = -0.78708042
+TAU_2 = 0.02130492
 
 # path in the Brillouin zone for the detuning frequency computation
 K_PATH = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 
 # Time evolution [units: 1/Γ₀]
 T0_PHYS = 0
-TF_PHYS = 5e-1
-NEW_TF_PHYS = 5e-1
+TF_PHYS = (2 * np.pi) ** 2 * 5e-1
+NEW_TF_PHYS = (2 * np.pi) ** 2 * 5e-1
 T_STEPS = 100
 TIME_INDEX = 50  # snapshot index for the single-emitter bath plot
 NEW_TIME_INDEX = 25  # snapshot index for the two-emitter bath plot
@@ -129,7 +129,7 @@ pml_dampings = np.where(dist < N_PML, GAMMA_MAX * ((N_PML - dist) / N_PML) ** 2,
 
 # %% Load field data for the excited emitter at R0=[-4.5, 4.5]
 data = mf.load(f"../data/kimble/fields/res_{RESOLUTION}/nk_{NK}/meshgrid_at_{R0}.pkl")
-omegas = np.asarray(data["freqs"])  # (Nk, Nb)
+omegas = 2 * np.pi * np.asarray(data["freqs"])  # (Nk, Nb)
 Eks = np.asarray(data["Eks"])  # (Nr, Nb, Nk, 3)
 kpts = np.asarray(data["kpts"])  # (Nk, 3)
 E_k_r0 = Eks[0, :, :, :]  # (Nb, Nk, 3)
@@ -162,7 +162,7 @@ psit = mf.evolve_diagonalisation(H_total, psi0, np.linspace(T0, TF, T_STEPS))
 probe_data = mf.load(
     f"../data/kimble/fields/res_{RESOLUTION}/nk_{NK}/meshgrid_at_{PROBE_R}.pkl"
 )
-probe_omegas = np.asarray(probe_data["freqs"])
+probe_omegas = 2 * np.pi * np.asarray(probe_data["freqs"])
 probe_Eks = np.asarray(probe_data["Eks"])
 probe_kpts = np.asarray(probe_data["kpts"])
 E_k_probe = probe_Eks[0, :, :, :]  # (Nb, Nk, 3)

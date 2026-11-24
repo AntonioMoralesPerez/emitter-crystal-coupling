@@ -40,20 +40,20 @@ LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
 N_CELLS: int = 60
 
-J_0: float = 0.07755639
-J_1: float = -0.01993698
-J_2: float = 0.00053966
+J_0: float = 3.06180355
+J_1: float = -0.78708042
+J_2: float = 0.02130492
 
 K_PATH: list = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 N_K_PATH: int = 100
 
 T_0: float = 0  # [1/Γ₀]
-T_F: float = 5e-2  # [1/Γ₀]
+T_F: float = (2 * np.pi) ** 2 * 5e-2  # [1/Γ₀]
 T_STEPS: int = 200
 
 # --- Sweep parameters ---
 N_PML: int = 20  # fixed PML thickness [unit cells]
-GAMMA_MAX_VALUES: list = [1e-3, 3e-3, 5e-3, 1e-2, 3e-2, 5e-2, 1e-1]
+GAMMA_MAX_VALUES: list = [2 * np.pi * g for g in [1e-3, 3e-3, 5e-3, 1e-2, 3e-2, 5e-2, 1e-1]]
 
 THETAS: list = [THETA_1, THETA_2]
 DIPOLES: list = [
@@ -102,7 +102,7 @@ _, _, rs_finite = mf.build_finite_grid(N_CELLS)
 fields_data = mf.load(
     f"../data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{R_0}.pkl"
 )
-omega_ks_n = np.asarray(fields_data["freqs"])
+omega_ks_n = 2 * np.pi * np.asarray(fields_data["freqs"])
 ks = np.asarray(fields_data["kpts"])
 fr0_n_ks = np.asarray(fields_data["Eks"])[0]
 

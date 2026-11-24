@@ -40,13 +40,13 @@ LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
 N_CELLS: int = 41
 N_PML: int = 8
-GAMMA_MAX: float = 3e-2  # [c/a]
-J_0: float = 0.07755639
-J_1: float = -0.01993698
-J_2: float = 0.00053966
+GAMMA_MAX: float = 2 * np.pi * 3e-2  # [c/a]
+J_0: float = 3.06180355
+J_1: float = -0.78708042
+J_2: float = 0.02130492
 
 T_0: float = 0.0
-T_F: float = 1e-4  # [1/Γ₀]
+T_F: float = (2 * np.pi) ** 2 * 1e-4  # [1/Γ₀]
 T_STEPS: int = 100
 N_EMITTERS: int = 1
 
@@ -56,7 +56,7 @@ N_EMITTERS: int = 1
 fields_data = mf.load(
     f"./data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{R_0}.pkl"
 )
-omega_ks_n = np.asarray(fields_data["freqs"])
+omega_ks_n = 2 * np.pi * np.asarray(fields_data["freqs"])
 ks = np.asarray(fields_data["kpts"])
 fr0_n_ks = np.asarray(fields_data["Eks"])[0]
 

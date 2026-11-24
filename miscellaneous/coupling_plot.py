@@ -45,7 +45,7 @@ BAND_INDEX = 0  # index of the band to consider (0-based)
 # ---------------------------------------------------------------------------- #
 data = mf.load(f"../data/kimble/fields/res_{RESOLUTION}/nk_{NK}/meshgrid_at_{R0}.pkl")
 
-omegas = np.asarray(data["freqs"])  # Frequencies (Nk, Nb)
+omegas = 2 * np.pi * np.asarray(data["freqs"])  # Frequencies (Nk, Nb)
 Eks = np.asarray(data["Eks"])  # Electric fields, shape: (Nr, Nb, Nk, 3)
 kpts = np.asarray(data["kpts"])  # k-points in cartesian coordinates, shape: (Nk, 3)
 

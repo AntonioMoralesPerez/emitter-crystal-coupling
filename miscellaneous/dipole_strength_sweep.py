@@ -5,8 +5,8 @@ Runs the single-emitter time evolution (θ = 90°) for a fine sweep of
 dipole strengths bracketing the regime where a single non-Markovian
 revival emerges. Uses ω₀ = ω_X (band frequency at the BZ X point — a
 saddle van Hove singularity), instead of argmax Γ(ω). Other parameters
-match kimble.py: N_CELLS = 50, N_PML = 10, GAMMA_MAX = 1e-2,
-T_F = 5e-2 (in 1/Γ₀ units).
+(pre-2π kimble.py values): N_CELLS = 50, N_PML = 10, GAMMA_MAX = 2π·1e-2,
+T_F = (2π)²·5e-2 (in 1/Γ₀ units).
 
 Each curve is plotted vs t·Γ₀(self) so the Markovian baseline lies on
 the same diagonal across the sweep and only the non-Markovian content
@@ -42,17 +42,17 @@ LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
 N_CELLS: int = 50
 N_PML: int = 10
-GAMMA_MAX: float = 1e-2
+GAMMA_MAX: float = 2 * np.pi * 1e-2
 
-J_0: float = 0.07755639
-J_1: float = -0.01993698
-J_2: float = 0.00053966
+J_0: float = 3.06180355
+J_1: float = -0.78708042
+J_2: float = 0.02130492
 
 K_PATH: list = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 N_K_PATH: int = 100
 
 T_0: float = 0  # [1/Γ₀]
-T_F: float = 5e-2  # [1/Γ₀]
+T_F: float = (2 * np.pi) ** 2 * 5e-2  # [1/Γ₀]
 T_STEPS: int = 200
 
 # --- Sweep parameters ---
@@ -96,7 +96,7 @@ pml_dampings = compute_pml_dampings(rs_finite, N_CELLS, N_PML, GAMMA_MAX)
 fields_data = mf.load(
     f"../data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{R_0}.pkl"
 )
-omega_ks_n = np.asarray(fields_data["freqs"])
+omega_ks_n = 2 * np.pi * np.asarray(fields_data["freqs"])
 ks = np.asarray(fields_data["kpts"])
 fr0_n_ks = np.asarray(fields_data["Eks"])[0]
 

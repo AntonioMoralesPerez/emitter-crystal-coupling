@@ -42,17 +42,17 @@ LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
 N_CELLS: int = 41
 N_PML: int = 8
-GAMMA_MAX: float = 3e-2
+GAMMA_MAX: float = 2 * np.pi * 3e-2
 
 # in units of [c/a]
-J_0: float = 0.07755639
-J_1: float = -0.01993698
-J_2: float = 0.00053966
+J_0: float = 3.06180355
+J_1: float = -0.78708042
+J_2: float = 0.02130492
 
 K_PATH: list = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 N_K_PATH: int = 100
 
-T_F: float = 1e-2  # [Γ₀⁻¹]
+T_F: float = (2 * np.pi) ** 2 * 1e-2  # [Γ₀⁻¹]
 T_STEPS: int = 50
 
 
@@ -120,7 +120,7 @@ for label, j2 in TB_VARIANTS.items():
         excited_coupling = mf.compute_real_space_coupling(
             fr0_n_ks=np.asarray(data_excited["Eks"])[0],
             dipole_moment=EXCITED_DIPOLE,
-            omega_ks_n=np.asarray(data_excited["freqs"]),
+            omega_ks_n=2 * np.pi * np.asarray(data_excited["freqs"]),
             ks=np.asarray(data_excited["kpts"]),
             rs=rs_finite,
         )[BAND_IDX, :]
@@ -128,7 +128,7 @@ for label, j2 in TB_VARIANTS.items():
         data_probe = mf.load(
             f"{FIELDS_DIR}/nk_{nk}/meshgrid_at_{PROBE_R}.pkl"
         )
-        omega_ks_probe = np.asarray(data_probe["freqs"])
+        omega_ks_probe = 2 * np.pi * np.asarray(data_probe["freqs"])
         fr0_probe = np.asarray(data_probe["Eks"])[0]
         ks_probe = np.asarray(data_probe["kpts"])
 

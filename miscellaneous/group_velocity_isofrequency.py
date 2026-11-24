@@ -19,9 +19,9 @@ import numpy as np
 
 # %% Parameters
 
-J_0: float = 0.07755639
-J_1: float = -0.01993698
-J_2: float = 0.00053966
+J_0: float = 3.06180355
+J_1: float = -0.78708042
+J_2: float = 0.02130492
 
 N_K: int = 601  # BZ grid resolution for contour extraction
 

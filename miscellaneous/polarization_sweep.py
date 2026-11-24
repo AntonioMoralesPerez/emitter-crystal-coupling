@@ -23,7 +23,7 @@ DIRNAME_OUTPUT = "data/miscellaneous/"
 
 N_CELLS = 41
 N_PML: int = 8
-GAMMA_MAX: float = 3e-2
+GAMMA_MAX: float = 2 * np.pi * 3e-2
 
 N_K = 101
 RESOLUTION = 64  # must match the precomputed field files
@@ -32,7 +32,7 @@ RESOLUTION = 64  # must match the precomputed field files
 THETAS = np.linspace(90, 140, 6) * np.pi / 180
 LAT_PARAM: float = 300e-9  # lattice parameter [m]
 DIP_STRENGTH: float = 7000  # dipole moment strength [Debye]
-DETUNING_FREQ = 0.274587  # [c/a]
+DETUNING_FREQ = 2 * np.pi * 0.274587  # [c/a]
 
 N_EMITTERS = 1
 R_0 = [0, 0]
@@ -41,12 +41,12 @@ LAT = [[1, 0], [0, 1]]
 ORB = [[0, 0]]
 
 # Hopping coefficients up to 2nd nearest neighbours [units: (c/a)²]
-J_0 = 0.07755639
-J_1 = -0.01993698
-J_2 = 0.00053966
+J_0 = 3.06180355
+J_1 = -0.78708042
+J_2 = 0.02130492
 
 T_0 = 0
-T_F = 1e-2
+T_F = (2 * np.pi) ** 2 * 1e-2
 T_STEPS = 100
 SNAP_IDX = 30
 
@@ -66,7 +66,7 @@ data = mf.load(
     f"./data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{R_0}.pkl"
 )
 
-omega_ks_n = np.asarray(data["freqs"])  # (Nk, Nb)
+omega_ks_n = 2 * np.pi * np.asarray(data["freqs"])  # (Nk, Nb)
 ks = np.asarray(data["kpts"])  # (Nk, 3)
 fr0_n_ks = np.asarray(data["Eks"])[0]  # (Nb, Nk, 3)
 

@@ -2,8 +2,8 @@
 Single-emitter decay comparing two resonances: ω₀ = ω_X (BZ X-point)
 vs ω₀ = ω_Γmax (frequency that maximizes Γ(ω)).
 
-θ = 90°, DIP_STRENGTH = 10000 D. Other settings match kimble.py:
-N_CELLS = 50, N_PML = 10, GAMMA_MAX = 1e-2, T_F = 3e-2 (in 1/Γ₀ units).
+θ = 90°, DIP_STRENGTH = 10000 D. Other settings (pre-2π kimble.py values):
+N_CELLS = 50, N_PML = 10, GAMMA_MAX = 2π·1e-2, T_F = (2π)²·3e-2 (in 1/Γ₀ units).
 
 Produces two figures:
   (a) |C_e(t)|² vs t·Γ₀ overlaying both resonances.
@@ -41,22 +41,22 @@ LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
 N_CELLS: int = 50
 N_PML: int = 10
-GAMMA_MAX: float = 1e-2
+GAMMA_MAX: float = 2 * np.pi * 1e-2
 
-J_0: float = 0.07755639
-J_1: float = -0.01993698
-J_2: float = 0.00053966
+J_0: float = 3.06180355
+J_1: float = -0.78708042
+J_2: float = 0.02130492
 
 K_PATH: list = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 N_K_PATH: int = 100
 
 T_0: float = 0  # [1/Γ₀]
-T_F: float = 3e-2  # [1/Γ₀]
+T_F: float = (2 * np.pi) ** 2 * 3e-2  # [1/Γ₀]
 T_STEPS: int = 200
 SNAP_IDX: int = 5  # bath snapshot time index (matches kimble.py)
 
 # Resonance for Γ(ω) maximum (from kimble.py)
-OMEGA_GAMMA_MAX: float = 0.262631  # c/a
+OMEGA_GAMMA_MAX: float = 2 * np.pi * 0.262631  # c/a
 
 
 # ------------------------------------------------------------------------------
@@ -129,7 +129,7 @@ pml_dampings = compute_pml_dampings(rs_finite, N_CELLS, N_PML, GAMMA_MAX)
 fields_data = mf.load(
     f"../data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{R_0}.pkl"
 )
-omega_ks_n = np.asarray(fields_data["freqs"])
+omega_ks_n = 2 * np.pi * np.asarray(fields_data["freqs"])
 ks = np.asarray(fields_data["kpts"])
 fr0_n_ks = np.asarray(fields_data["Eks"])[0]
 

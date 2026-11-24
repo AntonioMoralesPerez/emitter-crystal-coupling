@@ -47,20 +47,20 @@ DIP_COLOR: str = "#1f77b4"
 LAT: list = [[1, 0], [0, 1]]
 ORB: list = [[0, 0]]
 
-J_0: float = 0.07755639
-J_1: float = -0.01993698
-J_2: float = 0.00053966
+J_0: float = 3.06180355
+J_1: float = -0.78708042
+J_2: float = 0.02130492
 
 K_PATH: list = [[0, 0], [0, 0.5], [0.5, 0.5], [0, 0]]
 N_K_PATH: int = 100
 
 T_0: float = 0  # [1/Γ₀]
-T_F: float = 1e-1  # [1/Γ₀]
+T_F: float = (2 * np.pi) ** 2 * 1e-1  # [1/Γ₀]
 T_STEPS: int = 100
 
 # --- Sweep parameters ---
 N_PML: int = 10  # fixed PML thickness [unit cells]
-GAMMA_MAX: float = 1e-2  # fixed maximum damping rate [c/a]
+GAMMA_MAX: float = 2 * np.pi * 1e-2  # fixed maximum damping rate [c/a]
 N_CELLS_VALUES: list = [35, 41, 50, 60]
 
 
@@ -100,7 +100,7 @@ print(f"omega_0 = {omega_0:.6f} c/a")
 fields_data = mf.load(
     f"../data/kimble/fields/res_{RESOLUTION}/nk_{N_K}/meshgrid_at_{R_0}.pkl"
 )
-omega_ks_n = np.asarray(fields_data["freqs"])
+omega_ks_n = 2 * np.pi * np.asarray(fields_data["freqs"])
 ks = np.asarray(fields_data["kpts"])
 fr0_n_ks = np.asarray(fields_data["Eks"])[0]
 

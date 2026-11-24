@@ -30,7 +30,7 @@ RESOLUTION = 64  # must match the precomputed field files
 # angles for the dipole moments of the quantum emitters and its dimensionless value
 THETA = 130 * np.pi / 180
 P_DIMLESS = 1e-2  # TODO: modify when you know which value should we put
-DETUNING_FREQ = 0.274587  # [c/a]
+DETUNING_FREQ = 2 * np.pi * 0.274587  # [c/a]
 
 # Position of the quantum emitter in units of the lattice constant 'a'
 # list of positions are also allowed
@@ -44,9 +44,9 @@ ORB = [[0, 0]]
 BAND_INDEX = 0  # index of the band to consider (0-based)
 
 # coefficients for the tight-binding model
-TAU_0 = 0.07755639
-TAU_1 = -0.01993698
-TAU_2 = 0.00053966
+TAU_0 = 3.06180355
+TAU_1 = -0.78708042
+TAU_2 = 0.02130492
 
 T0 = 0  # initial time for the field snapshots
 TF = 100  # final time for the field snapshots
@@ -67,7 +67,7 @@ datas = [
 ]
 
 # Extract relevant quantities
-omegas = [np.asarray(data["freqs"]) for data in datas]
+omegas = [2 * np.pi * np.asarray(data["freqs"]) for data in datas]
 Eks = [np.asarray(data["Eks"]) for data in datas]
 kpts = [np.asarray(data["kpts"]) for data in datas]
 
